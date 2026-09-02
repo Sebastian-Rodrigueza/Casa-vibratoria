@@ -1479,11 +1479,15 @@
                 width: auto;
                 left: 8px;
                 right: 8px;
-                max-height: 52vh;
+                /* Antes esto ocupaba mas de la mitad de la pantalla
+                   (52vh) y casi no dejaba ver ni manipular el modelo
+                   3D en celular. Ahora deja mucho mas espacio libre
+                   arriba para el modelo. */
+                max-height: 30vh;
             }
 
             .chart-wrap {
-                height: 190px;
+                height: 110px;
             }
 
             /* En celular la barra de arriba ocupaba media pantalla:
