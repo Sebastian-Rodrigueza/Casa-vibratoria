@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <meta name="theme-color" content="#ffffff">
+
+    <meta name="description"
+          content="Visores generales de Geodata Colombia">
+
+    <title>
+        Geodata General de Colombia | Universidad de los Andes
+    </title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+
+    <link rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Sans+3:wght@600;700;800&display=swap"
+          rel="stylesheet">
+
+    <!-- Ruta correcta al CSS ubicado en Geodata Colombia/css/Index.css -->
+    <link rel="stylesheet" href="../css/Index.css">
+
+    <link rel="stylesheet" href="../../agente1/agente-panel.css">
+</head>
+
+<body>
+
+    <header class="topbar">
+
+        <div class="topbar-inner">
+
+            <div class="brand">
+
+                <span class="logo-box">
+
+                    <img src="../../Imagenes/logo-uniandes.png"
+                         alt="Universidad de los Andes">
+
+                </span>
+
+                <span class="brand-copy">
+
+                    <small>
+                        Universidad de los Andes · CIAM
+                    </small>
+
+                    <strong>
+                        Geodata General
+                    </strong>
+
+                </span>
+
+            </div>
+
+            <nav class="navigation">
+
+                <a href="../Index.html">
+                    Volver
+                </a>
+
+                <a href="../../Index.html">
+                    Inicio
+                </a>
+
+                <button class="nav-primary"
+                        type="button"
+                        data-action="explorar">
+                    Explorar
+                </button>
+
+            </nav>
+
+        </div>
+
+    </header>
+
+    <main>
+
+        <section class="page-heading">
+
+            <small>
+                Información territorial
+            </small>
+
+            <h1>
+                Geodata General de Colombia
+            </h1>
+
+            <p>
+                Selecciona la fuente geográfica que deseas consultar.
+                Cada acceso reúne información, servicios cartográficos
+                y datos territoriales disponibles para Colombia.
+            </p>
+
+        </section>
+
+        <section class="viewer-grid">
+
+            <!-- ICDE -->
+
+            <article class="viewer-card"
+                     data-viewer="Geodata ICDE"
+                     data-url="ICDE/ICDE.html"
+                     tabindex="0"
+                     role="link"
+                     aria-label="Abrir Geodata ICDE">
+
+                <img src="../../Imagenes/GeoColombia/ICDE.jpg"
+                     alt="Geodata ICDE">
+
+                <div class="viewer-overlay"></div>
+
+                <span class="viewer-number">
+                    01
+                </span>
+
+                <div class="viewer-icon">
+
+                    <svg viewBox="0 0 24 24">
+
+                        <circle cx="12"
+                                cy="12"
+                                r="9"></circle>
+
+                        <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"></path>
+
+                    </svg>
+
+                </div>
+
+                <div class="viewer-content">
+
+                    <span class="viewer-kicker">
+                        Infraestructura nacional
+                    </span>
+
+                    <h2>
+                        Geodata ICDE
+                    </h2>
+
+                    <p>
+                        Acceso a recursos de la Infraestructura Colombiana
+                        de Datos Espaciales, catálogos geográficos,
+                        servicios interoperables y fuentes oficiales.
+                    </p>
+
+                    <div class="viewer-tags">
+
+                        <span>Catálogos</span>
+                        <span>Servicios web</span>
+                        <span>Metadatos</span>
+
+                    </div>
+
+                    <button class="viewer-button"
+                            type="button"
+                            data-name="Geodata ICDE"
+                            data-url="ICDE/ICDE.html">
+
+                        Abrir visor
+
+                        <svg viewBox="0 0 24 24">
+
+                            <path d="M5 12h14M13 6l6 6-6 6"></path>
+
+                        </svg>
+
+                    </button>
+
+                </div>
+
+            </article>
+
+            <!-- IGAC -->
+
+            <article class="viewer-card"
+                     data-viewer="Geodata IGAC"
+                     tabindex="0">
+
+                <img src="../../Imagenes/GeoColombia/IGAC.png"
+                     alt="Geodata IGAC">
+
+                <div class="viewer-overlay"></div>
+
+                <span class="viewer-number">
+                    02
+                </span>
+
+                <div class="viewer-icon">
+
+                    <svg viewBox="0 0 24 24">
+
+                        <path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"></path>
+
+                        <path d="M9 3v15M15 6v15"></path>
+
+                    </svg>
+
+                </div>
+
+                <div class="viewer-content">
+
+                    <span class="viewer-kicker">
+                        Cartografía oficial
+                    </span>
+
+                    <h2>
+                        Geodata IGAC
+                    </h2>
+
+                    <p>
+                        Consulta información cartográfica, geodésica,
+                        catastral y territorial producida por el Instituto
+                        Geográfico Agustín Codazzi.
+                    </p>
+
+                    <div class="viewer-tags">
+
+                        <span>Cartografía</span>
+                        <span>Catastro</span>
+                        <span>Geodesia</span>
+
+                    </div>
+
+                    <button class="viewer-button"
+                            type="button"
+                            data-name="Geodata IGAC">
+
+                        Abrir visor
+
+                        <svg viewBox="0 0 24 24">
+
+                            <path d="M5 12h14M13 6l6 6-6 6"></path>
+
+                        </svg>
+
+                    </button>
+
+                </div>
+
+            </article>
+
+            <!-- ESRI -->
+
+            <article class="viewer-card"
+                     data-viewer="Geodata ESRI"
+                     tabindex="0">
+
+                <img src="../../Imagenes/GeoColombia/ESRI.jpg"
+                     alt="Geodata ESRI">
+
+                <div class="viewer-overlay"></div>
+
+                <span class="viewer-number">
+                    03
+                </span>
+
+                <div class="viewer-icon">
+
+                    <svg viewBox="0 0 24 24">
+
+                        <path d="M4 5h16v14H4Z"></path>
+
+                        <path d="M4 10h16M9 5v14"></path>
+
+                    </svg>
+
+                </div>
+
+                <div class="viewer-content">
+
+                    <span class="viewer-kicker">
+                        Plataforma geográfica
+                    </span>
+
+                    <h2>
+                        Geodata ESRI
+                    </h2>
+
+                    <p>
+                        Acceso a mapas, capas, servicios ArcGIS y recursos
+                        geográficos publicados mediante plataformas y
+                        herramientas de Esri.
+                    </p>
+
+                    <div class="viewer-tags">
+
+                        <span>ArcGIS</span>
+                        <span>Mapas web</span>
+                        <span>Servicios</span>
+
+                    </div>
+
+                    <button class="viewer-button"
+                            type="button"
+                            data-name="Geodata ESRI">
+
+                        Abrir visor
+
+                        <svg viewBox="0 0 24 24">
+
+                            <path d="M5 12h14M13 6l6 6-6 6"></path>
+
+                        </svg>
+
+                    </button>
+
+                </div>
+
+            </article>
+
+        </section>
+
+    </main>
+
+    <footer>
+
+        <div class="footer-inner">
+
+            <div>
+
+                <strong>
+                    Geodata General de Colombia
+                </strong>
+
+                <span>
+                    Laboratorio Digital CIAM
+                </span>
+
+            </div>
+
+            <span>
+                © 2026 Universidad de los Andes
+            </span>
+
+        </div>
+
+    </footer>
+
+    <div class="toast"
+         id="toast">
+        <span id="toastText"></span>
+    </div>
+
+    <script>
+        document.addEventListener(
+            "DOMContentLoaded",
+            function () {
+
+                const toast =
+                    document.getElementById("toast");
+
+                const toastText =
+                    document.getElementById("toastText");
+
+                const explorar =
+                    document.querySelector(
+                        "[data-action='explorar']"
+                    );
+
+                let toastTimer = null;
+
+                function mostrarMensaje(nombre) {
+
+                    if (!toast || !toastText) {
+                        return;
+                    }
+
+                    toastText.textContent =
+                        nombre +
+                        ": visor preparado, sin navegación por ahora.";
+
+                    toast.classList.add("visible");
+
+                    if (toastTimer) {
+                        clearTimeout(toastTimer);
+                    }
+
+                    toastTimer = setTimeout(
+                        function () {
+                            toast.classList.remove("visible");
+                        },
+                        2600
+                    );
+                }
+
+                function abrirVisor(elemento, nombre) {
+
+                    const url =
+                        elemento.getAttribute("data-url");
+
+                    if (url) {
+                        window.location.href = url;
+                        return;
+                    }
+
+                    mostrarMensaje(nombre);
+                }
+
+                document
+                    .querySelectorAll(".viewer-button")
+                    .forEach(function (boton) {
+
+                        boton.addEventListener(
+                            "click",
+                            function (event) {
+
+                                event.preventDefault();
+                                event.stopPropagation();
+
+                                abrirVisor(
+                                    boton,
+                                    boton.dataset.name
+                                );
+                            }
+                        );
+                    });
+
+                document
+                    .querySelectorAll(".viewer-card")
+                    .forEach(function (tarjeta) {
+
+                        tarjeta.addEventListener(
+                            "click",
+                            function (event) {
+
+                                if (
+                                    event.target.closest(
+                                        ".viewer-button"
+                                    )
+                                ) {
+                                    return;
+                                }
+
+                                abrirVisor(
+                                    tarjeta,
+                                    tarjeta.dataset.viewer
+                                );
+                            }
+                        );
+
+                        tarjeta.addEventListener(
+                            "keydown",
+                            function (event) {
+
+                                if (
+                                    event.key === "Enter"
+                                    || event.key === " "
+                                ) {
+
+                                    event.preventDefault();
+
+                                    abrirVisor(
+                                        tarjeta,
+                                        tarjeta.dataset.viewer
+                                    );
+                                }
+                            }
+                        );
+                    });
+
+                if (explorar) {
+
+                    explorar.addEventListener(
+                        "click",
+                        function () {
+                            window.location.href =
+                                "ICDE/ICDE.html";
+                        }
+                    );
+                }
+            }
+        );
+    </script>
+
+    <!-- ==========================================
+         AGENTE IA · BOTÓN FLOTANTE Y PANEL DE CHAT (ICDE)
+         Mismo bloque que en Index.html, para que el agente
+         esté disponible en todas las páginas del sitio.
+    =========================================== -->
+
+    <button class="agent-launcher" id="agentLauncher" type="button" aria-label="Abrir asistente ICDE">
+        <svg class="agent-launcher-icon-open" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 4h16v11H8l-4 4V4Z"></path>
+            <path d="M8 9h8M8 12h5"></path>
+        </svg>
+        <svg class="agent-launcher-icon-close" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18"></path>
+        </svg>
+    </button>
+
+    <section class="agent-panel" id="agentPanel" aria-label="Asistente ICDE">
+        <header class="agent-panel-head">
+            <div class="agent-panel-title">
+                <span class="agent-panel-icon">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 4h16v11H8l-4 4V4Z"></path>
+                        <path d="M8 9h8M8 12h5"></path>
+                    </svg>
+                </span>
+                <div>
+                    <small>Laboratorio Digital CIAM</small>
+                    <h2>Asistente ICDE</h2>
+                </div>
+            </div>
+            <button class="agent-panel-close" id="agentPanelClose" type="button" aria-label="Cerrar asistente">×</button>
+        </header>
+
+        <div class="agent-panel-log" id="agentPanelLog">
+            <div class="agent-bubble agent-bubble-bot">
+                Hola, soy el asistente del portal ICDE. Cuéntame qué
+                información geográfica necesitas y busco en el catálogo
+                los datasets que más te sirvan.
+            </div>
+        </div>
+
+        <form class="agent-panel-input" id="agentForm">
+            <input type="text" id="agentInput" placeholder="Escribe qué información necesitas…" disabled aria-label="Mensaje para el asistente" autocomplete="off">
+            <button type="submit" disabled>Enviar</button>
+        </form>
+    </section>
+
+    <script src="../../agente1/agente.js"></script>
+
+</body>
+</html>

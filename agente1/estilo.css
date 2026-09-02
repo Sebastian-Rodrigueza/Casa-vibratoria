@@ -1,0 +1,360 @@
+* {
+    box-sizing: border-box;
+}
+
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(circle at top,#152238,#05070c);
+    font-family: "Segoe UI",Arial,sans-serif;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+
+/* PANEL PRINCIPAL */
+
+.nexa-panel {
+    width: 720px;
+    background: #0b111b;
+    border: 1px solid #24364d;
+    border-radius: 22px;
+    padding: 28px;
+    box-shadow: 0 0 50px rgba(0,180,255,.15);
+}
+
+
+
+
+
+/* CABECERA */
+
+.nexa-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #26384c;
+    padding-bottom: 18px;
+}
+
+
+
+    .nexa-header h1 {
+        margin: 0;
+        font-size: 34px;
+        letter-spacing: 4px;
+        color: #00d9ff;
+    }
+
+
+
+    .nexa-header p {
+        margin: 6px 0 0;
+        color: #8899aa;
+        font-size: 14px;
+    }
+
+
+
+
+
+/* ESTADOS */
+
+.estado {
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 12px;
+    letter-spacing: 1px;
+}
+
+
+
+.offline {
+    background: #2b2018;
+    color: #ffab6b;
+}
+
+
+
+.online {
+    background: #102d21;
+    color: #62ffad;
+}
+
+
+
+
+/* CUERPO */
+
+.nexa-main {
+    display: flex;
+    gap: 35px;
+    margin-top: 30px;
+}
+
+
+
+
+/* AVATAR */
+
+.avatar-section {
+    width: 280px;
+    text-align: center;
+}
+
+
+
+
+
+.holograma {
+    position: relative;
+    width: 210px;
+    height: 210px;
+    margin: auto;
+    border-radius: 50%;
+    background: radial-gradient(circle,#12314b,#08111d);
+    border: 2px solid #00d9ff;
+    box-shadow: 0 0 35px #00d9ff;
+    overflow: hidden;
+    transition: .4s;
+}
+
+
+
+
+    .holograma svg {
+        position: absolute;
+        left: 20px;
+        top: 20px;
+    }
+
+
+
+
+.cabeza {
+    fill: #0c1826;
+    stroke: #00d9ff;
+    stroke-width: 2;
+}
+
+
+
+.ojo {
+    fill: #00d9ff;
+    transition: .2s;
+}
+
+
+
+.boca {
+    fill: none;
+    stroke: #00d9ff;
+    stroke-width: 4;
+    stroke-linecap: round;
+}
+
+
+
+.scan {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: #00d9ff;
+    top: 20px;
+    box-shadow: 0 0 15px #00d9ff;
+    animation: scan 3s infinite;
+}
+
+
+
+
+
+@keyframes scan {
+
+
+    0% {
+        top: 20px;
+    }
+
+
+    50% {
+        top: 180px;
+    }
+
+
+    100% {
+        top: 20px;
+    }
+}
+
+
+
+
+
+/* ESTADO PENSANDO */
+
+
+.holograma.pensando {
+    animation: pulso 1s infinite alternate;
+}
+
+
+
+
+    .holograma.pensando .scan {
+        animation: scanRapido .8s infinite;
+    }
+
+
+
+
+@keyframes pulso {
+
+
+    from {
+        box-shadow: 0 0 30px #00d9ff;
+    }
+
+
+    to {
+        box-shadow: 0 0 80px #00d9ff;
+    }
+}
+
+
+
+
+@keyframes scanRapido {
+
+
+    from {
+        top: 20px;
+    }
+
+
+    to {
+        top: 180px;
+    }
+}
+
+
+
+
+
+/* ESTADO HABLANDO */
+
+
+.holograma.hablando {
+    box-shadow: 0 0 80px #00ff9d;
+}
+
+
+
+    .holograma.hablando .boca {
+        stroke: #00ff9d;
+    }
+
+
+
+/* TEXTO ESTADO */
+
+
+#estadoAgente {
+    margin-top: 20px;
+    font-size: 13px;
+    letter-spacing: 3px;
+    color: #00d9ff;
+}
+
+
+
+
+
+/* PANEL CONTROL */
+
+
+.control-section {
+    flex: 1;
+}
+
+
+
+    .control-section label {
+        font-size: 12px;
+        color: #8ca0b5;
+    }
+
+
+
+
+
+select,
+button {
+    width: 100%;
+    margin-top: 12px;
+    padding: 13px;
+    border-radius: 10px;
+    border: 1px solid #29435c;
+    background: #111c2b;
+    color: white;
+    font-size: 15px;
+}
+
+
+
+
+button {
+    background: #00a8d6;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+
+
+    button:hover {
+        background: #00d9ff;
+        color: #001018;
+    }
+
+
+
+    button:disabled {
+        opacity: .5;
+    }
+
+
+
+
+
+/* FICHA SENSOR */
+
+
+.ficha {
+    margin-top: 25px;
+    background: #101a29;
+    border-radius: 14px;
+    padding: 18px;
+    border-left: 3px solid #00d9ff;
+}
+
+
+
+    .ficha h2 {
+        font-size: 15px;
+        margin-top: 0;
+        color: #00d9ff;
+    }
+
+
+
+#subtitulo {
+    font-size: 14px;
+    line-height: 1.7;
+    color: #d4dbe3;
+}

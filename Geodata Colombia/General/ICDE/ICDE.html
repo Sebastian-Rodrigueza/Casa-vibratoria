@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <meta name="theme-color"
+          content="#f5c400">
+
+    <meta name="description"
+          content="Portal temático ICDE para consulta de información geográfica">
+
+    <!-- Evita usar versiones antiguas durante desarrollo -->
+    <meta http-equiv="Cache-Control"
+          content="no-cache, no-store, must-revalidate">
+
+    <meta http-equiv="Pragma"
+          content="no-cache">
+
+    <meta http-equiv="Expires"
+          content="0">
+
+    <title>
+        ICDE | Información geográfica
+    </title>
+
+    <link rel="preconnect"
+          href="https://fonts.googleapis.com">
+
+    <link rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Sans+3:wght@600;700;800&display=swap"
+          rel="stylesheet">
+
+    <style>
+
+        :root {
+            --white: #ffffff;
+            --cream: #fffdf5;
+            --beige: #fdf7e9;
+            --soft: #f7f7f3;
+            --yellow: #f5c400;
+            --yellow-dark: #d4a900;
+            --yellow-soft: #fff3b0;
+            --text: #282b2f;
+            --muted: #6f7479;
+            --line: #e5e4dc;
+            --danger: #a94442;
+            --shadow: 0 18px 44px rgba(38, 40, 43, 0.14);
+            --font-body: "Inter", "Segoe UI", sans-serif;
+            --font-display: "Source Sans 3", "Segoe UI", sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            position: relative;
+            color: var(--text);
+            background: radial-gradient( circle at 10% 8%, rgba(245, 196, 0, 0.10), transparent 25% ), linear-gradient( 180deg, var(--cream) 0%, var(--beige) 100vh );
+            font-family: var(--font-body);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Escudo de la Universidad de los Andes centrado como marca de
+           agua, muy pequeño y tenue, fijo detrás de todo el contenido. */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            z-index: -1;
+            width: 280px;
+            height: 280px;
+            transform: translate(-50%, -50%);
+            background: url("../../../Imagenes/escudoandes.jpg") center / contain no-repeat;
+            opacity: .08;
+            mix-blend-mode: multiply;
+            pointer-events: none;
+        }
+
+        button,
+        a {
+            font: inherit;
+        }
+
+        .page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ==========================================
+           ENCABEZADO
+        ========================================== */
+
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            min-height: 74px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 14px 6vw;
+            background: rgba(255, 255, 255, 0.96);
+            border-bottom: 1px solid var(--line);
+            box-shadow: 0 2px 12px rgba(30, 32, 35, 0.05);
+            backdrop-filter: blur(12px);
+        }
+
+        .brand {
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand-mark {
+            width: 44px;
+            height: 44px;
+            flex: none;
+            display: grid;
+            place-items: center;
+            color: var(--text);
+            background: var(--yellow);
+            border-radius: 12px;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+        }
+
+        .brand-text small {
+            display: block;
+            margin-bottom: 2px;
+            color: var(--muted);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .brand-text h1 {
+            margin: 0;
+            font: 700 20px / 1.1 var(--font-display);
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            color: var(--text);
+            background: var(--white);
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            transition: 0.18s ease;
+        }
+
+            .back-link:hover {
+                background: var(--yellow-soft);
+                border-color: var(--yellow-dark);
+            }
+
+        /* ==========================================
+           PRESENTACIÓN
+        ========================================== */
+
+        .hero {
+            width: min( 1180px, calc(100% - 32px) );
+            margin: 0 auto;
+            padding: 68px 0 28px;
+            text-align: center;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            padding: 7px 11px;
+            color: #6f5900;
+            background: var(--yellow-soft);
+            border: 1px solid #ead46b;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+            .eyebrow::before {
+                content: "";
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: var(--yellow-dark);
+            }
+
+        .hero h2 {
+            max-width: 850px;
+            margin: 0 auto 16px;
+            color: var(--text);
+            font: 700 clamp(34px, 5vw, 58px) / 1.05 var(--font-display);
+            letter-spacing: -0.025em;
+        }
+
+        .hero p {
+            max-width: 760px;
+            margin: 0 auto;
+            color: var(--muted);
+            font-size: 16px;
+            line-height: 1.72;
+        }
+
+        /* ==========================================
+           CUADRÍCULA
+        ========================================== */
+
+        .themes {
+            width: min( 1180px, calc(100% - 32px) );
+            margin: 0 auto;
+            padding: 38px 0 88px;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 28px;
+        }
+
+        /* ==========================================
+           TARJETA
+        ========================================== */
+
+        .theme-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 0;
+            padding: 28px 22px 30px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.97);
+            border: 1px solid var(--line);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+            .theme-card::before {
+                content: "";
+                position: absolute;
+                inset: 0 0 auto;
+                height: 6px;
+                background: var(--yellow);
+            }
+
+            .theme-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 24px 50px rgba(38, 40, 43, 0.18);
+            }
+
+        /* ==========================================
+           IMAGEN CIRCULAR
+        ========================================== */
+
+        .circle-image {
+            position: relative;
+            width: min(255px, 72vw);
+            aspect-ratio: 1;
+            margin: 10px auto 24px;
+            overflow: hidden;
+            background: #ecece7;
+            border: 8px solid var(--white);
+            outline: 2px solid var(--yellow);
+            border-radius: 50%;
+            box-shadow: 0 14px 36px rgba(27, 34, 40, 0.18);
+        }
+
+            .circle-image img {
+                width: 100%;
+                height: 100%;
+                display: block;
+                object-fit: cover;
+                object-position: center;
+                transition: transform 0.35s ease;
+            }
+
+        .theme-card:hover
+        .circle-image img {
+            transform: scale(1.05);
+        }
+
+        .circle-image::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background: linear-gradient( 180deg, transparent 58%, rgba(0, 0, 0, 0.14) );
+        }
+
+        /* ==========================================
+           ERROR DE IMAGEN
+        ========================================== */
+
+        .image-error {
+            position: absolute;
+            inset: 0;
+            z-index: 3;
+            display: none;
+            place-items: center;
+            padding: 28px;
+            color: var(--danger);
+            background: #fff4f2;
+            text-align: center;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .circle-image.has-error
+        .image-error {
+            display: grid;
+        }
+
+        .circle-image.has-error img {
+            display: none;
+        }
+
+        /* ==========================================
+           INFORMACIÓN
+        ========================================== */
+
+        .theme-number {
+            margin-bottom: 8px;
+            color: var(--yellow-dark);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.10em;
+            text-transform: uppercase;
+            text-align: center;
+        }
+
+        .theme-card h3 {
+            margin: 0 0 10px;
+            color: var(--text);
+            font: 700 29px / 1 var(--font-display);
+            text-align: center;
+        }
+
+        .theme-card p {
+            max-width: 340px;
+            min-height: 88px;
+            margin: 0 0 22px;
+            color: var(--muted);
+            text-align: center;
+            font-size: 13px;
+            line-height: 1.65;
+        }
+
+        /* ==========================================
+           BOTÓN
+        ========================================== */
+
+        .theme-btn {
+            min-width: 165px;
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: auto;
+            padding: 10px 18px;
+            color: var(--text);
+            background: var(--yellow);
+            border: 1px solid var(--yellow-dark);
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.18s ease, transform 0.18s ease;
+        }
+
+            .theme-btn:hover {
+                background: #ffd526;
+                transform: translateY(-1px);
+            }
+
+        /* ==========================================
+           AVISO
+        ========================================== */
+
+        .notice {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            z-index: 50;
+            max-width: 350px;
+            padding: 14px 16px;
+            color: var(--white);
+            background: #2b2e31;
+            border-left: 5px solid var(--yellow);
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            font-size: 13px;
+            line-height: 1.5;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(16px);
+            transition: 0.22s ease;
+        }
+
+            .notice.show {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+        /* ==========================================
+           FOOTER
+        ========================================== */
+
+        .footer {
+            margin-top: auto;
+            padding: 22px 24px;
+            color: var(--muted);
+            background: var(--white);
+            border-top: 1px solid var(--line);
+            text-align: center;
+            font-size: 11px;
+        }
+
+        /* ==========================================
+           RESPONSIVE
+        ========================================== */
+
+        @media (max-width: 1000px) {
+
+            .themes {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 700px) {
+
+            .topbar {
+                padding: 12px 16px;
+            }
+
+            .brand-text small {
+                display: none;
+            }
+
+            .brand-text h1 {
+                font-size: 17px;
+            }
+
+            .hero {
+                padding-top: 50px;
+            }
+
+            .themes {
+                grid-template-columns: 1fr;
+                max-width: 520px;
+                gap: 28px;
+            }
+
+            .circle-image {
+                width: min(290px, 74vw);
+            }
+        }
+
+        @media (max-width: 480px) {
+
+            .brand-mark {
+                width: 39px;
+                height: 39px;
+            }
+
+            .back-link span {
+                display: none;
+            }
+
+            .hero h2 {
+                font-size: 36px;
+            }
+
+            .hero p {
+                font-size: 14px;
+            }
+        }
+    </style>
+
+    <link rel="stylesheet" href="../../../agente1/agente-panel.css">
+
+</head>
+
+<body>
+
+    <div class="page">
+
+        <!-- ==========================================
+             ENCABEZADO
+        ========================================== -->
+
+        <header class="topbar">
+
+            <div class="brand">
+
+                <div class="brand-mark">
+                    IC
+                </div>
+
+                <div class="brand-text">
+
+                    <small>
+                        Universidad de los Andes · CIAM
+                    </small>
+
+                    <h1>
+                        Infraestructura Colombiana de Datos Espaciales
+                    </h1>
+
+                </div>
+
+            </div>
+
+            <a class="back-link"
+               href="../Index.html"
+               aria-label="Volver a Geodata General">
+                ←
+                <span>
+                    Volver a Geodata General
+                </span>
+            </a>
+
+        </header>
+
+        <!-- ==========================================
+             CONTENIDO
+        ========================================== -->
+
+        <main>
+
+            <section class="hero">
+
+                <span class="eyebrow">
+                    Exploración temática
+                </span>
+
+                <h2>
+                    Información geográfica para comprender el territorio
+                </h2>
+
+                <p>
+                    Consulta las categorías disponibles de la
+                    Infraestructura Colombiana de Datos Espaciales.
+                    El portal reúne información de agua, suelos,
+                    catastro, geodesia, gestión del riesgo,
+                    infraestructura, relieve y transporte.
+                </p>
+
+            </section>
+
+            <section class="themes">
+
+                <!-- ==================================
+                     01 AGUA
+                =================================== -->
+
+                <article class="theme-card">
+
+                    <div class="circle-image">
+
+                        <img src="../../../Imagenes/GeoColombia/agua.jpg"
+                             alt="Agua"
+                             onerror="mostrarErrorImagen(this)">
+
+                        <div class="image-error">
+                            No fue posible cargar la imagen de Agua.
+                        </div>
+
+                    </div>
+
+                    <span class="theme-number">
+                        01 · Recurso hídrico
+                    </span>
+
+                    <h3>
+                        Agua
+                    </h3>
+
+                    <p>
+                        Información relacionada con recursos hídricos,
+                        corrientes, cuerpos de agua y cobertura
+                        hidrográfica.
+                    </p>
+
+                    <button class="theme-btn"
+                            type="button"
+                            data-tema="Agua">
+                        Explorar agua
+                    </button>
+
+                </article>
+
+                <!-- ==================================
+                     02 SUELOS
+                =================================== -->
+
+                <article class="theme-card">
+
+                    <div class="circle-image">
+
+                        <img src="../../../Imagenes/GeoColombia/suelos.jpg"
+                             alt="Suelos"
+                             onerror="mostrarErrorImagen(this)">
+
+                        <div class="image-error">
+                            No fue posible cargar la imagen de Suelos.
+                        </div>
+
+                    </div>
+
+                    <span class="theme-number">
+                        02 · Territorio
+                    </span>
+
+                    <h3>
+                        Suelos
+                    </h3>
+
+                    <p>
+                        Información geográfica asociada con las
+                        características del suelo, cobertura, uso
+                        territorial y análisis ambiental.
+                    </p>
+
+                    <button class="theme-btn"
+                            type="button"
+                            data-tema="Suelo">
+                        Explorar suelos
+                    </button>
+
+                </article>
+
+                <!-- ==================================
+                     03 CATASTRO
+                =================================== -->
+
+                <article class="theme-card">
+
+                    <div class="circle-image">
+
+                        <img src="../../../Imagenes/GeoColombia/catastro.png"
+                             alt="Catastro"
+                             onerror="mostrarErrorImagen(this)">
+
+                        <div class="image-error">
+                            No fue posible cargar la imagen de Catastro.
+                        </div>
+
+                    </div>
+
+                    <span class="theme-number">
+                        03 · Propiedad y tierras
+                    </span>
+
+                    <h3>
+                        Catastro
+                    </h3>
+
+                    <p>
+                        Información geográfica vinculada con gestión
+                        predial, límites de propiedades, tierras y
+                        ordenamiento territorial.
+                    </p>
+
+                    <button class="theme-btn"
+                            type="button"
+                            data-tema="Catastro">
+                        Explorar catastro
+                    </button>
+
+                </article>
+
+                <!-- ==================================
+                     04 GEODESIA
+                =================================== -->
+
+                <article class="theme-card">
+
+                    <div class="circle-image">
+
+                        <img src="../../../Imagenes/GeoColombia/geodesia.jpg"
+                             alt="Geodesia"
+                             onerror="mostrarErrorImagen(this)">
+
+                        <div class="image-error">
+                            No fue posible cargar la imagen de Geodesia.
+                        </div>
+
+                    </div>
+
+                    <span class="theme-number">
+                        04 · Referencia espacial
+                    </span>
+
+                    <h3>
+                        Geodesia
+                    </h3>
+
+                    <p>
+                        Información sobre sistemas de referencia,
+                        redes geodésicas, posicionamiento, coordenadas
+                        y control geográfico.
+                    </p>
+
+                    <button class="theme-btn"
+                            type="button"
+                            data-tema="Geodesia">
+                        Explorar geodesia
+                    </button>
+
+                </article>
+
+                <!-- ==================================
+                     05 GESTIÓN DEL RIESGO
+                =================================== -->
+
+                <article class="theme-card">
+
+                    <div class="circle-image">
+
+                        <img src="../../../Imagenes/GeoColombia/gestionriesgo.png"
+                             alt="Gestión del Riesgo"
+                             onerror="mostrarErrorImagen(this)">
+
+                        <div class="image-error">
+                            No fue posible cargar la imagen de Gestión del Riesgo.
+                        </div>
+
+                    </div>
+
+                    <span class="theme-number">
+                        05 · Amenazas y vulnerabilidad
+                    </span>
+
+                    <h3>
+                        Gestión del Riesgo
+                    </h3>
+
+                    <p>
+                        Información sobre amenazas, vulnerabilidad,
+                        emergencias, prevención y gestión del riesgo
+                        de desastres.
+                    </p>
+
+                    <button class="theme-btn"
+                            type="button"
+                            data-tema="Gestion del Riesgo">
+                        Explorar riesgo
+                    </button>
+
+                </article>
+
+                <!-- ==================================
+                     06 INFRAESTRUCTURA
+                =================================== -->
+
+                <article class="theme-card">
+
+                    <div class="circle-image">
+
+                        <img src="../../../Imagenes/GeoColombia/infraestruc.png"
+                             alt="Infraestructura"
+                             onerror="mostrarErrorImagen(this)">
+
+                        <div class="image-error">
+                            No fue posible cargar la imagen de Infraestructura.
+                        </div>
+
+                    </div>
+
+                    <span class="theme-number">
+                        06 · Equipamientos y redes
+                    </span>
+
+                    <h3>
+                        Infraestructura
+                    </h3>
+
+                    <p>
+                        Información territorial relacionada con
+                        infraestructura, equipamientos, servicios,
+                        redes y elementos construidos.
+                    </p>
+
+                    <button class="theme-btn"
+                            type="button"
+                            data-tema="Infraestructura">
+                        Explorar infraestructura
+                    </button>
+
+                </article>
+
+                <!-- ==================================
+                     07 RELIEVE
+                =================================== -->
+
+                <article class="theme-card">
+
+                    <div class="circle-image">
+
+                        <img src="../../../Imagenes/GeoColombia/relieve.jpg"
+                             alt="Relieve"
+                             onerror="mostrarErrorImagen(this)">
+
+                        <div class="image-error">
+                            No fue posible cargar la imagen de Relieve.
+                        </div>
+
+                    </div>
+
+                    <span class="theme-number">
+                        07 · Topografía y elevación
+                    </span>
+
+                    <h3>
+                        Relieve
+                    </h3>
+
+                    <p>
+                        Información relacionada con elevación,
+                        topografía, formas del terreno y características
+                        físicas del relieve colombiano.
+                    </p>
+
+                    <button class="theme-btn"
+                            type="button"
+                            data-tema="Relieve">
+                        Explorar relieve
+                    </button>
+
+                </article>
+
+                <!-- ==================================
+                     08 TRANSPORTE
+                =================================== -->
+
+                <article class="theme-card">
+
+                    <div class="circle-image">
+
+                        <img src="../../../Imagenes/GeoColombia/transportevias.webp"
+                             alt="Transporte y vías"
+                             onerror="mostrarErrorImagen(this)">
+
+                        <div class="image-error">
+                            No fue posible cargar la imagen de Transporte.
+                        </div>
+
+                    </div>
+
+                    <span class="theme-number">
+                        08 · Movilidad y conectividad
+                    </span>
+
+                    <h3>
+                        Transporte
+                    </h3>
+
+                    <p>
+                        Información sobre vías, corredores de transporte,
+                        movilidad, conectividad y redes de comunicación
+                        terrestre.
+                    </p>
+
+                    <button class="theme-btn"
+                            type="button"
+                            data-tema="Transporte">
+                        Explorar transporte
+                    </button>
+
+                </article>
+
+            </section>
+
+        </main>
+
+        <!-- ==========================================
+             FOOTER
+        ========================================== -->
+
+        <footer class="footer">
+            Universidad de los Andes · Laboratorio Digital CIAM · ICDE
+        </footer>
+
+        <div class="notice" id="notice"></div>
+
+    </div>
+
+    <!-- ==========================================
+         ERROR DE IMÁGENES
+    ========================================== -->
+
+    <script>
+
+        function mostrarErrorImagen(imagen) {
+
+            const contenedor =
+                imagen.closest(".circle-image");
+
+            if (contenedor) {
+                contenedor.classList.add("has-error");
+            }
+
+            console.error(
+                "No se pudo cargar la imagen:",
+                imagen.src
+            );
+        }
+
+    </script>
+
+    <!-- ==========================================
+         NAVEGACIÓN ENTRE TEMAS (JavaScript normal)
+    ========================================== -->
+
+    <script>
+
+        (() => {
+            "use strict";
+
+            const notice = document.getElementById("notice");
+            let avisoTimer = null;
+
+            function mostrarAviso(mensaje) {
+                notice.textContent = mensaje;
+                notice.classList.add("show");
+
+                if (avisoTimer) {
+                    clearTimeout(avisoTimer);
+                }
+
+                avisoTimer = setTimeout(() => {
+                    notice.classList.remove("show");
+                }, 2600);
+            }
+
+            function abrirTema(tema) {
+
+                /*
+                 * Rutas específicas por categoría.
+                 * Las categorías que todavía no tienen
+                 * un HTML propio continúan usando resultados.html.
+                 */
+
+                const rutas = {
+                    "Agua": "resultadosagua.html",
+                    "Suelo": "resultados.html?categoria=Suelo",
+                    "Suelos": "resultados.html?categoria=Suelos",
+                    "Catastro": "resultadoscatastro.html",
+                    "Geodesia": "resultadosgeodesia.html",
+                    "Gestion del Riesgo": "resultadosGesRieg.html",
+                    "Gestión del Riesgo": "resultadosGesRieg.html",
+                    "Infraestructura": "resultados.html?categoria=Infraestructura",
+                    "Relieve": "resultados.html?categoria=Relieve",
+                    "Transporte": "resultados.html?categoria=Transporte"
+                };
+
+                const destino = rutas[tema];
+
+                if (!destino) {
+
+                    console.warn(
+                        "No existe una ruta configurada para:",
+                        tema
+                    );
+
+                    mostrarAviso("No existe una ruta configurada para: " + tema);
+
+                    window.location.href =
+                        "resultados.html?categoria=" +
+                        encodeURIComponent(tema) +
+                        "&v=20260814-01";
+
+                    return;
+                }
+
+                const separador =
+                    destino.includes("?") ? "&" : "?";
+
+                window.location.href =
+                    destino +
+                    separador +
+                    "v=20260814-01";
+            }
+
+            document.querySelectorAll("[data-tema]").forEach((boton) => {
+                boton.addEventListener("click", () => abrirTema(boton.dataset.tema));
+            });
+
+        })();
+
+    </script>
+
+
+    <!-- Evita restaurar una versión vieja desde la memoria del navegador -->
+    <script>
+        window.addEventListener("pageshow", function (event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
+    </script>
+
+    <!-- ==========================================
+         AGENTE IA · BOTÓN FLOTANTE Y PANEL DE CHAT (ICDE)
+         Mismo bloque que en Index.html, para que el agente
+         esté disponible en todas las páginas del sitio.
+    =========================================== -->
+
+    <button class="agent-launcher" id="agentLauncher" type="button" aria-label="Abrir asistente ICDE">
+        <svg class="agent-launcher-icon-open" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 4h16v11H8l-4 4V4Z"></path>
+            <path d="M8 9h8M8 12h5"></path>
+        </svg>
+        <svg class="agent-launcher-icon-close" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18"></path>
+        </svg>
+    </button>
+
+    <section class="agent-panel" id="agentPanel" aria-label="Asistente ICDE">
+        <header class="agent-panel-head">
+            <div class="agent-panel-title">
+                <span class="agent-panel-icon">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 4h16v11H8l-4 4V4Z"></path>
+                        <path d="M8 9h8M8 12h5"></path>
+                    </svg>
+                </span>
+                <div>
+                    <small>Laboratorio Digital CIAM</small>
+                    <h2>Asistente ICDE</h2>
+                </div>
+            </div>
+            <button class="agent-panel-close" id="agentPanelClose" type="button" aria-label="Cerrar asistente">×</button>
+        </header>
+
+        <div class="agent-panel-log" id="agentPanelLog">
+            <div class="agent-bubble agent-bubble-bot">
+                Hola, soy el asistente del portal ICDE. Cuéntame qué
+                información geográfica necesitas y busco en el catálogo
+                los datasets que más te sirvan.
+            </div>
+        </div>
+
+        <form class="agent-panel-input" id="agentForm">
+            <input type="text" id="agentInput" placeholder="Escribe qué información necesitas…" disabled aria-label="Mensaje para el asistente" autocomplete="off">
+            <button type="submit" disabled>Enviar</button>
+        </form>
+    </section>
+
+    <script src="../../../agente1/agente.js"></script>
+
+</body>
+
+</html>

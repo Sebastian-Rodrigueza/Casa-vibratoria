@@ -1,0 +1,323 @@
+/* =========================================================
+   AGENTE ICDE · BOTÓN FLOTANTE Y PANEL DE CHAT
+   -----------------------------------------------------------
+   Hoja de estilos independiente para el widget del agente.
+   Se puede incluir desde cualquier página del sitio (tenga o
+   no AngularJS, tenga o no su propio geodata.css) porque usa
+   valores de color fijos en vez de variables --tomadas de otro
+   archivo.
+   ========================================================= */
+
+.agent-launcher {
+    position: fixed;
+    right: 26px;
+    bottom: 26px;
+    z-index: 3000;
+    width: 58px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+    color: #26292d;
+    background: #f5c400;
+    border: 1px solid #d7aa00;
+    border-radius: 50%;
+    box-shadow: 0 14px 32px rgba(215, 170, 0, .34);
+    cursor: pointer;
+    transition: .18s ease;
+}
+
+    .agent-launcher:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 38px rgba(215, 170, 0, .40);
+    }
+
+    .agent-launcher svg {
+        width: 24px;
+        height: 24px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .agent-launcher .agent-launcher-icon-close {
+        display: none;
+    }
+
+    .agent-launcher.is-open .agent-launcher-icon-open {
+        display: none;
+    }
+
+    .agent-launcher.is-open .agent-launcher-icon-close {
+        display: block;
+    }
+
+.agent-panel {
+    position: fixed;
+    right: 26px;
+    bottom: 96px;
+    z-index: 2999;
+    width: min(360px, calc(100vw - 40px));
+    max-height: min(520px, calc(100vh - 140px));
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #ffffff;
+    border: 1px solid #d5d5cc;
+    border-top: 5px solid #f5c400;
+    border-radius: 20px;
+    box-shadow: 0 18px 46px rgba(35, 37, 40, .12);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(16px) scale(.98);
+    transition: .18s ease;
+    font-family: "Inter", "Segoe UI", sans-serif;
+}
+
+    .agent-panel.agent-panel-open {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0) scale(1);
+    }
+
+.agent-panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 18px 14px;
+    border-bottom: 1px solid #e5e5de;
+}
+
+.agent-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.agent-panel-icon {
+    width: 36px;
+    height: 36px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    color: #26292d;
+    background: #fff3ad;
+    border-radius: 10px;
+}
+
+    .agent-panel-icon svg {
+        width: 18px;
+        height: 18px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.9;
+    }
+
+.agent-panel-title small {
+    display: block;
+    margin-bottom: 2px;
+    color: #8b8e92;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+}
+
+.agent-panel-title h2 {
+    margin: 0;
+    color: #26292d;
+    font: 700 16px "Source Sans 3", sans-serif;
+}
+
+.agent-panel-close {
+    width: 30px;
+    height: 30px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    color: #26292d;
+    background: #f7f7f3;
+    border: 1px solid #e5e5de;
+    border-radius: 8px;
+    font-size: 17px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+    .agent-panel-close:hover {
+        background: #fff3ad;
+    }
+
+.agent-panel-log {
+    flex: 1;
+    min-height: 90px;
+    overflow-y: auto;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.agent-bubble {
+    max-width: 92%;
+    padding: 11px 13px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.agent-bubble-bot {
+    align-self: flex-start;
+    color: #34383d;
+    background: #f7f7f3;
+    border: 1px solid #e5e5de;
+    border-top-left-radius: 4px;
+}
+
+.agent-bubble-user {
+    align-self: flex-end;
+    color: #26292d;
+    background: #fff3ad;
+    border: 1px solid #ead57a;
+    border-top-right-radius: 4px;
+    font-weight: 600;
+}
+
+.agent-bubble.loading {
+    position: relative;
+    padding-left: 32px;
+    color: #70757b;
+}
+
+    .agent-bubble.loading::before {
+        content: "";
+        position: absolute;
+        left: 12px;
+        top: 13px;
+        width: 11px;
+        height: 11px;
+        border: 2px solid #d5d5cc;
+        border-top-color: #d7aa00;
+        border-radius: 50%;
+        animation: agentSpin .75s linear infinite;
+    }
+
+@keyframes agentSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.agent-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+    .agent-card strong {
+        color: #26292d;
+        font-size: 13px;
+    }
+
+    .agent-card small {
+        color: #70757b;
+        font-size: 11px;
+    }
+
+.agent-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+    .agent-card-actions a,
+    .agent-card-actions button {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 10px;
+        color: #26292d;
+        background: #f5c400;
+        border: 1px solid #d7aa00;
+        border-radius: 7px;
+        text-decoration: none;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        font-family: inherit;
+    }
+
+        .agent-card-actions a:hover,
+        .agent-card-actions button:hover {
+            background: #ffd526;
+        }
+
+        .agent-card-actions button:disabled {
+            cursor: wait;
+            opacity: .6;
+        }
+
+.agent-panel-input {
+    display: flex;
+    gap: 8px;
+    padding: 14px 18px 18px;
+    border-top: 1px solid #e5e5de;
+}
+
+    .agent-panel-input input {
+        min-width: 0;
+        flex: 1;
+        height: 42px;
+        padding: 0 13px;
+        color: #34383d;
+        background: #f7f7f3;
+        border: 1px solid #d5d5cc;
+        border-radius: 9px;
+        outline: none;
+        font-size: 13px;
+        font-family: inherit;
+    }
+
+        .agent-panel-input input:disabled {
+            cursor: not-allowed;
+            opacity: .7;
+        }
+
+    .agent-panel-input button {
+        min-width: 78px;
+        height: 42px;
+        padding: 0 14px;
+        color: #26292d;
+        background: #f5c400;
+        border: 1px solid #d7aa00;
+        border-radius: 9px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        font-family: inherit;
+    }
+
+        .agent-panel-input button:disabled {
+            cursor: not-allowed;
+            opacity: .55;
+        }
+
+@media (max-width: 620px) {
+    .agent-launcher {
+        right: 16px;
+        bottom: 16px;
+        width: 52px;
+        height: 52px;
+    }
+
+    .agent-panel {
+        right: 12px;
+        left: 12px;
+        bottom: 80px;
+        width: auto;
+        max-height: min(64vh, 460px);
+    }
+}

@@ -1,0 +1,691 @@
+:root {
+    --white: #ffffff;
+    --cream: #fffdf6;
+    --beige: #fdf7e9;
+    --soft: #f7f7f3;
+    --yellow: #f5c400;
+    --yellow-dark: #d7aa00;
+    --yellow-soft: #fff3ad;
+    --charcoal: #26292d;
+    --text: #34383d;
+    --muted: #70757b;
+    --line: #e5e5de;
+    --line-strong: #d5d5cc;
+    --shadow: 0 18px 46px rgba(35,37,40,.12);
+    --radius: 22px;
+    --max: 1240px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    position: relative;
+    color: var(--text);
+    background: linear-gradient(180deg, var(--cream) 0%, var(--beige) 100vh);
+    font-family: "Inter",sans-serif;
+}
+
+/* Escudo de la Universidad de los Andes centrado como marca de agua,
+   muy pequeño y tenue, fijo detrás de todo el contenido. */
+body::before {
+    content: "";
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: -1;
+    width: 280px;
+    height: 280px;
+    transform: translate(-50%, -50%);
+    background: url("Imagenes/escudoandes.jpg") center / contain no-repeat;
+    opacity: .08;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+}
+
+button {
+    font: inherit;
+}
+
+img,
+svg {
+    display: block;
+}
+
+.page-shell {
+    min-height: 100vh;
+}
+
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(255,255,255,.97);
+    border-bottom: 1px solid var(--line);
+    box-shadow: 0 3px 14px rgba(34,36,39,.06);
+    backdrop-filter: blur(14px);
+}
+
+.topbar-inner {
+    width: min(var(--max),calc(100% - 40px));
+    min-height: 86px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 28px;
+}
+
+.brand {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 0;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    text-align: left;
+}
+
+.logo-wrap {
+    width: 178px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding-right: 18px;
+    border-right: 1px solid var(--line);
+}
+
+    .logo-wrap img {
+        max-width: 100%;
+        max-height: 46px;
+        object-fit: contain;
+    }
+
+    .logo-wrap.logo-error::after {
+        content: "Universidad de los Andes";
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+.brand-copy small {
+    display: block;
+    margin-bottom: 2px;
+    color: #898d91;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.brand-copy strong {
+    display: block;
+    color: var(--charcoal);
+    font: 700 18px/1.1 "Source Sans 3",sans-serif;
+}
+
+.nav {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+    .nav button {
+        min-width: 88px;
+        min-height: 42px;
+        padding: 0 15px;
+        color: var(--muted);
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 11px;
+        cursor: pointer;
+        font-weight: 700;
+        transition: .16s ease;
+    }
+
+        .nav button:hover {
+            color: var(--charcoal);
+            background: var(--soft);
+            border-color: var(--line);
+        }
+
+    .nav .nav-primary {
+        color: var(--charcoal);
+        background: var(--yellow);
+        border-color: var(--yellow-dark);
+    }
+
+.menu-toggle {
+    display: none;
+    width: 42px;
+    height: 42px;
+    padding: 9px;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+}
+
+    .menu-toggle span {
+        display: block;
+        height: 2px;
+        margin: 4px 0;
+        background: var(--charcoal);
+        border-radius: 5px;
+    }
+
+.hero {
+    width: min(var(--max),calc(100% - 40px));
+    margin: 0 auto;
+    padding: 72px 0 54px;
+    display: grid;
+    grid-template-columns: 1.04fr .96fr;
+    gap: 52px;
+    align-items: center;
+}
+
+.hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 20px;
+    padding: 8px 13px;
+    color: #705900;
+    background: var(--yellow-soft);
+    border: 1px solid #e5cf6a;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+    .hero-tag span {
+        width: 8px;
+        height: 8px;
+        background: var(--yellow-dark);
+        border-radius: 50%;
+    }
+
+.hero h1 {
+    max-width: 760px;
+    margin: 0;
+    color: var(--charcoal);
+    font: 700 clamp(44px,5.5vw,72px)/1 "Source Sans 3",sans-serif;
+    letter-spacing: -.038em;
+}
+
+    .hero h1 em {
+        color: #b78f00;
+        font-style: normal;
+    }
+
+.hero-copy > p {
+    max-width: 650px;
+    margin: 22px 0 0;
+    color: var(--muted);
+    font-size: 17px;
+    line-height: 1.72;
+}
+
+.hero-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 30px;
+}
+
+.btn {
+    min-height: 50px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 0 21px;
+    border-radius: 12px;
+    border: 1px solid var(--line-strong);
+    cursor: pointer;
+    font-weight: 800;
+    transition: .18s ease;
+}
+
+    .btn svg,
+    .card-action svg {
+        width: 18px;
+        height: 18px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2.1;
+    }
+
+.btn-primary {
+    color: var(--charcoal);
+    background: var(--yellow);
+    border-color: var(--yellow-dark);
+}
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(245,196,0,.22);
+    }
+
+.btn-secondary {
+    color: var(--charcoal);
+    background: var(--white);
+}
+
+    .btn-secondary:hover {
+        background: var(--soft);
+    }
+
+.hero-visual {
+    position: relative;
+    min-height: 390px;
+    overflow: hidden;
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-radius: 28px;
+    box-shadow: var(--shadow);
+}
+
+.hero-background {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    transition: transform .6s ease;
+}
+
+.hero-visual:hover .hero-background {
+    transform: scale(1.025);
+}
+
+.hero-image-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(20,23,27,.04) 0%, rgba(20,23,27,.10) 60%, rgba(20,23,27,.18) 100%);
+}
+
+.hero-logo-card {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 3;
+    width: min(62%, 410px);
+    min-height: 210px;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 28px;
+    color: var(--charcoal);
+    background: rgba(255,255,255,.94);
+    border: 1px solid rgba(213,213,204,.94);
+    border-radius: 24px;
+    box-shadow: 0 18px 44px rgba(22,24,28,.20);
+    backdrop-filter: blur(12px);
+    text-align: center;
+}
+
+    .hero-logo-card img {
+        max-width: 175px;
+        max-height: 58px;
+        margin-bottom: 8px;
+        object-fit: contain;
+    }
+
+    .hero-logo-card span {
+        color: #777b80;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: .09em;
+        text-transform: uppercase;
+    }
+
+    .hero-logo-card strong {
+        max-width: 280px;
+        color: var(--charcoal);
+        font: 700 24px/1.14 "Source Sans 3",sans-serif;
+    }
+
+.visual-pill {
+    position: absolute;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 13px;
+    color: var(--charcoal);
+    background: rgba(255,255,255,.95);
+    border: 1px solid rgba(213,213,204,.96);
+    border-radius: 11px;
+    box-shadow: 0 10px 25px rgba(35,37,40,.14);
+    backdrop-filter: blur(8px);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+    .visual-pill svg {
+        width: 18px;
+        height: 18px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+    }
+
+.visual-pill-top {
+    top: 24px;
+    right: 24px;
+}
+
+.visual-pill-bottom {
+    left: 24px;
+    bottom: 24px;
+}
+
+.section {
+    width: min(var(--max),calc(100% - 40px));
+    margin: 0 auto;
+    padding: 54px 0 88px;
+}
+
+.section-head {
+    margin-bottom: 32px;
+}
+
+    .section-head small {
+        display: block;
+        margin-bottom: 7px;
+        color: #987800;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: .10em;
+        text-transform: uppercase;
+    }
+
+    .section-head h2 {
+        margin: 0;
+        color: var(--charcoal);
+        font: 700 clamp(31px,4vw,48px)/1.06 "Source Sans 3",sans-serif;
+    }
+
+    .section-head p {
+        max-width: 590px;
+        margin: 14px 0 0;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.7;
+    }
+
+.geodata-grid {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 24px;
+}
+
+.geodata-card {
+    position: relative;
+    min-height: 420px;
+    overflow: hidden;
+    background: var(--white);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    isolation: isolate;
+    transition: .22s ease;
+}
+
+    .geodata-card:hover {
+        transform: translateY(-5px);
+        border-color: var(--yellow-dark);
+        box-shadow: 0 24px 56px rgba(35,37,40,.16);
+    }
+
+    .geodata-card > img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: -2;
+        transition: transform .55s ease;
+    }
+
+    .geodata-card:hover > img {
+        transform: scale(1.035);
+    }
+
+.card-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(90deg,rgba(255,255,255,.98) 0%,rgba(255,255,255,.92) 44%,rgba(255,255,255,.22) 78%,rgba(255,255,255,.04) 100%), linear-gradient(0deg,rgba(255,255,255,.54),transparent 48%);
+}
+
+.card-body {
+    position: relative;
+    min-height: 420px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 34px;
+}
+
+.card-number {
+    position: absolute;
+    top: 26px;
+    left: 28px;
+    color: #9a9d9f;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: .12em;
+}
+
+.card-kicker {
+    margin: 0 0 8px;
+    color: #917200;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .10em;
+    text-transform: uppercase;
+}
+
+.card-body h3 {
+    max-width: 340px;
+    margin: 0;
+    color: var(--charcoal);
+    font: 700 clamp(32px,4vw,48px)/1 "Source Sans 3",sans-serif;
+    letter-spacing: -.03em;
+}
+
+.card-body > p:not(.card-kicker) {
+    max-width: 370px;
+    margin: 15px 0 24px;
+    color: #60656a;
+    line-height: 1.65;
+    font-size: 14px;
+}
+
+.card-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 17px;
+    color: var(--charcoal);
+    background: var(--yellow);
+    border: 1px solid var(--yellow-dark);
+    border-radius: 11px;
+    cursor: pointer;
+    font-weight: 800;
+}
+
+    .card-action:hover svg {
+        transform: translateX(4px);
+    }
+
+    .card-action svg {
+        transition: transform .18s ease;
+    }
+
+footer {
+    padding: 24px 20px 32px;
+    color: var(--muted);
+    background: var(--white);
+    border-top: 1px solid var(--line);
+    text-align: center;
+    font-size: 12px;
+}
+
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    z-index: 100;
+    transform: translate(-50%,18px);
+    max-width: calc(100% - 34px);
+    padding: 13px 18px;
+    color: var(--charcoal);
+    background: var(--white);
+    border: 1px solid var(--line-strong);
+    border-radius: 12px;
+    box-shadow: 0 16px 38px rgba(34,36,39,.18);
+    opacity: 0;
+    pointer-events: none;
+    transition: .22s ease;
+}
+
+.toast-show {
+    opacity: 1;
+    transform: translate(-50%,0);
+}
+
+@media(max-width:940px) {
+    .topbar-inner {
+        position: relative;
+    }
+
+    .menu-toggle {
+        display: block;
+        margin-left: auto;
+    }
+
+    .nav {
+        position: absolute;
+        top: 76px;
+        right: 0;
+        width: min(310px,calc(100vw - 40px));
+        display: none;
+        flex-direction: column;
+        align-items: stretch;
+        padding: 12px;
+        background: var(--white);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: var(--shadow);
+    }
+
+    .nav-open {
+        display: flex;
+    }
+
+    .nav button {
+        width: 100%;
+        text-align: left;
+    }
+
+    .hero {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-visual {
+        min-height: 340px;
+    }
+
+    .geodata-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media(max-width:620px) {
+    .topbar-inner {
+        width: calc(100% - 24px);
+        min-height: 76px;
+    }
+
+    .logo-wrap {
+        width: 122px;
+        height: 46px;
+        padding-right: 10px;
+    }
+
+    .brand-copy small {
+        display: none;
+    }
+
+    .brand-copy strong {
+        font-size: 16px;
+    }
+
+    .hero,
+    .section {
+        width: calc(100% - 24px);
+    }
+
+    .hero {
+        padding-top: 42px;
+    }
+
+        .hero h1 {
+            font-size: 42px;
+        }
+
+    .hero-visual {
+        min-height: 300px;
+    }
+
+    .hero-logo-card {
+        width: 72%;
+        padding: 22px;
+    }
+
+        .hero-logo-card img {
+            max-width: 165px;
+        }
+
+    .visual-pill {
+        font-size: 10px;
+    }
+
+    .visual-pill-top {
+        top: 18px;
+        right: 16px;
+    }
+
+    .visual-pill-bottom {
+        left: 16px;
+        bottom: 18px;
+    }
+
+    .card-body {
+        min-height: 380px;
+        padding: 26px;
+    }
+
+    .card-overlay {
+        background: linear-gradient(0deg,rgba(255,255,255,.98) 0%,rgba(255,255,255,.89) 70%,rgba(255,255,255,.20) 100%);
+    }
+}

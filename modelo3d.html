@@ -1,0 +1,4958 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- El navegador estaba sirviendo una copia vieja de esta página desde
+         caché en vez de recargar los cambios (por eso a veces parecía que
+         algo "se revertía" sin que nadie tocara nada). Estas 3 etiquetas le
+         piden al navegador que siempre revise si hay una versión más nueva
+         en vez de reusar la guardada. -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Modelo 3D Interactivo | SinergIA</title>
+
+    <style>
+        :root {
+            --bg: #eef3f8;
+            --panel: rgba(255,255,255,.88);
+            --panel-solid: #ffffff;
+            --sidebar: rgba(15,23,42,.94);
+            --sidebar-2: rgba(30,41,59,.94);
+            --text: #0f172a;
+            --muted: #64748b;
+            --muted-2: #94a3b8;
+            --border: rgba(203,213,225,.72);
+            --accent: #f5c400;
+            --accent-dark: #c69e00;
+            --accent-soft: rgba(245,196,0,.14);
+            --success: #16a34a;
+            --shadow: 0 18px 50px rgba(15,23,42,.12);
+            --sidebar-w: 320px;
+            --radius-xl: 24px;
+            --radius-lg: 18px;
+            --radius-md: 14px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        button, input {
+            font: inherit;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        #viewer {
+            position: fixed;
+            inset: 0 460px 0 var(--sidebar-w);
+            background: radial-gradient(circle at 65% 25%, rgba(255,255,255,.96), rgba(241,245,249,.74) 30%, rgba(226,232,240,.74) 100%);
+        }
+
+        .sidebar {
+            position: fixed;
+            z-index: 30;
+            inset: 14px auto 14px 14px;
+            width: calc(var(--sidebar-w) - 14px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            color: #fff;
+            background: linear-gradient(180deg, rgba(15,23,42,.97), rgba(17,24,39,.94));
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: var(--radius-xl);
+            box-shadow: 0 22px 60px rgba(15,23,42,.26);
+            backdrop-filter: blur(20px);
+        }
+
+        .sidebar-head {
+            padding: 22px 18px 16px;
+            border-bottom: 1px solid rgba(255,255,255,.08);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .brand-mark {
+            width: 46px;
+            height: 46px;
+            display: grid;
+            place-items: center;
+            flex: 0 0 auto;
+            border-radius: 15px;
+            color: #111827;
+            background: linear-gradient(145deg, #ffe26b, var(--accent));
+            box-shadow: 0 8px 22px rgba(245,196,0,.24);
+        }
+
+            .brand-mark svg {
+                width: 23px;
+                height: 23px;
+            }
+
+        .brand-copy small {
+            display: block;
+            color: #cbd5e1;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .09em;
+            text-transform: uppercase;
+        }
+
+        .brand-copy strong {
+            display: block;
+            margin-top: 3px;
+            font-size: 18px;
+            line-height: 1.15;
+        }
+
+        .brand-centered {
+            width: 100%;
+            text-align: center;
+        }
+
+            .brand-centered small {
+                font-size: 11px;
+            }
+
+        .sidebar-sub {
+            margin-top: 14px;
+            color: #cbd5e1;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .search-wrap {
+            padding: 14px 14px 10px;
+        }
+
+        .search {
+            position: relative;
+        }
+
+            .search svg {
+                position: absolute;
+                left: 12px;
+                top: 50%;
+                width: 17px;
+                height: 17px;
+                transform: translateY(-50%);
+                color: #94a3b8;
+                pointer-events: none;
+            }
+
+            .search input {
+                width: 100%;
+                padding: 11px 12px 11px 38px;
+                color: #fff;
+                background: rgba(255,255,255,.07);
+                border: 1px solid rgba(255,255,255,.09);
+                border-radius: 13px;
+                outline: none;
+            }
+
+                .search input::placeholder {
+                    color: #94a3b8;
+                }
+
+                .search input:focus {
+                    border-color: rgba(245,196,0,.58);
+                    box-shadow: 0 0 0 3px rgba(245,196,0,.08);
+                }
+
+        .sensor-summary {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding: 0 14px 12px;
+        }
+
+        .mini-stat {
+            padding: 10px 11px;
+            background: rgba(255,255,255,.06);
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 12px;
+        }
+
+            .mini-stat span {
+                display: block;
+                color: #94a3b8;
+                font-size: 10px;
+                text-transform: uppercase;
+                letter-spacing: .07em;
+            }
+
+            .mini-stat strong {
+                display: block;
+                margin-top: 3px;
+                font-size: 17px;
+            }
+
+        .sensor-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 4px 10px 18px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,.2) transparent;
+        }
+
+        .sensor-group {
+            margin-top: 10px;
+        }
+
+        .sensor-group-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 7px;
+            color: #94a3b8;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+
+            .sensor-group-title span:last-child {
+                color: #64748b;
+            }
+
+        .sensor-item {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 5px;
+            padding: 10px 10px;
+            color: #e2e8f0;
+            text-align: left;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 12px;
+            transition: .16s ease;
+        }
+
+            .sensor-item:hover {
+                background: rgba(255,255,255,.07);
+                border-color: rgba(255,255,255,.06);
+            }
+
+            .sensor-item.active {
+                color: #fff;
+                background: linear-gradient(90deg, rgba(245,196,0,.22), rgba(245,196,0,.07));
+                border-color: rgba(245,196,0,.30);
+                box-shadow: inset 3px 0 0 var(--accent);
+            }
+
+        .sensor-dot {
+            width: 10px;
+            height: 10px;
+            flex: 0 0 auto;
+            border-radius: 50%;
+            background: #94a3b8;
+            box-shadow: 0 0 0 4px rgba(148,163,184,.10);
+        }
+
+        .sensor-item.active .sensor-dot {
+            background: var(--accent);
+            box-shadow: 0 0 0 4px rgba(245,196,0,.14);
+        }
+
+        .sensor-item-copy {
+            min-width: 0;
+            flex: 1;
+        }
+
+            .sensor-item-copy strong {
+                display: block;
+                overflow: hidden;
+                font-size: 12px;
+                font-weight: 700;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .sensor-item-copy small {
+                display: block;
+                margin-top: 2px;
+                overflow: hidden;
+                color: #94a3b8;
+                font-size: 10px;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+        .topbar {
+            position: fixed;
+            z-index: 20;
+            top: 12px;
+            left: calc(var(--sidebar-w) + 16px);
+            right: 460px;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 6px;
+            padding: 8px 12px;
+            background: rgba(255,255,255,.80);
+            border: 1px solid rgba(255,255,255,.88);
+            border-radius: 16px;
+            box-shadow: 0 12px 35px rgba(15,23,42,.08);
+            backdrop-filter: blur(18px) saturate(145%);
+        }
+
+        /* El título ya no compite por ancho con los botones (antes iban
+           lado a lado en la misma fila y el título terminaba partido en
+           3 líneas torpes) — ahora va en su propia fila, y la etiqueta
+           pequeña queda al lado del título en vez de encima. */
+        .top-title {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .top-title small {
+            color: var(--muted);
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .top-title strong {
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .toolbar {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        /* Fila fija de grupos (ya no es una sola tira de 11 botones
+           idénticos): cada grupo lleva su propia etiqueta chiquita
+           arriba ("Simulación", "Vista", "Cámara") para que se sepa qué
+           hace ese bloque sin tener que adivinar por los íconos solos.
+           Si no cabe todo, la fila pasa a envolver en vez de aplastar
+           nada. Todo el bloque se mantiene chico a propósito: esta
+           barra no debe competir en tamaño con el modelo 3D. */
+        .toolbar-row {
+            display: flex;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .toolbar-group {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .toolbar-group-label {
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: var(--muted);
+        }
+
+        .toolbar-group-buttons {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .toolbar-nav {
+            margin-left: auto;
+        }
+
+        /* Selector de ensayo: mismo lenguaje visual que los .tool-btn,
+           pero es un <select> nativo, no un botón. */
+        .toolbar-select {
+            min-height: 32px;
+            padding: 6px 8px;
+            color: var(--text);
+            background: rgba(255,255,255,.95);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        /* Vista por piso (Todo / Piso 1 / Piso 2): antes eran 3 botones
+           sueltos idénticos a los demás; ahora comparten una sola
+           "cápsula" para leerse como un único control de 3 posiciones. */
+        .view-segment {
+            gap: 2px;
+            padding: 2px;
+            background: rgba(241,245,249,.9);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+
+            .view-segment .tool-btn {
+                min-height: 26px;
+                padding: 4px 8px;
+                border: none;
+                background: transparent;
+                box-shadow: none;
+            }
+
+                .view-segment .tool-btn:hover {
+                    transform: none;
+                    background: rgba(255,255,255,.7);
+                }
+
+                .view-segment .tool-btn.active {
+                    box-shadow: 0 2px 8px rgba(15,23,42,.10);
+                }
+
+        .tool-btn,
+        .back {
+            min-height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 6px 10px;
+            color: var(--text);
+            background: rgba(255,255,255,.95);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            text-decoration: none;
+            font-size: 11px;
+            font-weight: 700;
+            transition: .15s ease;
+        }
+
+            .tool-btn:hover,
+            .back:hover {
+                transform: translateY(-1px);
+                border-color: #94a3b8;
+                box-shadow: 0 6px 14px rgba(15,23,42,.07);
+            }
+
+            .tool-btn.active {
+                color: #111827;
+                background: var(--accent);
+                border-color: var(--accent-dark);
+            }
+
+
+            .tool-btn.quake {
+                color: #6b2108;
+                background: #fff7ed;
+                border-color: #fed7aa;
+            }
+
+                .tool-btn.quake:hover {
+                    color: #7c2d12;
+                    background: #ffedd5;
+                    border-color: #fdba74;
+                }
+
+                .tool-btn.quake.active {
+                    color: #ffffff;
+                    background: #ea580c;
+                    border-color: #c2410c;
+                    box-shadow: 0 6px 18px rgba(234,88,12,.22);
+                }
+
+            .tool-btn.rebuild {
+                color: #166534;
+                background: #f0fdf4;
+                border-color: #bbf7d0;
+            }
+
+                .tool-btn.rebuild:hover {
+                    background: #dcfce7;
+                    border-color: #86efac;
+                }
+
+
+            .tool-btn.environment {
+                color: #1e3a5f;
+                background: #eff6ff;
+                border-color: #bfdbfe;
+            }
+
+                .tool-btn.environment:hover {
+                    background: #dbeafe;
+                    border-color: #93c5fd;
+                }
+
+                .tool-btn.environment.active {
+                    color: #ffffff;
+                    background: #2563eb;
+                    border-color: #1d4ed8;
+                    box-shadow: 0 6px 18px rgba(37,99,235,.20);
+                }
+
+            .tool-btn svg,
+            .back svg {
+                width: 14px;
+                height: 14px;
+            }
+
+
+        .right-rail {
+            position: fixed;
+            z-index: 18;
+            top: 96px;
+            right: 18px;
+            bottom: 12px;
+            width: 430px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+            padding-right: 2px;
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 transparent;
+            pointer-events: none;
+        }
+
+            .right-rail > * {
+                flex: 0 0 auto;
+                pointer-events: auto;
+            }
+
+        .selection-card {
+            position: relative;
+            z-index: 20;
+            right: auto;
+            bottom: auto;
+            width: 100%;
+            padding: 12px;
+            background: rgba(255,255,255,.88);
+            border: 1px solid rgba(255,255,255,.92);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(18px);
+        }
+
+        .selection-eyebrow {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            color: var(--muted);
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+
+        .live-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 7px;
+            color: #166534;
+            background: #dcfce7;
+            border-radius: 999px;
+            font-size: 9px;
+            letter-spacing: .04em;
+        }
+
+            .live-pill i {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: var(--success);
+            }
+
+        .selection-name {
+            margin-top: 8px;
+            font-size: 18px;
+            font-weight: 800;
+            line-height: 1.25;
+            word-break: break-word;
+        }
+
+        .selection-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 7px;
+            margin-top: 10px;
+        }
+
+        .meta-box {
+            padding: 9px 10px;
+            background: rgba(248,250,252,.9);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+
+            .meta-box span {
+                display: block;
+                color: var(--muted);
+                font-size: 9px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: .06em;
+            }
+
+            .meta-box strong {
+                display: block;
+                margin-top: 3px;
+                font-size: 12px;
+            }
+
+        .hint {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 11px;
+            line-height: 1.45;
+        }
+
+        .sensor-description {
+            margin-top: 8px;
+            padding: 9px 10px;
+            color: #334155;
+            background: rgba(248,250,252,.96);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 11px;
+            line-height: 1.5;
+        }
+
+            .sensor-description strong {
+                color: var(--text);
+            }
+
+        .loading {
+            position: fixed;
+            z-index: 25;
+            left: calc(50% + var(--sidebar-w) / 2);
+            top: 50%;
+            transform: translate(-50%, -50%);
+            min-width: 230px;
+            padding: 15px 16px;
+            background: rgba(255,255,255,.94);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .loading-bar {
+            height: 5px;
+            margin-top: 10px;
+            overflow: hidden;
+            background: #e2e8f0;
+            border-radius: 999px;
+        }
+
+            .loading-bar i {
+                display: block;
+                width: 14%;
+                height: 100%;
+                background: var(--accent);
+                border-radius: inherit;
+                transition: width .2s ease;
+            }
+
+        .empty-sensors {
+            padding: 22px 12px;
+            color: #94a3b8;
+            font-size: 12px;
+            line-height: 1.5;
+            text-align: center;
+        }
+
+        .model-label {
+            position: absolute;
+            z-index: 4;
+            pointer-events: none;
+            transform: translate(-50%, -115%);
+            padding: 6px 9px;
+            color: #111827;
+            background: rgba(255,255,255,.96);
+            border: 1px solid rgba(245,196,0,.65);
+            border-radius: 9px;
+            box-shadow: 0 7px 18px rgba(15,23,42,.12);
+            font-size: 11px;
+            font-weight: 800;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity .15s ease;
+        }
+
+            .model-label.show {
+                opacity: 1;
+            }
+
+
+        .data-panel {
+            position: relative;
+            z-index: 19;
+            left: auto;
+            right: auto;
+            top: auto;
+            bottom: auto;
+            width: 100%;
+            min-width: 0;
+            padding: 12px;
+            background: rgba(255,255,255,.90);
+            border: 1px solid rgba(255,255,255,.94);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(18px);
+        }
+
+        .data-panel-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 9px;
+        }
+
+        .data-title small {
+            display: block;
+            color: var(--muted);
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+
+        .data-title strong {
+            display: block;
+            margin-top: 2px;
+            font-size: 15px;
+        }
+
+        .api-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 8px;
+            color: #475569;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+            .api-status i {
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: #94a3b8;
+            }
+
+            .api-status.ok {
+                color: #166534;
+                background: #f0fdf4;
+                border-color: #bbf7d0;
+            }
+
+                .api-status.ok i {
+                    background: #16a34a;
+                }
+
+            .api-status.error {
+                color: #991b1b;
+                background: #fef2f2;
+                border-color: #fecaca;
+            }
+
+                .api-status.error i {
+                    background: #dc2626;
+                }
+
+        .api-connection-detail {
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: 9px;
+            text-align: right;
+        }
+
+        .channel-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 8px;
+            align-items: end;
+            margin-bottom: 8px;
+        }
+
+        .channel-field label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--muted);
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+        }
+
+        .channel-field select {
+            width: 100%;
+            min-height: 38px;
+            padding: 8px 10px;
+            color: var(--text);
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            outline: none;
+            font-size: 12px;
+            font-weight: 650;
+        }
+
+            .channel-field select:focus {
+                border-color: #e0b300;
+                box-shadow: 0 0 0 3px rgba(245,196,0,.12);
+            }
+
+        .refresh-btn {
+            min-height: 38px;
+            padding: 8px 11px;
+            color: var(--text);
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            font-size: 12px;
+            font-weight: 750;
+        }
+
+            .refresh-btn:hover {
+                border-color: #94a3b8;
+            }
+
+        .chart-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 7px;
+            margin-bottom: 8px;
+        }
+
+        .chart-stat {
+            min-width: 0;
+            padding: 8px 9px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 11px;
+        }
+
+            .chart-stat span {
+                display: block;
+                color: var(--muted);
+                font-size: 8px;
+                font-weight: 800;
+                letter-spacing: .05em;
+                text-transform: uppercase;
+            }
+
+            .chart-stat strong {
+                display: block;
+                margin-top: 3px;
+                overflow: hidden;
+                font-size: 12px;
+                font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+
+        .playback-panel {
+            display: grid;
+            grid-template-columns: auto auto minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .sim-btn {
+            min-height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            padding: 8px 11px;
+            color: var(--text);
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            font-size: 11px;
+            font-weight: 800;
+            transition: .15s ease;
+        }
+
+            .sim-btn:hover:not(:disabled) {
+                border-color: #94a3b8;
+                transform: translateY(-1px);
+            }
+
+            .sim-btn.primary {
+                color: #111827;
+                background: var(--accent);
+                border-color: #d7ae00;
+            }
+
+            .sim-btn:disabled {
+                opacity: .45;
+                cursor: not-allowed;
+            }
+
+        .sim-progress-wrap {
+            min-width: 0;
+        }
+
+            .sim-progress-wrap input[type="range"] {
+                width: 100%;
+                accent-color: #d1a900;
+                cursor: pointer;
+            }
+
+        .sim-time {
+            margin-top: 3px;
+            color: var(--muted);
+            font-size: 9px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            text-align: right;
+        }
+
+        .sim-speed {
+            min-height: 38px;
+            padding: 7px 8px;
+            color: var(--text);
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            font-size: 11px;
+            font-weight: 750;
+        }
+
+        .chart-wrap {
+            position: relative;
+            height: 150px;
+            overflow: hidden;
+            background: linear-gradient(180deg, #fff, #fbfdff);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+        }
+
+            .chart-wrap svg {
+                width: 100%;
+                height: 100%;
+                display: block;
+            }
+
+        .chart-empty {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            padding: 20px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.45;
+            text-align: center;
+        }
+
+        .chart-grid {
+            stroke: #e8eef5;
+            stroke-width: 1;
+        }
+
+        .chart-axis {
+            fill: #64748b;
+            font-size: 10px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        }
+
+        .chart-line {
+            fill: none;
+            stroke: #d1a900;
+            stroke-width: 2.2;
+            stroke-linejoin: round;
+            stroke-linecap: round;
+        }
+
+        .chart-area {
+            fill: rgba(245,196,0,.10);
+        }
+
+        .chart-dot {
+            fill: #f5c400;
+            stroke: #fff;
+            stroke-width: 2;
+        }
+
+        .chart-note {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 10px;
+            line-height: 1.45;
+        }
+
+
+
+        @media (max-height: 860px) {
+            .sidebar-head {
+                padding: 15px 14px 12px;
+            }
+
+            .sidebar-sub {
+                margin-top: 8px;
+                font-size: 11px;
+                line-height: 1.35;
+            }
+
+            .search-wrap {
+                padding: 10px 10px 7px;
+            }
+
+            .sensor-summary {
+                padding: 0 10px 8px;
+            }
+
+            .sensor-list {
+                padding: 2px 8px 12px;
+            }
+
+            .sensor-item {
+                margin-top: 4px;
+                padding: 8px 8px;
+            }
+
+            .right-rail {
+                top: 88px;
+                bottom: 8px;
+                gap: 7px;
+                width: 420px;
+            }
+
+            .selection-card,
+            .data-panel {
+                padding: 9px 10px;
+                border-radius: 16px;
+            }
+
+            .selection-name {
+                margin-top: 5px;
+                font-size: 16px;
+            }
+
+            .selection-meta {
+                gap: 6px;
+                margin-top: 7px;
+            }
+
+            .meta-box {
+                padding: 7px 8px;
+            }
+
+                .meta-box span {
+                    font-size: 8px;
+                }
+
+                .meta-box strong {
+                    margin-top: 2px;
+                    font-size: 11px;
+                }
+
+            .hint {
+                margin-top: 6px;
+                font-size: 10px;
+                line-height: 1.35;
+            }
+
+            .sensor-description {
+                margin-top: 6px;
+                padding: 7px 8px;
+                font-size: 10px;
+                line-height: 1.35;
+            }
+
+            .data-panel-head {
+                margin-bottom: 6px;
+            }
+
+            .data-title strong {
+                font-size: 13px;
+            }
+
+            .channel-row {
+                margin-bottom: 6px;
+            }
+
+            .channel-field select,
+            .refresh-btn,
+            .sim-btn,
+            .sim-speed {
+                min-height: 34px;
+                font-size: 10px;
+            }
+
+            .chart-stats {
+                gap: 5px;
+                margin-bottom: 6px;
+            }
+
+            .chart-stat {
+                padding: 6px 7px;
+            }
+
+                .chart-stat span {
+                    font-size: 7px;
+                }
+
+                .chart-stat strong {
+                    margin-top: 2px;
+                    font-size: 10px;
+                }
+
+            .playback-panel {
+                gap: 5px;
+                margin-bottom: 6px;
+            }
+
+            .chart-wrap {
+                height: 118px;
+            }
+
+            .chart-note {
+                margin-top: 5px;
+                font-size: 9px;
+                line-height: 1.3;
+            }
+        }
+
+        @media (max-height: 720px) {
+            .right-rail {
+                top: 80px;
+                width: 400px;
+            }
+
+            .sensor-description {
+                max-height: 52px;
+                overflow-y: auto;
+            }
+
+            .chart-wrap {
+                height: 96px;
+            }
+
+            .chart-note {
+                display: none;
+            }
+
+            .hint {
+                display: none;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .right-rail {
+                top: 92px;
+                width: 360px;
+            }
+
+            #viewer {
+                inset: 0 385px 0 var(--sidebar-w);
+            }
+
+            .topbar {
+                right: 385px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            :root {
+                --sidebar-w: 270px;
+            }
+
+            .top-title small {
+                display: none;
+            }
+
+            .chart-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* El texto de los botones (Ambiente, Piso 1, Restablecer zoom...)
+           ya NO se oculta hasta una ventana bastante angosta: antes
+           desaparecía desde los 900px y solo quedaban íconos sueltos sin
+           ninguna pista de qué hacía cada uno. */
+        @media (max-width: 640px) {
+            .tool-btn span,
+            .back span {
+                display: none;
+            }
+        }
+
+        @media (max-width: 700px) {
+            :root {
+                --sidebar-w: 0px;
+            }
+
+            .right-rail {
+                top: auto;
+                left: 8px;
+                right: 8px;
+                bottom: 8px;
+                width: auto;
+                max-height: 48vh;
+            }
+
+            .sidebar {
+                display: none;
+            }
+
+            #viewer {
+                inset: 0;
+            }
+
+            .topbar {
+                left: 8px;
+                right: 8px;
+                top: 8px;
+            }
+
+            .selection-card {
+                right: 8px;
+                left: 8px;
+                bottom: 8px;
+                width: auto;
+                display: none;
+            }
+
+            .chart-wrap {
+                height: 155px;
+            }
+
+            .loading {
+                left: 50%;
+            }
+        }
+
+        /* =========================================================
+           UI REFINEMENT · SinergIA 3D V2
+        ========================================================= */
+        :root {
+            --panel-glass: rgba(255,255,255,.92);
+            --panel-soft: rgba(248,250,252,.88);
+            --line-soft: rgba(226,232,240,.92);
+            --shadow-float: 0 22px 55px rgba(15,23,42,.10);
+            --shadow-soft: 0 8px 24px rgba(15,23,42,.06);
+        }
+
+        body {
+            background: radial-gradient(circle at 18% 12%, rgba(245,196,0,.06), transparent 24%), radial-gradient(circle at 88% 18%, rgba(59,130,246,.05), transparent 26%), var(--bg);
+        }
+
+        #viewer {
+            inset: 0 480px 0 var(--sidebar-w);
+        }
+
+        .topbar {
+            right: 480px;
+            padding: 8px 12px 8px 16px;
+            border-color: rgba(226,232,240,.90);
+            box-shadow: var(--shadow-soft);
+        }
+
+        .top-title strong {
+            font-size: 14px;
+            letter-spacing: -.01em;
+        }
+
+        .sidebar {
+            box-shadow: 0 25px 70px rgba(15,23,42,.30);
+        }
+
+        .sidebar-head {
+            background: radial-gradient(circle at 15% 0%, rgba(245,196,0,.10), transparent 38%);
+        }
+
+        .institution-logo-box {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .sensor-item {
+            min-height: 48px;
+            padding: 10px 11px;
+        }
+
+            .sensor-item.active {
+                background: linear-gradient(90deg, rgba(245,196,0,.22), rgba(245,196,0,.045));
+            }
+
+        .right-rail {
+            top: 12px;
+            right: 16px;
+            bottom: 14px;
+            width: 448px;
+            gap: 12px;
+        }
+
+        .selection-card,
+        .data-panel {
+            border: 1px solid rgba(226,232,240,.92);
+            background: var(--panel-glass);
+            box-shadow: var(--shadow-float);
+        }
+
+        .selection-card {
+            padding: 14px;
+        }
+
+        .selection-name {
+            font-size: 19px;
+            letter-spacing: -.015em;
+        }
+
+        .meta-box {
+            background: rgba(248,250,252,.78);
+            border-color: rgba(226,232,240,.94);
+        }
+
+        .data-panel {
+            padding: 14px;
+        }
+
+        .data-panel-head {
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .data-title strong {
+            font-size: 16px;
+            letter-spacing: -.01em;
+        }
+
+        .channel-row {
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .channel-field select,
+        .refresh-btn {
+            min-height: 40px;
+        }
+
+        .chart-stats {
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .chart-stat {
+            padding: 9px 10px;
+            background: linear-gradient(180deg,#fff,#f8fafc);
+            border-color: rgba(226,232,240,.94);
+        }
+
+            .chart-stat strong {
+                font-size: 12px;
+            }
+
+        .playback-panel {
+            grid-template-columns: auto auto minmax(120px,1fr) auto;
+            gap: 8px;
+            margin-bottom: 10px;
+            padding: 8px;
+            background: rgba(248,250,252,.72);
+            border: 1px solid rgba(226,232,240,.9);
+            border-radius: 13px;
+        }
+
+        .sim-btn,
+        .sim-speed {
+            min-height: 36px;
+        }
+
+        .chart-wrap {
+            height: 220px;
+            border-radius: 16px;
+            border: 1px solid rgba(203,213,225,.82);
+            background: linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,.96));
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 8px 20px rgba(15,23,42,.035);
+        }
+
+        .chart-grid {
+            stroke: #edf2f7;
+            stroke-width: 1;
+        }
+
+        .chart-line {
+            stroke: #d1a900;
+            stroke-width: 2.6;
+            vector-effect: non-scaling-stroke;
+        }
+
+        .chart-dot {
+            stroke-width: 2.4;
+            vector-effect: non-scaling-stroke;
+            filter: drop-shadow(0 2px 4px rgba(245,196,0,.28));
+        }
+
+        .chart-axis {
+            fill: #7c8ca1;
+            font-size: 9.5px;
+            font-weight: 600;
+        }
+
+        .chart-note {
+            padding: 7px 9px;
+            background: rgba(248,250,252,.70);
+            border-radius: 10px;
+        }
+
+        .chart-mode-pill {
+            position: absolute;
+            top: 10px;
+            left: 58px;
+            z-index: 3;
+            padding: 4px 8px;
+            border: 1px solid rgba(226,232,240,.95);
+            border-radius: 999px;
+            background: rgba(255,255,255,.88);
+            color: #64748b;
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: .03em;
+            backdrop-filter: blur(4px);
+            pointer-events: none;
+        }
+
+        .chart-current-line {
+            stroke: rgba(100,116,139,.24);
+            stroke-width: 1;
+            stroke-dasharray: 4 4;
+            vector-effect: non-scaling-stroke;
+        }
+
+        @media (max-width:1200px) {
+            #viewer {
+                inset: 0 405px 0 var(--sidebar-w);
+            }
+
+            .topbar {
+                right: 405px;
+            }
+
+            .right-rail {
+                width: 380px;
+            }
+        }
+
+        @media (max-width:700px) {
+            .right-rail {
+                top: auto;
+                width: auto;
+                left: 8px;
+                right: 8px;
+                max-height: 52vh;
+            }
+
+            .chart-wrap {
+                height: 190px;
+            }
+
+            /* En celular la barra de arriba ocupaba media pantalla:
+               2 filas, cada grupo con su etiqueta encima y botones con
+               texto completo que se envolvían en 3-4 líneas. Ahora es
+               una sola tira angosta y horizontal (se desliza con el
+               dedo), como una barra de herramientas de app. */
+            .topbar {
+                min-height: 0;
+                padding: 8px 10px;
+                gap: 6px;
+                border-radius: 14px;
+            }
+
+            .top-title strong {
+                font-size: 13px;
+            }
+
+            .toolbar {
+                flex-direction: row;
+                flex-wrap: nowrap;
+                gap: 14px;
+                overflow-x: auto;
+                overflow-y: hidden;
+                padding-bottom: 2px;
+                scrollbar-width: none;
+            }
+
+                .toolbar::-webkit-scrollbar {
+                    display: none;
+                }
+
+            .toolbar-row {
+                flex: 0 0 auto;
+                flex-wrap: nowrap;
+                align-items: flex-end;
+                gap: 10px;
+            }
+
+            .toolbar-group {
+                flex: 0 0 auto;
+            }
+
+            .toolbar-group-label {
+                font-size: 8px;
+                white-space: nowrap;
+            }
+
+            .toolbar-group-buttons {
+                flex-wrap: nowrap;
+            }
+
+            .toolbar-nav {
+                margin-left: 0;
+            }
+
+            .tool-btn,
+            .back,
+            .toolbar-select {
+                min-height: 32px;
+                padding: 6px 8px;
+                font-size: 11px;
+                white-space: nowrap;
+            }
+
+            .view-segment .tool-btn {
+                min-height: 26px;
+                padding: 5px 7px;
+            }
+
+            .tool-btn svg,
+            .back svg {
+                width: 14px;
+                height: 14px;
+            }
+
+            .toolbar-select {
+                max-width: 92px;
+            }
+        }
+
+        @media (max-width:480px) {
+            .toolbar-group-label {
+                display: none;
+            }
+
+            .tool-btn span,
+            .back span {
+                display: none;
+            }
+        }
+
+        .uniandes-logo {
+            width: 175px;
+            height: auto;
+            display: block;
+            object-fit: contain;
+            margin: 0 auto 14px;
+            filter: drop-shadow(0 8px 18px rgba(0,0,0,.18));
+        }
+
+        .sidebar-head .uniandes-logo {
+            background: rgba(255,255,255,.98);
+            padding: 12px 18px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,.16);
+        }
+    </style>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <link rel="stylesheet" href="agente1/agente-panel.css">
+</head>
+
+<body>
+    <div id="viewer"></div>
+    <div class="model-label" id="model-label"></div>
+
+    <aside class="sidebar">
+        <div class="sidebar-head">
+            <div class="institution-logo-box">
+                <img class="uniandes-logo" src="Imagenes/logo-uniandes.png" alt="Universidad de los Andes">
+            </div>
+
+            <div class="brand">
+                <div class="brand-copy brand-centered">
+                    <small>Universidad de los Andes · SinergIA</small>
+                    <strong>Instrumentación 3D</strong>
+                </div>
+            </div>
+            <p class="sidebar-sub">
+                Selecciona un sensor desde esta lista para localizarlo y cargar su gráfica.
+            </p>
+        </div>
+
+        <div class="search-wrap">
+            <div class="search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="m20 20-3.3-3.3" />
+                </svg>
+                <input id="sensor-search" type="search" placeholder="Buscar sensor..." autocomplete="off">
+            </div>
+        </div>
+
+        <div class="sensor-summary">
+            <div class="mini-stat">
+                <span>Detectados</span>
+                <strong id="sensor-count">0</strong>
+            </div>
+            <div class="mini-stat">
+                <span>Seleccionado</span>
+                <strong id="selected-short">—</strong>
+            </div>
+        </div>
+
+        <div class="sensor-list" id="sensor-list">
+            <div class="empty-sensors">Cargando sensores del modelo…</div>
+        </div>
+    </aside>
+
+    <header class="topbar">
+        <div class="top-title">
+            <strong>Casa vibratoria · Modelo 3D</strong>
+            <small>Visualización estructural interactiva</small>
+        </div>
+
+        <div class="toolbar">
+            <div class="toolbar-row">
+                <div class="toolbar-group">
+                    <span class="toolbar-group-label">Ensayo</span>
+                    <div class="toolbar-group-buttons">
+                        <select class="toolbar-select" id="modelo-ensayo-select" aria-label="Ensayo a mostrar">
+                            <option value="2026-08-26-A50.lvm">A50</option>
+                            <option value="2026-08-26-A100Def.lvm">A100</option>
+                            <option value="2026-08-26-A120.lvm">A120</option>
+                            <option value="2026-08-26-A150.lvm" selected>A150</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="toolbar-group">
+                    <span class="toolbar-group-label">Simulación</span>
+                    <div class="toolbar-group-buttons">
+                        <button class="tool-btn environment" id="btn-environment" type="button" title="Activar ambiente urbano">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 21h18" />
+                                <path d="M5 21V9l4-3v15" />
+                                <path d="M9 21V5l5-3v19" />
+                                <path d="M14 21V8l5 2v11" />
+                            </svg>
+                            <span>Ambiente</span>
+                        </button>
+
+                        <button class="tool-btn quake" id="btn-quake" type="button" title="Iniciar simulación visual de sismo">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 12h3l2-5 4 10 3-7 2 2h4" />
+                            </svg>
+                            <span>Simular sismo</span>
+                        </button>
+
+                        <button class="tool-btn rebuild" id="btn-rebuild" type="button" title="Reconstruir y devolver la casa a su posición original">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 11.5 12 4l9 7.5" />
+                                <path d="M5 10v10h14V10" />
+                                <path d="M8 14h8" />
+                            </svg>
+                            <span>Reconstruir casa</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="toolbar-group">
+                    <span class="toolbar-group-label">Vista por piso</span>
+                    <div class="toolbar-group-buttons view-segment" role="group" aria-label="Vista por piso">
+                        <button class="tool-btn active" id="btn-piso-todo" type="button" title="Mostrar toda la casa">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 9h18M3 15h18" />
+                                <rect x="3" y="4" width="18" height="16" rx="1.5" />
+                            </svg>
+                            <span>Todo</span>
+                        </button>
+
+                        <button class="tool-btn" id="btn-piso-1" type="button" title="Mostrar solo el piso 1">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="4" width="18" height="16" rx="1.5" />
+                                <path d="M3 14h18" />
+                            </svg>
+                            <span>Piso 1</span>
+                        </button>
+
+                        <button class="tool-btn" id="btn-piso-2" type="button" title="Mostrar solo el piso 2">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="4" width="18" height="16" rx="1.5" />
+                                <path d="M3 10h18" />
+                            </svg>
+                            <span>Piso 2</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="toolbar-row">
+                <div class="toolbar-group">
+                    <span class="toolbar-group-label">Cámara</span>
+                    <div class="toolbar-group-buttons">
+                        <button class="tool-btn" id="btn-toggle-muros" type="button" title="Poner los muros de ladrillo semitransparentes, para comparar la estructura metálica interna contra el SketchUp original">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="1.5" stroke-dasharray="3 3" />
+                                <path d="M8 3v18M16 3v18" stroke-dasharray="3 3" />
+                            </svg>
+                            <span>Muros</span>
+                        </button>
+
+                        <button class="tool-btn" id="btn-home" type="button" title="Restablecer zoom">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 11.5 12 4l9 7.5" />
+                                <path d="M5 10v10h14V10" />
+                            </svg>
+                            <span>Restablecer zoom</span>
+                        </button>
+
+                        <button class="tool-btn" id="btn-rotate" type="button" title="Giro automático">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 7h-5V2" />
+                                <path d="M20 7a8 8 0 1 0 1 8" />
+                            </svg>
+                            <span>Giro</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="toolbar-group toolbar-nav">
+                    <span class="toolbar-group-label">Ir a</span>
+                    <div class="toolbar-group-buttons">
+                        <a class="back" href="index.html" aria-label="Ir al inicio">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 11.5 12 4l9 7.5" />
+                                <path d="M5 10v10h14V10" />
+                            </svg>
+                            <span>Inicio</span>
+                        </a>
+
+                        <a class="back" href="casa.html" aria-label="Volver al dashboard">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="m15 18-6-6 6-6" />
+                            </svg>
+                            <span>Dashboard</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="loading" id="loading">
+        <div id="loading-text">Cargando modelo 3D…</div>
+        <div class="loading-bar"><i id="loading-progress"></i></div>
+    </div>
+
+
+
+    <aside class="right-rail">
+        <section class="selection-card">
+            <div class="selection-eyebrow">
+                <span>Sensor / objeto seleccionado</span>
+                <span class="live-pill"><i></i> INTERACTIVO</span>
+            </div>
+
+            <div class="selection-name" id="selected-name">Selecciona un sensor</div>
+
+            <div class="selection-meta">
+                <div class="meta-box">
+                    <span>Tipo</span>
+                    <strong id="selected-type">—</strong>
+                </div>
+                <div class="meta-box">
+                    <span>Objeto 3D</span>
+                    <strong id="selected-object">—</strong>
+                </div>
+            </div>
+
+            <p class="hint">
+                La selección de sensores se realiza desde el panel azul de la izquierda. El modelo queda disponible para girar, acercar y explorar libremente.
+            </p>
+
+            <div class="sensor-description" id="sensor-description">
+                <strong>¿Qué mide este sensor?</strong><br>Selecciona un sensor para conocer qué mide y cuál es su función dentro del ensayo.
+            </div>
+        </section>
+
+        <section class="data-panel">
+            <div class="data-panel-head">
+                <div class="data-title">
+                    <small>Histórico de base de datos</small>
+                    <strong id="chart-title">Selecciona un sensor</strong>
+                </div>
+                <div>
+                    <span class="api-status" id="api-status"><i></i><span>API pendiente</span></span>
+                    <div class="api-connection-detail" id="api-connection-detail">127.0.0.1:5000</div>
+                </div>
+            </div>
+
+            <div class="channel-row">
+                <div class="channel-field">
+                    <label for="data-channel">Canal de datos vinculado</label>
+                    <select id="data-channel" disabled>
+                        <option value="">Esperando datos de la API…</option>
+                    </select>
+                </div>
+                <button class="refresh-btn" id="btn-refresh-data" type="button">Actualizar</button>
+            </div>
+
+            <div class="chart-stats">
+                <div class="chart-stat">
+                    <span>Actual</span>
+                    <strong id="stat-current">—</strong>
+                </div>
+                <div class="chart-stat">
+                    <span>Máximo</span>
+                    <strong id="stat-max">—</strong>
+                </div>
+                <div class="chart-stat">
+                    <span>Mínimo</span>
+                    <strong id="stat-min">—</strong>
+                </div>
+                <div class="chart-stat">
+                    <span>Lecturas</span>
+                    <strong id="stat-count">0</strong>
+                </div>
+            </div>
+
+            <div style="margin:0 0 6px;color:#64748b;font-size:9px;line-height:1.3;">
+                ▶ Reproducir: el dato actual permanece en el borde derecho. Las muestras anteriores se acumulan y desplazan hacia la izquierda sin estirarse. Al finalizar se conserva la gráfica completa.
+            </div>
+
+            <div class="playback-panel">
+                <button class="sim-btn primary" id="btn-sim-play" type="button" disabled>▶ Reproducir</button>
+                <button class="sim-btn" id="btn-sim-reset" type="button" disabled>↺ Reiniciar</button>
+
+                <div class="sim-progress-wrap">
+                    <input id="sim-progress" type="range" min="0" max="0" value="0" disabled>
+                    <div class="sim-time" id="sim-time">0.00 s / 0.00 s</div>
+                </div>
+
+                <select class="sim-speed" id="sim-speed" aria-label="Velocidad de simulación">
+                    <option value="5" selected>8x</option>
+                    <option value="2">16x</option>
+                </select>
+            </div>
+
+            <div class="chart-wrap">
+                <div class="chart-mode-pill" id="chart-mode-pill">Ventana dinámica</div>
+                <svg id="sensor-chart" viewBox="0 0 900 190" preserveAspectRatio="none" aria-label="Gráfica histórica del sensor"></svg>
+                <div class="chart-empty" id="chart-empty">
+                    Selecciona un sensor desde el panel azul de la izquierda para cargar su gráfica.
+                </div>
+            </div>
+
+            <p class="chart-note" id="chart-note">
+                Los datos se consultan desde <b>/api/labview/historico</b>. Usa el botón <b>Actualizar</b> para volver a cargar el histórico cuando lo necesites.
+            </p>
+        </section>
+    </aside>
+
+    <script type="module">
+        import * as THREE from "three";
+        import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+        import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+        const root = document.getElementById("viewer");
+        const loading = document.getElementById("loading");
+        const loadingText = document.getElementById("loading-text");
+        const loadingProgress = document.getElementById("loading-progress");
+        const sensorListEl = document.getElementById("sensor-list");
+        const sensorSearch = document.getElementById("sensor-search");
+        const sensorCount = document.getElementById("sensor-count");
+        const selectedShort = document.getElementById("selected-short");
+        const selectedName = document.getElementById("selected-name");
+        const selectedType = document.getElementById("selected-type");
+        const selectedObject = document.getElementById("selected-object");
+        const btnHome = document.getElementById("btn-home");
+        const btnRotate = document.getElementById("btn-rotate");
+        const btnEnvironment = document.getElementById("btn-environment");
+        const btnQuake = document.getElementById("btn-quake");
+        const btnRebuild = document.getElementById("btn-rebuild");
+        const btnPisoTodo = document.getElementById("btn-piso-todo");
+        const btnPiso1 = document.getElementById("btn-piso-1");
+        const btnPiso2 = document.getElementById("btn-piso-2");
+        const btnToggleMuros = document.getElementById("btn-toggle-muros");
+
+        // ---------------------------------------------------------
+        // FILTRO POR PISO (1 / 2 / todo)
+        // ---------------------------------------------------------
+        // El .glb trae la estructura organizada en grupos de 2 hijos
+        // cada uno: el primero ("...1") y el segundo ("...2"). Pero
+        // midiendo las alturas reales del modelo se ve que "muros1" /
+        // "muros2" sí son los muros propios de cada piso, mientras que
+        // "losa1" (con sus perfiles y bloquelones) es la placa que
+        // queda ENCIMA de los muros del piso 1 (el techo del piso 1 /
+        // piso del piso 2), y "losa2" es la placa de arriba del todo
+        // (el techo del piso 2). Por eso, si "piso 1" mostrara losa1
+        // tal cual, se seguiría viendo un techo tapando la vista desde
+        // arriba. Entonces:
+        //   - Piso 1: solo los muros del piso 1, SIN ninguna losa
+        //     (para poder ver hacia adentro desde arriba).
+        //   - Piso 2: muros del piso 2 + todas las losas (para que no
+        //     se vea flotando ni le falte el techo).
+        //   - Todos: como siempre, todo visible.
+        // Columnas, cimentación, escalera, mesa y sensores son
+        // compartidos entre pisos y no se tocan, se ven siempre.
+        const GRUPO_MUROS = "G-Muros";
+        // La losa de concreto es la superficie que de verdad se ve
+        // como piso/techo terminado. Los perfiles y bloquelones son
+        // el encofrado (la lámina y los bloques que van DENTRO de esa
+        // losa antes de fundirla) — normalmente quedan escondidos
+        // dentro del concreto y no deberían verse nunca sueltos (por
+        // ahí salía ese "perfil en L" incómodo). Por eso se tratan
+        // aparte: la losa sí se deja como piso/techo según el caso,
+        // pero perfiles y bloquelones se ocultan siempre que se aísla
+        // un piso, sea cual sea.
+        const GRUPO_LOSA = "G-Losas";
+        const GRUPOS_ENCOFRADO = ["G-Perfiles", "G-Bloquelones"];
+        let pisoActivo = "todos";
+
+        function marcarPisosEnModelo() {
+            const grupoMuros = model.getObjectByName(GRUPO_MUROS);
+            if (grupoMuros && grupoMuros.children.length >= 2) {
+                grupoMuros.children[0].userData.piso = 1;
+                grupoMuros.children[1].userData.piso = 2;
+            }
+            // Igual para las losas: el hijo "1" es la losa de en medio
+            // (techo del piso 1 / suelo del piso 2) y el hijo "2" es
+            // la losa de arriba (techo del piso 2, el tejado).
+            const grupoLosa = model.getObjectByName(GRUPO_LOSA);
+            if (grupoLosa && grupoLosa.children.length >= 2) {
+                grupoLosa.children[0].userData.piso = 1;
+                grupoLosa.children[1].userData.piso = 2;
+            }
+        }
+
+        function aplicarFiltroPiso(piso) {
+            pisoActivo = piso;
+            const esTodos = piso === "todos";
+
+            const grupoMuros = model.getObjectByName(GRUPO_MUROS);
+            if (grupoMuros) {
+                grupoMuros.children.forEach(hijo => {
+                    // "Piso 2" ya no aísla: se ven los muros de AMBOS
+                    // pisos (piso 1 completo y normal, sin cambios), y
+                    // solo se le quita el techo/losa superior al piso 2
+                    // (más abajo) para poder ver el interior desde
+                    // arriba. "Piso 1" sigue aislando como antes.
+                    hijo.visible = esTodos || piso === 2 || (hijo.userData.piso === piso);
+                });
+            }
+
+            // Losa de concreto: la de en medio ("...1", entre piso 1 y
+            // piso 2) es a la vez el techo del piso 1 y el piso/suelo
+            // del piso 2, así que se oculta solo al aislar el piso 1
+            // (para ver hacia adentro desde arriba) y se deja visible
+            // en el piso 2 (para que no quede flotando sin suelo). La
+            // losa de arriba ("...2", el tejado) se oculta al aislar
+            // CUALQUIER piso, para poder ver el piso 2 desde arriba
+            // también — solo se ve completa en "Todos".
+            const grupoLosa = model.getObjectByName(GRUPO_LOSA);
+            if (grupoLosa && grupoLosa.children.length >= 2) {
+                grupoLosa.children.forEach(hijo => {
+                    hijo.visible = hijo.userData.piso === 1 ? (esTodos || piso === 2) : esTodos;
+                });
+            }
+
+            // Perfiles y bloquelones (el encofrado que va DENTRO de la
+            // losa, no la superficie visible): se ocultan siempre que
+            // se aísla un piso, sea cual sea. Solo se ven en "Todos".
+            GRUPOS_ENCOFRADO.forEach(nombreGrupo => {
+                const grupo = model.getObjectByName(nombreGrupo);
+                if (grupo) grupo.visible = esTodos;
+            });
+
+            // Columnas ("columP"): se quedan ocultas siempre — ver la
+            // corrección en ubicarElementosOpcionales(). No se tocan aquí
+            // para que el filtro de piso no las vuelva a mostrar.
+            // Mesa vibratoria: siempre visible, sea "Todos", "Piso 1" o
+            // "Piso 2" — nunca se oculta al aislar un piso.
+            if (objetoMesa) objetoMesa.visible = true;
+
+            btnPisoTodo.classList.toggle("active", esTodos);
+            btnPiso1.classList.toggle("active", piso === 1);
+            btnPiso2.classList.toggle("active", piso === 2);
+        }
+
+        // ---------------------------------------------------------
+        // ELEMENTOS QUE SOLO SE VEN EN "TODOS" (columnas, escalera,
+        // mesa y sensores). Al aislar un piso se ocultan solos, sin
+        // botones aparte, para que la vista de planta quede limpia
+        // de una vez con un solo clic.
+        // ---------------------------------------------------------
+        let objetosColumnas = [];
+        let objetoEscalera = null;
+        let objetoMesa = null;
+        let gruposSensores = [];
+
+        function ubicarElementosOpcionales() {
+            objetosColumnas = model.children.filter(h => h.name && h.name.startsWith("columP"));
+            objetoEscalera = model.getObjectByName("C-escalera");
+            objetoMesa = model.getObjectByName("C-mesa");
+
+            // CORRECCIÓN (2ª vuelta — verificado esta vez con datos, no con
+            // el nombre del componente): se había reversado esto pensando
+            // que "columP" era la torre de reacción con arriostramiento en
+            // X. Revisando la geometría interna real de "columP" (sin
+            // navegador, leyendo directo el .glb) se ve que su pieza alta
+            // es "perfilI": un perfil I LISO de 5 m, sin ninguna diagonal.
+            // Lo único que trae de "contraF" es una plaquita de conexión
+            // de 13×26 cm en la base — no una riostra en X de piso a piso.
+            // Es decir: "columP" son 4 postes lisos de apoyo interior
+            // (pegados a donde está la escalera), no el pórtico atirantado
+            // real. Se ocultan siempre — en cualquier vista — hasta poder
+            // confirmar aparte cuál es el pórtico con arriostramiento real.
+            objetosColumnas.forEach(o => { o.visible = false; });
+
+            // CORRECCIÓN (verificado contra el .glb, comparando cajas
+            // delimitadoras en coordenadas de mundo): esto estaba al
+            // revés. Los 4 grupos "C-XLvdt"/"001"/"002"/"003" SÍ están
+            // bien ubicados — su altura real coincide con piso 1 y
+            // piso 2 (dentro de ~1-19 cm de margen), tal como se ve en
+            // el SketchUp original. Los 4 objetos sueltos a nivel raíz
+            // (diagLvdt, vertLvdt, diagLvdt001, vertLvdt001) son la
+            // copia huérfana: su caja llega hasta Y≈0, metida dentro
+            // de la cimentación/mesa, muy por debajo de piso 1. Esos
+            // son los que hay que ocultar; los grupos "C-XLvdt*" son
+            // los que se deben mostrar.
+            const xLvdtHuerfanos = ["diagLvdt", "vertLvdt", "diagLvdt001", "vertLvdt001"]
+                .map(nombre => model.getObjectByName(nombre))
+                .filter(Boolean);
+            xLvdtHuerfanos.forEach(o => { o.visible = false; });
+
+            const gruposXLvdt = ["C-XLvdt", "C-XLvdt001", "C-XLvdt002", "C-XLvdt003"]
+                .map(nombre => model.getObjectByName(nombre))
+                .filter(Boolean);
+            gruposXLvdt.forEach(g => { g.visible = true; });
+
+            gruposSensores = ["G-Accs", ...gruposXLvdt];
+
+            // ------------------------------------------------------
+            // "Basura" suelta del modelo original (piezas sin agrupar
+            // que quedaron de cuando se armó la versión organizada
+            // C-.../G-...). Midiendo el modelo se confirmó que los
+            // perfiles sueltos de arriba quedan exactamente encima de
+            // los de G-Perfiles (por eso el techo del piso 1 no se
+            // quitaba). El resto (bloques sueltos, "perfilI" en forma
+            // de L, placas y anclajes sueltos) son piezas repetidas de
+            // las que ya están dentro de las columnas o del techo
+            // organizado — se ven de más y quedan flotando. Se ocultan
+            // siempre (en cualquier vista), dejando solo la versión
+            // organizada y prolija.
+            // OJO: el visor le quita los puntos a los nombres al cargar
+            // el modelo (ej. "perfilI.001" queda "perfilI001"). Estos
+            // nombres ya están escritos como quedan de verdad, no como
+            // aparecen en el archivo original — si no, la mitad de cada
+            // pieza duplicada se quedaba sin ocultar sin que se notara.
+            const nombresBasuraSuelta = [
+                "contraF", "contraF001", "contraF002", "contraF003",
+                "perfilI", "perfilI001",
+                "Platina", "lvdt", "tuboDiag", "ancla", "ancla001", "tuboVert", "lvdt001",
+                "aceleHor", "Acelerometro", "aceleVer", "Acelerometro001",
+            ];
+            const basuraSuelta = model.children.filter(h => h.name && (
+                nombresBasuraSuelta.includes(h.name) ||
+                h.name.startsWith("bloquelonPlacaFacil") ||
+                h.name.startsWith("Perfil_placa")
+            ));
+            basuraSuelta.forEach(o => { o.visible = false; });
+        }
+
+        // ---------------------------------------------------------
+        // MATERIALES OPACOS
+        // ---------------------------------------------------------
+        // El modelo se exportó con casi todos sus materiales en modo
+        // "BLEND" (transparencia por textura), algo típico de Blender
+        // cuando el material queda en "Alpha Blend" aunque no sea
+        // vidrio. Por eso la casa se ve translúcida/fantasma. Esta
+        // casa no tiene vidrios reales, así que forzamos todos los
+        // materiales a opacos apenas carga el modelo.
+        function forzarMaterialesOpacos(raiz) {
+            const vistos = new Set();
+            raiz.traverse(obj => {
+                if (!obj.isMesh || !obj.material) return;
+                const materiales = Array.isArray(obj.material) ? obj.material : [obj.material];
+                materiales.forEach(mat => {
+                    if (vistos.has(mat)) return;
+                    vistos.add(mat);
+                    mat.transparent = false;
+                    mat.opacity = 1;
+                    mat.depthWrite = true;
+
+                    // El ladrillo (Brick_30x20) SÍ debe conservar su
+                    // textura (map) — el patrón de ladrillo y juntas se
+                    // ve gracias a ella. "color" aquí es un TINTE que
+                    // multiplica esa textura, no la reemplaza.
+                    //
+                    // La textura real (Brick_10_1K_alb.png, extraída y
+                    // medida directo del .glb) tiene un naranja fuerte,
+                    // ~RGB(209,107,77) en las zonas de ladrillo bien
+                    // iluminadas. Three.js multiplica color×textura en
+                    // espacio LINEAL (no en el sRGB de los hex), así que
+                    // el tinte se calcula pasando textura y objetivo a
+                    // lineal, dividiendo ahí, y devolviendo el resultado
+                    // a sRGB (lo que espera mat.color.setRGB).
+                    // Verificado en pantalla (zoom sobre el muro real, no
+                    // solo cálculo). Se probó un tinte más oscuro
+                    // (0.0830, 0.1854, 0.2265, ~RGB 65,46,35) pero quedó
+                    // demasiado café/oscuro. De vuelta al tinte aprobado
+                    // ~RGB(100,72,55).
+                    if (mat.name === "Brick_30x20" && mat.color) {
+                        mat.color.setRGB(0.2001, 0.4412, 0.5155);
+                    }
+
+                    mat.needsUpdate = true;
+                });
+            });
+        }
+
+        // ---------------------------------------------------------
+        // MUROS SEMITRANSPARENTES (solo para comparar visualmente la
+        // estructura metálica interna contra el SketchUp original).
+        // No se toca la malla ni la geometría: solo se ajusta la
+        // opacidad del material en tiempo real. Los materiales del
+        // GLB pueden estar compartidos entre varias piezas (por eso
+        // forzarMaterialesOpacos los recorre con un Set de "vistos"),
+        // así que antes de tocar la opacidad se clona el material de
+        // cada malla de G-Muros la primera vez — así el cambio queda
+        // aislado a los muros y no afecta por referencia a ninguna
+        // otra pieza que use el mismo material (ej. otro ladrillo).
+        let murosTransparentes = false;
+        function toggleMurosTransparentes() {
+            const grupoMuros = model.getObjectByName(GRUPO_MUROS);
+            if (!grupoMuros) return;
+
+            murosTransparentes = !murosTransparentes;
+
+            grupoMuros.traverse(obj => {
+                if (!obj.isMesh || !obj.material) return;
+
+                if (!obj.userData.materialClonadoParaMuros) {
+                    obj.material = Array.isArray(obj.material)
+                        ? obj.material.map(mat => mat.clone())
+                        : obj.material.clone();
+                    obj.userData.materialClonadoParaMuros = true;
+                }
+
+                const materiales = Array.isArray(obj.material) ? obj.material : [obj.material];
+                materiales.forEach(mat => {
+                    mat.transparent = murosTransparentes;
+                    mat.opacity = murosTransparentes ? 0.1 : 1;
+                    mat.depthWrite = !murosTransparentes;
+                    mat.needsUpdate = true;
+                });
+            });
+
+            btnToggleMuros.classList.toggle("active", murosTransparentes);
+        }
+        const modelLabel = document.getElementById("model-label");
+        const apiStatus = document.getElementById("api-status");
+        const dataChannel = document.getElementById("data-channel");
+        const btnRefreshData = document.getElementById("btn-refresh-data");
+        const ensayoSelect = document.getElementById("modelo-ensayo-select");
+        const chartTitle = document.getElementById("chart-title");
+        const chartSvg = document.getElementById("sensor-chart");
+        const chartModePill = document.getElementById("chart-mode-pill");
+        const chartEmpty = document.getElementById("chart-empty");
+        const statCurrent = document.getElementById("stat-current");
+        const statMax = document.getElementById("stat-max");
+        const statMin = document.getElementById("stat-min");
+        const statCount = document.getElementById("stat-count");
+        const chartNote = document.getElementById("chart-note");
+        const apiConnectionDetail = document.getElementById("api-connection-detail");
+        const sensorDescription = document.getElementById("sensor-description");
+        const btnSimPlay = document.getElementById("btn-sim-play");
+        const btnSimReset = document.getElementById("btn-sim-reset");
+        const simProgress = document.getElementById("sim-progress");
+        const simTime = document.getElementById("sim-time");
+        const simSpeed = document.getElementById("sim-speed");
+
+        let simulationPoints = [];
+        let simulationChannel = "";
+        let simulationIndex = 0;
+        let simulationTimer = null;
+        let simulationPlaying = false;
+        let simulationMaxAbs = 1;
+
+        // Parámetros para transformar el histórico del sensor en movimiento visual.
+        let simulationBaseline = 0;
+        let simulationDeviationMax = 1;
+
+        // Transformación original del modelo.
+        let modelBasePosition = new THREE.Vector3();
+        let modelBaseRotation = new THREE.Euler();
+        let sensorMarkerBasePosition = new THREE.Vector3();
+
+        // Estado independiente de la simulación visual del sismo.
+        let earthquakePlaying = false;
+        let earthquakeStartedAt = 0;
+        let collapseStartedAt = 0;
+        let collapseActive = false;
+
+        let crackGroup = null;
+        let cracksVisible = false;
+        const CRACKS_START_MS = 4000;
+
+        let bogotaEnvironment = null;
+        let environmentEnabled = false;
+
+        // Tiempos de la simulación visual.
+        const COLLAPSE_AFTER_MS = 7000;
+        const COLLAPSE_DURATION_MS = 3200;
+
+        let sensorMarker = null;
+        let sensorMarkerHalo = null;
+        let sensorMarkerBaseScale = 1;
+
+        let markerCycleToken = 0;
+        let markerVisiblePhase = false;
+        let markerPhaseStartedAt = 0;
+        const MARKER_ON_MS = 5000;
+        const MARKER_OFF_MS = 5000;
+
+
+        const API_BASE = "http://127.0.0.1:5000"; // CAMBIA ESTA URL SI TU API ESTÁ EN OTRA IP
+        let historico = [];
+        let apiChannels = [];
+        const sensorChannelMap = JSON.parse(localStorage.getItem("ciamSensorChannelMap") || "{}");
+
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xeef3f8);
+
+        scene.fog = new THREE.Fog(0xeef3f8, 18, 48);
+
+        // Fondo con el escudo de Uniandes de marca de agua: antes, al
+        // alejar el zoom, se veía un color plano vacío ("se pierde el
+        // modelo"). Se reemplaza por un degradado suave con el escudo
+        // centrado muy tenue, para que ese espacio se sienta parte del
+        // diseño en vez de un vacío. Si la imagen no carga por algún
+        // motivo, se queda con el color plano de arriba (ya asignado).
+        function crearFondoConLogo(colorArriba, colorAbajo) {
+            return new Promise(resolve => {
+                const canvas = document.createElement("canvas");
+                canvas.width = 1024;
+                canvas.height = 1024;
+                const ctx = canvas.getContext("2d");
+                const gradiente = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                gradiente.addColorStop(0, colorArriba);
+                gradiente.addColorStop(1, colorAbajo);
+                ctx.fillStyle = gradiente;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                const logo = new Image();
+                logo.onload = () => {
+                    // Un solo escudo centrado casi no se veía: la casa
+                    // ocupa justo el centro del encuadre, así que el
+                    // logo quedaba tapado detrás del modelo sin importar
+                    // el zoom. Se repite en una cuadrícula por todo el
+                    // fondo (como una marca de agua de PDF) para que
+                    // siempre asomen varias copias alrededor de la casa,
+                    // se vea de cerca o de lejos. Se usa el escudo solo
+                    // (escudoandes.png, ya sin fondo blanco — recortado
+                    // a transparente) en vez del logo con texto, más
+                    // grande y bien visible.
+                    const cols = 3;
+                    const rows = 3;
+                    const cellW = canvas.width / cols;
+                    const cellH = canvas.height / rows;
+                    const w = cellW * .85;
+                    const h = w * (logo.height / logo.width);
+                    ctx.globalAlpha = .35;
+                    for (let r = 0; r < rows; r++) {
+                        for (let c = 0; c < cols; c++) {
+                            const cx = cellW * (c + .5);
+                            const cy = cellH * (r + .5);
+                            ctx.drawImage(logo, cx - w / 2, cy - h / 2, w, h);
+                        }
+                    }
+                    ctx.globalAlpha = 1;
+                    resolve(new THREE.CanvasTexture(canvas));
+                };
+                logo.onerror = () => resolve(null);
+                logo.src = "Imagenes/escudoandes.png";
+            });
+        }
+
+        crearFondoConLogo("#f5f8fb", "#dbe4ed").then(textura => {
+            if (textura) scene.background = textura;
+        });
+
+        const camera = new THREE.PerspectiveCamera(42, 1, 0.01, 5000);
+        camera.position.set(-1.5, 5, 9);
+
+        const renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            alpha: false,
+            powerPreference: "high-performance"
+        });
+
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.08;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        root.appendChild(renderer.domElement);
+
+        const hemi = new THREE.HemisphereLight(0xffffff, 0x64748b, 2.7);
+        scene.add(hemi);
+
+        const key = new THREE.DirectionalLight(0xffffff, 3.6);
+        key.position.set(8, 12, 8);
+        key.castShadow = true;
+        key.shadow.mapSize.set(2048, 2048);
+        key.shadow.camera.near = 0.1;
+        key.shadow.camera.far = 60;
+        scene.add(key);
+
+        const fill = new THREE.DirectionalLight(0xbfd8ff, 1.2);
+        fill.position.set(-8, 5, -6);
+        scene.add(fill);
+
+        const warm = new THREE.PointLight(0xffe4a3, 1.0, 30);
+        warm.position.set(0, 7, 3);
+        scene.add(warm);
+
+        const ground = new THREE.Mesh(
+            new THREE.CircleGeometry(18, 96),
+            new THREE.MeshStandardMaterial({
+                color: 0xdde5ed,
+                roughness: .94,
+                metalness: 0
+            })
+        );
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -0.05;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        const grid = new THREE.GridHelper(24, 24, 0xb7c4d3, 0xd5dee8);
+        grid.position.y = 0;
+        const gridMaterials = Array.isArray(grid.material) ? grid.material : [grid.material];
+        gridMaterials.forEach(m => {
+            m.transparent = true;
+            m.opacity = .32;
+        });
+        scene.add(grid);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = .065;
+        controls.enablePan = true;
+        controls.autoRotate = false;
+        controls.autoRotateSpeed = 1.1;
+        // Antes se podía girar la cámara casi hasta quedar boca abajo
+        // (.92 de PI ≈ 166°), lo que dejaba ver la casa desde abajo:
+        // cimentación, losas y cables de "hilo" al revés, y parecía un
+        // sensor "flotando mal puesto" cuando en realidad solo era la
+        // vista de abajo. Se limita a 90° (horizonte) para que nunca se
+        // pueda voltear por debajo de la casa sin querer.
+        controls.maxPolarAngle = Math.PI * .5;
+
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+
+        let model = null;
+        let modelBounds = null;
+        let modelCenter = new THREE.Vector3();
+        let modelSize = new THREE.Vector3();
+        let defaultCameraPos = new THREE.Vector3();
+        let defaultTarget = new THREE.Vector3();
+
+        let sensorEntries = [];
+        let selectedEntry = null;
+        let highlightedMeshes = [];
+        let cameraTween = null;
+
+        const sensorRegex = /(aceler|acele|lvdt|diaglvdt|vertlvdt|tubodiag|tubovert|hilo|sensor)/i;
+
+        function resize() {
+            const width = root.clientWidth;
+            const height = root.clientHeight;
+            camera.aspect = width / Math.max(height, 1);
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height, false);
+        }
+
+        addEventListener("resize", resize);
+        resize();
+
+        function prettifyName(name, index, type) {
+            let n = (name || "").trim()
+                .replace(/^_?C-/i, "")
+                .replace(/\s*\(Loose Mesh\)\s*/gi, "")
+                .replace(/[._-]+/g, " ")
+                .replace(/\s+/g, " ")
+                .trim();
+
+            if (!n) n = type || "Sensor";
+
+            if (/aceler|acele/i.test(n)) n = n.replace(/aceleHor/gi, "Acelerómetro horizontal").replace(/aceleVer/gi, "Acelerómetro vertical");
+            if (/^Acelerometro$/i.test(n)) n = "Acelerómetro";
+            if (/diaglvdt/i.test(n)) n = n.replace(/diaglvdt/gi, "LVDT diagonal");
+            if (/vertlvdt/i.test(n)) n = n.replace(/vertlvdt/gi, "LVDT vertical");
+            if (/^lvdt$/i.test(n)) n = "LVDT";
+            if (/tubodiag/i.test(n)) n = n.replace(/tubodiag/gi, "LVDT diagonal");
+            if (/tubovert/i.test(n)) n = n.replace(/tubovert/gi, "LVDT vertical");
+
+            const suffix = String(index + 1).padStart(2, "0");
+            if (!/\d/.test(n)) n += ` ${suffix}`;
+            return n;
+        }
+
+        function detectType(name) {
+            const n = (name || "").toLowerCase();
+            if (n.includes("aceler") || n.includes("acele")) return "Acelerómetro";
+            if (n.includes("diag")) return "LVDT diagonal";
+            if (n.includes("vert")) return "LVDT vertical";
+            if (n.includes("lvdt")) return "LVDT";
+            if (n.includes("hilo")) return "Sensor de hilo";
+            return "Sensor";
+        }
+
+
+        function descriptionForType(type) {
+            const t = String(type || "").toLowerCase();
+
+            if (t.includes("aceler")) {
+                return "Mide la aceleración y las vibraciones de la estructura durante el ensayo. Permite observar cómo responde el modelo ante movimientos dinámicos de la mesa vibratoria.";
+            }
+            if (t.includes("lvdt diagonal")) {
+                return "Mide desplazamientos relativos en dirección diagonal. Es útil para identificar deformaciones por cortante y cambios geométricos entre puntos de la estructura.";
+            }
+            if (t.includes("lvdt vertical")) {
+                return "Mide desplazamientos relativos en sentido vertical. Permite registrar asentamientos, levantamientos o deformaciones verticales entre dos puntos.";
+            }
+            if (t.includes("lvdt horizontal") || (t.includes("lvdt") && t.includes("horizontal"))) {
+                return "Mide desplazamientos relativos en sentido horizontal. Ayuda a cuantificar derivas y movimientos laterales de muros, pisos o elementos estructurales.";
+            }
+            if (t.includes("lvdt")) {
+                return "Mide desplazamientos lineales muy pequeños entre dos puntos. Se utiliza para seguir deformaciones y movimientos relativos de la estructura durante el ensayo.";
+            }
+            if (t.includes("hilo")) {
+                return "Mide desplazamientos mediante un sistema de hilo o cable. Es útil para registrar movimientos relativos cuando se requiere cubrir una distancia mayor que con un LVDT.";
+            }
+            return "Sensor de instrumentación utilizado para registrar una variable física durante el ensayo estructural.";
+        }
+
+        function categoryFor(entry) {
+            if (entry.type === "Acelerómetro") return "Acelerómetros";
+            if (entry.type === "LVDT diagonal") return "LVDT diagonales";
+            if (entry.type === "LVDT vertical") return "LVDT verticales";
+            if (entry.type === "Sensor de hilo") return "Sensores de hilo";
+            if (entry.type === "LVDT") return "Otros LVDT";
+            return "Otros sensores";
+        }
+
+        // Un sensor real casi nunca es una sola malla: "C-aceleHor001" por
+        // ejemplo trae adentro la malla del sensor y otra suelta del
+        // soporte, y el conjunto en "X" (diagLvdt/vertLvdt) trae varios
+        // niveles de tubos y mallas anidadas. `obj.visible` tampoco se
+        // hereda solo por estar dentro de un grupo oculto (así es Three.js:
+        // el hijo puede seguir en visible=true aunque su grupo padre esté
+        // apagado), así que para saber si algo se ve de verdad hay que
+        // revisar toda la cadena de padres hasta la raíz.
+        function isEffectivelyVisible(obj) {
+            let nodo = obj;
+            while (nodo) {
+                if (nodo.visible === false) return false;
+                nodo = nodo.parent;
+            }
+            return true;
+        }
+
+        // Los 4 grupos "C-XLvdt*" (las X bien ubicadas) se manejan aparte
+        // en GRUPOS_X_LVDT, para poder mostrar cada uno como 2 sensores
+        // (diagonal + vertical) con piso/ubicación en vez de una sola
+        // fila genérica "LVDT". Por eso el recorrido genérico de abajo
+        // los debe ignorar — si no, saldrían duplicados.
+        const NOMBRES_GRUPOS_X_LVDT = ["C-XLvdt", "C-XLvdt001", "C-XLvdt002", "C-XLvdt003"];
+
+        function isUsableSensorObject(obj) {
+            if (!obj || !obj.name) return false;
+            if (!sensorRegex.test(obj.name)) return false;
+            if (NOMBRES_GRUPOS_X_LVDT.includes(obj.name)) return false;
+
+            // Si el padre ya hace parte de un sensor (su nombre también
+            // matchea), este nodo es una pieza interna de ese mismo sensor
+            // (soporte, tubo, malla suelta), no un sensor aparte — se
+            // ignora para que cada sensor físico salga UNA sola vez en la
+            // lista en vez de una fila por cada malla que lo compone.
+            const nombrePadre = obj.parent ? (obj.parent.name || "") : "";
+            if (sensorRegex.test(nombrePadre)) return false;
+
+            // Los duplicados "basura" (piezas sueltas del archivo original,
+            // incluidos los 4 huérfanos diagLvdt/vertLvdt/diagLvdt001/
+            // vertLvdt001) quedan ocultos en ubicarElementosOpcionales();
+            // si está oculto, tampoco debe aparecer en la lista.
+            if (!isEffectivelyVisible(obj)) return false;
+
+            return true;
+        }
+
+        // Los 4 conjuntos "X" bien ubicados (verificados contra el .glb:
+        // su altura real coincide con piso 1 / piso 2). Cada conjunto trae
+        // adentro 2 piezas de diagonal (las 2 líneas que se cruzan) y 2 de
+        // vertical (los 2 postes), casi superpuestas entre sí — por eso
+        // basta usar la primera de cada tipo como referencia de posición
+        // para el marcador/etiqueta.
+        // Antes esto decía "Ubicación 1/2" porque no se sabía a cuál muro
+        // del Excel correspondía cada una. Ya se confirmó comparando la
+        // posición real (X,Z) de cada conjunto contra los planos de los
+        // 4 muros exteriores (ver MURO_W1_X / MURO_W45_Z más abajo):
+        //   - C-XLvdt    (piso1, X≈3.1,Z≈-0.8 → junto al muro W4/W5) → W4
+        //   - C-XLvdt001 (piso1, X≈1.5,Z≈-5.7 → junto al muro W1)    → W1
+        //   - C-XLvdt002 (piso2, X≈3.1,Z≈-0.8)                       → W5
+        //   - C-XLvdt003 (piso2, X≈1.5,Z≈-5.7)                       → W1
+        const GRUPOS_X_LVDT = [
+            { grupo: "C-XLvdt", muro: "W4", piso: 1, diagonal: "C-diagLvdt", vertical: "C-vertLvdt" },
+            { grupo: "C-XLvdt001", muro: "W1", piso: 1, diagonal: "C-diagLvdt002", vertical: "C-vertLvdt002" },
+            { grupo: "C-XLvdt002", muro: "W5", piso: 2, diagonal: "C-diagLvdt004", vertical: "C-vertLvdt004" },
+            { grupo: "C-XLvdt003", muro: "W1", piso: 2, diagonal: "C-diagLvdt006", vertical: "C-vertLvdt006" },
+        ];
+
+        function buildEntradasGruposXLvdt() {
+            const entradas = [];
+            GRUPOS_X_LVDT.forEach(info => {
+                [
+                    { sufijo: "diagonal", nombreObjeto: info.diagonal, type: "LVDT diagonal" },
+                    { sufijo: "vertical", nombreObjeto: info.vertical, type: "LVDT vertical" },
+                ].forEach(({ nombreObjeto, type }) => {
+                    const object = model.getObjectByName(nombreObjeto);
+                    if (!object || !isEffectivelyVisible(object)) return;
+                    entradas.push({
+                        id: object.uuid,
+                        object,
+                        rawName: `${info.grupo} · ${nombreObjeto}`,
+                        type,
+                        label: `${type} — Muro ${info.muro}, Piso ${info.piso}`,
+                        category: categoryFor({ type }),
+                        skipAutoSuffix: true
+                    });
+                });
+            });
+            return entradas;
+        }
+
+        // ------------------------------------------------------------------
+        // Sensores "virtuales" (sin malla propia en el .glb), ubicados con
+        // coordenadas REALES del edificio (no una rejilla aproximada).
+        //
+        // El dashboard (casa.html) trabaja con 47 sensores reales:
+        //   17 acelerómetros (ya cubiertos 1 a 1 por las mallas aceleHor/
+        //   aceleVer) + 24 LVDT (LD/LH/LV, 8 cada uno) + 6 hilos (TH).
+        // El .glb solo trae mallas para 8 LVDT (los 4 conjuntos en "X") y
+        // NINGÚN hilo. Los 22 restantes (8 LD/LV extra + 8 LH + 6 TH) se
+        // ubican aquí usando la hoja de instrumentación del Excel
+        // ("muro" + "piso/losa/cimentación" para cada sensor) y los planos
+        // reales de los 4 muros exteriores, medidos por raycasting directo
+        // sobre el modelo cargado (clic en cada muro, cara y esquina, y
+        // comparando contra la posición real de los 4 conjuntos "X" y de
+        // las losas/cimentación — no son valores inventados):
+        //   - Muro WA (frontal, con ventanas):        Z =  0.0
+        //   - Muros WD (piso 1) / WE (piso 2), atrás:  Z = -6.0  (mismo muro)
+        //   - Muro W1 (lateral, ambos pisos):          X =  0.1
+        //   - Muros W4 (piso 1) / W5 (piso 2), lateral opuesto: X = 4.68
+        // Sigue siendo una ubicación APROXIMADA en el sentido de que el
+        // Excel no da la posición exacta a lo largo del muro (solo "cuál
+        // muro + qué piso"), pero el muro y la altura sí son los reales.
+        const MURO_W1_X = 0.1;
+        const MURO_W45_X = 4.68;
+        const MURO_WA_Z = 0.0;
+        const MURO_WDWE_Z = -6.0;
+
+        const Y_CIMENTACION = 1.2;
+        const Y_LOSA1 = 3.61;
+        const Y_LOSA2 = 5.89;
+        const Y_PISO1_TOP = 3.4;
+        const Y_PISO2_CENTRO = 4.78;
+
+        function crearMarcadorVirtual(xMundo, yMundo, zMundo, nombreInterno) {
+            const obj = new THREE.Object3D();
+            obj.name = nombreInterno;
+            const posicionLocal = model.worldToLocal(new THREE.Vector3(xMundo, yMundo, zMundo));
+            obj.position.copy(posicionLocal);
+            // Geometría mínima e invisible: solo para que objectCenterAndSize()
+            // (usada por el marcador, el foco de cámara y el resaltado) tenga
+            // una caja delimitadora no vacía a partir de la cual calcular.
+            const radio = Math.max(modelSize.length() * 0.01, 0.01);
+            const nucleo = new THREE.Mesh(
+                new THREE.SphereGeometry(radio, 4, 4),
+                new THREE.MeshBasicMaterial({ visible: false })
+            );
+            obj.add(nucleo);
+            model.add(obj);
+            return obj;
+        }
+
+        function crearEntradaVirtual(nombreInterno, x, y, z, type, label) {
+            const object = crearMarcadorVirtual(x, y, z, nombreInterno);
+            return {
+                id: object.uuid,
+                object,
+                rawName: "Sin malla en el modelo 3D — sobre el plano real del muro",
+                type,
+                label,
+                category: categoryFor({ type }),
+                esVirtual: true,
+                skipAutoSuffix: true
+            };
+        }
+
+        function buildEntradasVirtuales() {
+            const entradas = [];
+
+            // 8 LVDT diagonales/verticales que faltan (el Excel pide 2 de
+            // cada uno por esquina; el .glb solo trae 1 de cada uno en los
+            // 4 conjuntos "X" reales) — junto a la malla real de su misma
+            // esquina, con un pequeño desplazamiento para no encimarse.
+            const extrasDiagVert = [
+                { x: 3.095, y: 2.368, z: -0.788, muro: "W4", piso: 1, tipo: "LVDT diagonal" },
+                { x: 4.245, y: 2.368, z: -0.747, muro: "W4", piso: 1, tipo: "LVDT vertical" },
+                { x: 1.495, y: 2.368, z: -5.713, muro: "W1", piso: 1, tipo: "LVDT diagonal" },
+                { x: 2.645, y: 2.368, z: -5.753, muro: "W1", piso: 1, tipo: "LVDT vertical" },
+                { x: 3.095, y: 4.776, z: -0.788, muro: "W5", piso: 2, tipo: "LVDT diagonal" },
+                { x: 4.245, y: 4.776, z: -0.747, muro: "W5", piso: 2, tipo: "LVDT vertical" },
+                { x: 1.495, y: 4.776, z: -5.713, muro: "W1", piso: 2, tipo: "LVDT diagonal" },
+                { x: 2.645, y: 4.776, z: -5.753, muro: "W1", piso: 2, tipo: "LVDT vertical" },
+            ];
+            extrasDiagVert.forEach((p, i) => {
+                entradas.push(crearEntradaVirtual(
+                    `aux-desp-${i + 1}`, p.x + 0.3, p.y, p.z, "LVDT",
+                    `${p.tipo} extra — Muro ${p.muro}, Piso ${p.piso}`
+                ));
+            });
+
+            // 8 LVDT horizontales (LH01-08): pegados al plano real del
+            // muro que indica el Excel, a la altura descrita.
+            const horizontales = [
+                { x: MURO_W1_X, y: Y_CIMENTACION, z: -5.7, muro: "W1", nota: "cimentación" },
+                { x: MURO_W1_X, y: Y_LOSA1 - 0.15, z: -5.7, muro: "W1", nota: "losa 1 abajo" },
+                { x: MURO_W1_X, y: Y_LOSA1 + 0.15, z: -5.7, muro: "W1", nota: "losa 1 arriba" },
+                { x: MURO_W1_X, y: Y_LOSA2 - 0.15, z: -5.7, muro: "W1", nota: "losa 2 abajo" },
+                { x: MURO_W45_X, y: Y_CIMENTACION, z: -0.8, muro: "W4", nota: "cimentación" },
+                { x: MURO_W45_X, y: Y_LOSA1 - 0.15, z: -0.8, muro: "W4", nota: "losa 1 abajo" },
+                { x: MURO_W45_X, y: Y_LOSA1 + 0.15, z: -0.8, muro: "W5", nota: "losa 1 arriba" },
+                { x: MURO_W45_X, y: Y_LOSA2 - 0.15, z: -0.8, muro: "W5", nota: "losa 2 abajo" },
+            ];
+            horizontales.forEach((p, i) => {
+                entradas.push(crearEntradaVirtual(
+                    `aux-horiz-${i + 1}`, p.x, p.y, p.z, "LVDT",
+                    `LVDT horizontal — Muro ${p.muro}, ${p.nota}`
+                ));
+            });
+
+            // 6 hilos (TH01-06): todos sobre el muro WD/WE (posterior). El
+            // Excel describe TH02/TH05 como un hilo que va de la altura de
+            // piso 1 (WD) a piso 2 (WE) en ese MISMO muro (WD y WE son la
+            // misma pared física, solo que a distinta altura) — se ubica
+            // en el punto medio de ese tramo. Las dos columnas de X (1.0 y
+            // 1.5) separan el set TH01-03 del set duplicado TH04-06 para
+            // que no queden exactamente encimados.
+            const hilos = [
+                { x: 1.0, y: Y_CIMENTACION, muro: "WD cimentación" },
+                { x: 1.0, y: (Y_PISO1_TOP + Y_PISO2_CENTRO) / 2, muro: "WD piso 1 – WE piso 2" },
+                { x: 1.0, y: Y_PISO2_CENTRO, muro: "WE" },
+                { x: 1.5, y: Y_CIMENTACION, muro: "WD cimentación" },
+                { x: 1.5, y: (Y_PISO1_TOP + Y_PISO2_CENTRO) / 2, muro: "WD piso 1 – WE piso 2" },
+                { x: 1.5, y: Y_PISO2_CENTRO, muro: "WE" },
+            ];
+            hilos.forEach((p, i) => {
+                entradas.push(crearEntradaVirtual(
+                    `aux-cable-${i + 1}`, p.x, p.y, MURO_WDWE_Z, "Sensor de hilo",
+                    `Sensor de hilo — ${p.muro}`
+                ));
+            });
+
+            return entradas;
+        }
+
+        function buildSensorEntries() {
+            const candidates = [];
+
+            model.traverse(obj => {
+                if (isUsableSensorObject(obj)) {
+                    candidates.push(obj);
+                }
+            });
+
+            sensorEntries = candidates.map((object, index) => {
+                const type = detectType(object.name);
+                return {
+                    id: object.uuid,
+                    object,
+                    rawName: object.name,
+                    type,
+                    label: prettifyName(object.name, index, type),
+                    category: ""
+                };
+            });
+
+            sensorEntries.push(...buildEntradasGruposXLvdt());
+            sensorEntries.push(...buildEntradasVirtuales());
+
+            const counters = {};
+            sensorEntries.forEach(entry => {
+                // Las entradas de GRUPOS_X_LVDT ya traen su etiqueta final
+                // (con piso y ubicación); no se les agrega el "01"/"02"
+                // automático que sí necesitan las demás para diferenciarse.
+                if (entry.skipAutoSuffix) {
+                    entry.category = categoryFor(entry);
+                    return;
+                }
+                const base = entry.label.replace(/\s+\d+$/, "").trim();
+                counters[base] = (counters[base] || 0) + 1;
+                entry.label = `${base} ${String(counters[base]).padStart(2, "0")}`;
+                entry.category = categoryFor(entry);
+            });
+
+            sensorCount.textContent = sensorEntries.length;
+            renderSensorList();
+        }
+
+        function renderSensorList(filter = "") {
+            const query = filter.trim().toLowerCase();
+            const filtered = sensorEntries.filter(entry =>
+                entry.label.toLowerCase().includes(query) ||
+                entry.rawName.toLowerCase().includes(query) ||
+                entry.type.toLowerCase().includes(query)
+            );
+
+            if (!filtered.length) {
+                sensorListEl.innerHTML = '<div class="empty-sensors">No se encontraron sensores con ese criterio.</div>';
+                return;
+            }
+
+            const groups = new Map();
+            filtered.forEach(entry => {
+                if (!groups.has(entry.category)) groups.set(entry.category, []);
+                groups.get(entry.category).push(entry);
+            });
+
+            sensorListEl.innerHTML = "";
+
+            for (const [groupName, entries] of groups) {
+                const group = document.createElement("div");
+                group.className = "sensor-group";
+
+                const title = document.createElement("div");
+                title.className = "sensor-group-title";
+                title.innerHTML = `<span>${groupName}</span><span>${entries.length}</span>`;
+                group.appendChild(title);
+
+                entries.forEach(entry => {
+                    const btn = document.createElement("button");
+                    btn.type = "button";
+                    btn.className = "sensor-item" + (selectedEntry?.id === entry.id ? " active" : "");
+                    btn.dataset.sensorId = entry.id;
+
+                    const dot = document.createElement("span");
+                    dot.className = "sensor-dot";
+
+                    const copy = document.createElement("span");
+                    copy.className = "sensor-item-copy";
+
+                    const strong = document.createElement("strong");
+                    strong.textContent = entry.label;
+
+                    const small = document.createElement("small");
+                    small.textContent = entry.rawName;
+
+                    copy.appendChild(strong);
+                    copy.appendChild(small);
+                    btn.appendChild(dot);
+                    btn.appendChild(copy);
+
+                    btn.addEventListener("click", () => selectSensor(entry, true));
+                    group.appendChild(btn);
+                });
+
+                sensorListEl.appendChild(group);
+            }
+        }
+
+        function restoreHighlight() {
+            // Ya no cambiamos el color del sensor ni de la estructura.
+            highlightedMeshes = [];
+        }
+
+        function ensureSensorMarker() {
+            if (sensorMarker) return;
+
+            // Antes era una esfera lisa (una "bolita" genérica flotando).
+            // Se cambia por una caja pequeña -a modo de carcasa de
+            // sensor- para que se lea más como "un dispositivo puesto
+            // ahí" que como un simple marcador de selección. No busca
+            // imitar el sensor real de cada tipo, solo parecerse más a
+            // uno que a una esfera de resaltado.
+            sensorMarker = new THREE.Mesh(
+                new THREE.BoxGeometry(1, 0.55, 0.55),
+                new THREE.MeshBasicMaterial({
+                    color: 0x9b5de5,
+                    transparent: true,
+                    opacity: 0.92,
+                    depthTest: false,
+                    depthWrite: false
+                })
+            );
+            sensorMarker.renderOrder = 9999;
+            sensorMarker.visible = false;
+            scene.add(sensorMarker);
+
+            sensorMarkerHalo = new THREE.Mesh(
+                new THREE.SphereGeometry(1, 24, 24),
+                new THREE.MeshBasicMaterial({
+                    color: 0x9b5de5,
+                    transparent: true,
+                    opacity: 0.18,
+                    depthTest: false,
+                    depthWrite: false,
+                    wireframe: true
+                })
+            );
+            sensorMarkerHalo.renderOrder = 9998;
+            sensorMarkerHalo.visible = false;
+            scene.add(sensorMarkerHalo);
+        }
+
+        function showSensorMarker(object) {
+            ensureSensorMarker();
+
+            const info = objectCenterAndSize(object);
+            if (!info) return;
+
+            const modelDiag = Math.max(modelSize.length(), 1);
+            const objDiag = Math.max(info.size.length(), modelDiag * 0.01);
+
+            // Reducido varias veces respecto al original (era
+            // objDiag*0.65 / modelDiag*0.018): el círculo/caja de
+            // selección quedaba enorme sobre el objeto, tapándolo.
+            const markerRadius = Math.max(
+                objDiag * 0.15,
+                modelDiag * 0.0035
+            );
+
+            sensorMarkerBasePosition.copy(info.center);
+            sensorMarker.position.copy(sensorMarkerBasePosition);
+            sensorMarkerHalo.position.copy(sensorMarkerBasePosition);
+
+            sensorMarker.scale.setScalar(markerRadius);
+            sensorMarkerHalo.scale.setScalar(markerRadius * 1.15);
+
+            sensorMarkerBaseScale = markerRadius;
+            sensorMarker.visible = true;
+            sensorMarkerHalo.visible = true;
+        }
+
+        function setMarkerVisibility(visible) {
+            if (!sensorMarker || !sensorMarkerHalo) return;
+
+            sensorMarker.visible = visible;
+            sensorMarkerHalo.visible = visible;
+            markerVisiblePhase = visible;
+            markerPhaseStartedAt = performance.now();
+        }
+
+        function startMarkerCycle() {
+            markerCycleToken++;
+            const token = markerCycleToken;
+
+            // Primer ciclo: visible durante 5 segundos.
+            setMarkerVisibility(true);
+
+            setTimeout(() => {
+                if (token !== markerCycleToken) return;
+
+                // Después se oculta durante 5 segundos.
+                setMarkerVisibility(false);
+
+                setTimeout(() => {
+                    if (token !== markerCycleToken) return;
+                    repeatMarkerCycle(token);
+                }, MARKER_OFF_MS);
+
+            }, MARKER_ON_MS);
+        }
+
+        function repeatMarkerCycle(token) {
+            if (token !== markerCycleToken || !selectedEntry) return;
+
+            setMarkerVisibility(true);
+
+            setTimeout(() => {
+                if (token !== markerCycleToken) return;
+
+                setMarkerVisibility(false);
+
+                setTimeout(() => {
+                    if (token !== markerCycleToken) return;
+                    repeatMarkerCycle(token);
+                }, MARKER_OFF_MS);
+
+            }, MARKER_ON_MS);
+        }
+
+
+        function highlightObject(object) {
+            restoreHighlight();
+
+            // No alteramos colores del modelo. Solo mostramos el indicador circular.
+            showSensorMarker(object);
+            startMarkerCycle();
+        }
+
+        function objectCenterAndSize(object) {
+            const box = new THREE.Box3().setFromObject(object);
+            if (box.isEmpty()) return null;
+            return {
+                box,
+                center: box.getCenter(new THREE.Vector3()),
+                size: box.getSize(new THREE.Vector3())
+            };
+        }
+
+        function focusObject(object) {
+            const info = objectCenterAndSize(object);
+            if (!info) return;
+
+            const maxDim = Math.max(info.size.x, info.size.y, info.size.z, modelSize.length() * .018);
+            const fov = camera.fov * Math.PI / 180;
+            let distance = maxDim / (2 * Math.tan(fov / 2));
+            distance = Math.max(distance * 4.2, modelSize.length() * .12);
+
+            const currentDir = camera.position.clone().sub(controls.target).normalize();
+            const nextPos = info.center.clone().add(currentDir.multiplyScalar(distance));
+
+            cameraTween = {
+                start: performance.now(),
+                duration: 650,
+                fromPos: camera.position.clone(),
+                toPos: nextPos,
+                fromTarget: controls.target.clone(),
+                toTarget: info.center.clone()
+            };
+        }
+
+        function selectSensor(entry, focus = true) {
+            if (!entry) return;
+            selectedEntry = entry;
+
+            highlightObject(entry.object);
+
+            selectedName.textContent = entry.label;
+            selectedType.textContent = entry.type;
+            selectedObject.textContent = entry.rawName;
+            selectedShort.textContent = entry.label.replace(/\s+/g, " ").slice(0, 11);
+            sensorDescription.innerHTML = `<strong>¿Qué mide este sensor?</strong><br>${descriptionForType(entry.type)}` +
+                (entry.esVirtual
+                    ? `<br><br><em>Nota: este sensor no tiene una malla individual en el modelo 3D (no está modelado como pieza propia en el .glb). Se muestra en una posición aproximada dentro del piso correspondiente, solo para poder seleccionarlo y ver su gráfica.</em>`
+                    : "");
+
+            renderSensorList(sensorSearch.value);
+
+            if (focus) focusObject(entry.object);
+
+            updateModelLabel();
+
+            chartTitle.textContent = entry.label;
+
+            if (apiChannels.length) {
+                populateChannelSelect(entry);
+            } else {
+                dataChannel.innerHTML = '<option value="">Esperando conexión con la API…</option>';
+                dataChannel.disabled = true;
+                clearChart("El sensor está seleccionado. Falta cargar los datos desde la API.");
+            }
+        }
+
+        function findSensorEntryFromObject(object) {
+            let current = object;
+
+            while (current) {
+                const found = sensorEntries.find(entry => entry.object === current);
+                if (found) return found;
+                current = current.parent;
+            }
+
+            let nearest = null;
+            let minDistance = Infinity;
+            const clickedInfo = objectCenterAndSize(object);
+            if (!clickedInfo) return null;
+
+            sensorEntries.forEach(entry => {
+                const info = objectCenterAndSize(entry.object);
+                if (!info) return;
+                const d = info.center.distanceTo(clickedInfo.center);
+                if (d < minDistance) {
+                    minDistance = d;
+                    nearest = entry;
+                }
+            });
+
+            return nearest;
+        }
+
+        function fitCameraToModel(saveDefault = false) {
+            if (!model) return;
+
+            modelBounds = new THREE.Box3().setFromObject(model);
+            modelBounds.getCenter(modelCenter);
+            modelBounds.getSize(modelSize);
+
+            const maxDim = Math.max(modelSize.x, modelSize.y, modelSize.z);
+            const fov = camera.fov * Math.PI / 180;
+            let distance = maxDim / (2 * Math.tan(fov / 2));
+            distance *= 1.45;
+
+            // Antes la cámara quedaba a 45° exactos (offset igual en X
+            // y en Z), viendo la esquina de la casa en diagonal. Se
+            // probó una vista "de frente" con el offset grande en X
+            // (fachada W4), pero quedó al revés — se pidió girarla
+            // hacia la izquierda, así que ahora el offset grande queda
+            // en Z (la otra fachada) y el de X casi en cero.
+            const nextPos = new THREE.Vector3(
+                modelCenter.x - distance * .15,
+                modelCenter.y + distance * .5,
+                modelCenter.z + distance * 1.3
+            );
+
+            camera.position.copy(nextPos);
+            // Antes near/far eran 0.01 / maxDim*100 (~725): un rango
+            // gigantesco frente a lo poco que la cámara realmente se
+            // aleja (maxDistance abajo), lo que le deja muy poca
+            // precisión de profundidad a las distancias donde sí se
+            // usa la cámara — se traduce en parpadeo/artefactos raros
+            // justo al alejar el zoom. Se ajusta a un rango mucho más
+            // ajustado a lo que la cámara puede recorrer de verdad.
+            camera.near = Math.max(maxDim * .01, .05);
+            camera.far = Math.max(maxDim * 20, 200);
+            camera.updateProjectionMatrix();
+
+            controls.target.copy(modelCenter);
+            controls.minDistance = maxDim * .06;
+            controls.maxDistance = maxDim * 6;
+            controls.update();
+
+            // El piso/cuadrícula tenían un tamaño FIJO (radio 18 / 24
+            // unidades) sin relación con el tamaño real de la casa
+            // cargada. Al alejar la cámara hasta maxDistance, la casa
+            // quedaba flotando en un vacío mucho más grande que el piso
+            // visible — se sentía como si "se perdiera" el modelo. Se
+            // escala el piso/cuadrícula según el tamaño real del modelo
+            // para que siempre cubran de sobra el zoom máximo permitido.
+            const escalaEntorno = Math.max(1, (maxDim * 4) / 18);
+            ground.scale.setScalar(escalaEntorno);
+            grid.scale.setScalar(escalaEntorno);
+
+            // La niebla también estaba en distancias fijas (18-48) sin
+            // relación con el tamaño real del modelo — se ajusta para
+            // que empiece justo después de maxDistance, y no se "coma"
+            // el piso ya agrandado arriba.
+            if (scene.fog) {
+                scene.fog.near = maxDim * 3;
+                scene.fog.far = maxDim * 9;
+            }
+
+            ground.position.y = modelBounds.min.y - .035;
+            grid.position.y = modelBounds.min.y - .025;
+
+            if (saveDefault) {
+                defaultCameraPos.copy(camera.position);
+                defaultTarget.copy(controls.target);
+            }
+        }
+
+        function resetView() {
+            if (!model) return;
+
+            cameraTween = {
+                start: performance.now(),
+                duration: 700,
+                fromPos: camera.position.clone(),
+                toPos: defaultCameraPos.clone(),
+                fromTarget: controls.target.clone(),
+                toTarget: defaultTarget.clone()
+            };
+        }
+
+        function updateModelLabel() {
+            if (!selectedEntry) {
+                modelLabel.classList.remove("show");
+                return;
+            }
+
+            const info = objectCenterAndSize(selectedEntry.object);
+            if (!info) {
+                modelLabel.classList.remove("show");
+                return;
+            }
+
+            const pos = info.center.clone().project(camera);
+            const rect = renderer.domElement.getBoundingClientRect();
+
+            const x = (pos.x * .5 + .5) * rect.width + rect.left;
+            const y = (-pos.y * .5 + .5) * rect.height + rect.top;
+
+            if (pos.z > 1 || x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+                modelLabel.classList.remove("show");
+                return;
+            }
+
+            modelLabel.textContent = selectedEntry.label;
+            modelLabel.style.left = `${x}px`;
+            modelLabel.style.top = `${y}px`;
+            modelLabel.classList.add("show");
+        }
+
+
+        function setApiStatus(kind, text, detail = "") {
+            apiStatus.classList.remove("ok", "error");
+            if (kind) apiStatus.classList.add(kind);
+            apiStatus.querySelector("span").textContent = text;
+            if (apiConnectionDetail) {
+                apiConnectionDetail.textContent = detail || API_BASE.replace(/^https?:\/\//, "");
+            }
+        }
+
+        async function checkApiConnection() {
+            setApiStatus("", "Conectando…", "Verificando /api/status");
+            try {
+                const response = await fetch(`${API_BASE}/api/status`, { cache: "no-store" });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                setApiStatus("ok", "API conectada", `${API_BASE.replace(/^https?:\/\//, "")} · ${data.mensaje || "activa"}`);
+                return true;
+            } catch (error) {
+                console.error("API status:", error);
+                setApiStatus("error", "API sin conexión", `Revisa la URL: ${API_BASE}`);
+                return false;
+            }
+        }
+
+        function normalizeName(value) {
+            return String(value || "")
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/\(mean\)/g, "")
+                .replace(/[^a-z0-9]+/g, "");
+        }
+
+        function numericSuffix(value) {
+            const match = String(value || "").match(/(\d+)/);
+            return match ? Number(match[1]) : null;
+        }
+
+        function scoreChannelMatch(entry, channel) {
+            const a = normalizeName(entry.label + " " + entry.rawName + " " + entry.type);
+            const b = normalizeName(channel);
+            let score = 0;
+
+            if (a && b && (a.includes(b) || b.includes(a))) score += 80;
+
+            const entryNum = numericSuffix(entry.label) ?? numericSuffix(entry.rawName);
+            const channelNum = numericSuffix(channel);
+            if (entryNum !== null && channelNum !== null && entryNum === channelNum) score += 35;
+
+            const low = b.toLowerCase();
+            if (entry.type === "Acelerómetro" && (low.includes("acel") || low.includes("acc"))) score += 45;
+            if (entry.type.includes("LVDT") && low.includes("lvdt")) score += 45;
+            if (entry.type.includes("hilo") && (low.includes("hilo") || low.includes("laser"))) score += 35;
+
+            return score;
+        }
+
+        function autoChannelFor(entry) {
+            if (!entry || !apiChannels.length) return "";
+            if (sensorChannelMap[entry.rawName] && apiChannels.includes(sensorChannelMap[entry.rawName])) {
+                return sensorChannelMap[entry.rawName];
+            }
+
+            let best = "";
+            let bestScore = -1;
+            apiChannels.forEach(channel => {
+                const score = scoreChannelMatch(entry, channel);
+                if (score > bestScore) {
+                    bestScore = score;
+                    best = channel;
+                }
+            });
+
+            return bestScore >= 35 ? best : "";
+        }
+
+        function populateChannelSelect(entry = selectedEntry) {
+            dataChannel.innerHTML = "";
+
+            const blank = document.createElement("option");
+            blank.value = "";
+            blank.textContent = "— Selecciona un canal —";
+            dataChannel.appendChild(blank);
+
+            apiChannels.forEach(channel => {
+                const opt = document.createElement("option");
+                opt.value = channel;
+                opt.textContent = channel.replace(" (Mean)", "");
+                dataChannel.appendChild(opt);
+            });
+
+            dataChannel.disabled = apiChannels.length === 0;
+
+            const chosen = entry ? autoChannelFor(entry) : "";
+            dataChannel.value = chosen;
+
+            if (chosen) {
+                drawSensorChart(chosen);
+            } else {
+                clearChart(entry ? "Selecciona el canal que corresponde a este sensor." : "Selecciona un sensor.");
+            }
+        }
+
+
+
+
+        function createBogotaEnvironment() {
+            if (bogotaEnvironment) return;
+
+            bogotaEnvironment = new THREE.Group();
+            bogotaEnvironment.name = "AmbienteBogota";
+
+            const diag = Math.max(modelSize.length(), 1);
+            const center = modelCenter.clone();
+
+            // Calle alrededor de la vivienda
+            const roadMaterial = new THREE.MeshStandardMaterial({
+                color: 0x4b5563,
+                roughness: 0.96,
+                metalness: 0
+            });
+
+            const road = new THREE.Mesh(
+                new THREE.PlaneGeometry(diag * 3.2, diag * 0.62),
+                roadMaterial
+            );
+            road.rotation.x = -Math.PI / 2;
+            road.position.set(center.x, modelBounds.min.y + diag * 0.003, center.z + diag * 0.70);
+            road.receiveShadow = true;
+            bogotaEnvironment.add(road);
+
+            // Andenes
+            const sidewalkMaterial = new THREE.MeshStandardMaterial({
+                color: 0xaeb7c1,
+                roughness: 0.95
+            });
+
+            [-0.39, 0.39].forEach(offset => {
+                const sidewalk = new THREE.Mesh(
+                    new THREE.BoxGeometry(diag * 3.0, diag * 0.015, diag * 0.16),
+                    sidewalkMaterial
+                );
+                sidewalk.position.set(
+                    center.x,
+                    modelBounds.min.y + diag * 0.008,
+                    center.z + diag * (0.70 + offset)
+                );
+                sidewalk.receiveShadow = true;
+                bogotaEnvironment.add(sidewalk);
+            });
+
+            // Marcas sencillas de la vía
+            const stripeMaterial = new THREE.MeshBasicMaterial({ color: 0xe5e7eb });
+            for (let i = -5; i <= 5; i++) {
+                const stripe = new THREE.Mesh(
+                    new THREE.PlaneGeometry(diag * 0.14, diag * 0.018),
+                    stripeMaterial
+                );
+                stripe.rotation.x = -Math.PI / 2;
+                stripe.position.set(
+                    center.x + i * diag * 0.27,
+                    modelBounds.min.y + diag * 0.006,
+                    center.z + diag * 0.70
+                );
+                bogotaEnvironment.add(stripe);
+            }
+
+            // Edificaciones urbanas simples alrededor
+            const buildingColors = [0x9b7b68, 0x8f8578, 0xb08d73, 0x7c8a96, 0xa36f58];
+
+            const createBuilding = (x, z, w, h, d, colorIndex) => {
+                const group = new THREE.Group();
+
+                const body = new THREE.Mesh(
+                    new THREE.BoxGeometry(w, h, d),
+                    new THREE.MeshStandardMaterial({
+                        color: buildingColors[colorIndex % buildingColors.length],
+                        roughness: 0.92
+                    })
+                );
+                body.position.y = h / 2;
+                body.castShadow = true;
+                body.receiveShadow = true;
+                group.add(body);
+
+                // Ventanas
+                const winMat = new THREE.MeshBasicMaterial({
+                    color: 0x9cc7dd,
+                    transparent: true,
+                    opacity: 0.72
+                });
+
+                const floors = Math.max(2, Math.floor(h / (diag * 0.18)));
+                for (let f = 1; f <= floors; f++) {
+                    for (let c = -1; c <= 1; c++) {
+                        const win = new THREE.Mesh(
+                            new THREE.PlaneGeometry(w * 0.16, diag * 0.055),
+                            winMat
+                        );
+                        win.position.set(c * w * 0.25, f * h / (floors + 1), d / 2 + 0.002);
+                        group.add(win);
+                    }
+                }
+
+                group.position.set(x, modelBounds.min.y, z);
+                bogotaEnvironment.add(group);
+            };
+
+            const bx = center.x;
+            const bz = center.z;
+
+            createBuilding(bx - diag * 1.10, bz - diag * 0.15, diag * 0.34, diag * 0.82, diag * 0.35, 0);
+            createBuilding(bx - diag * 0.70, bz - diag * 0.28, diag * 0.28, diag * 0.60, diag * 0.30, 1);
+            createBuilding(bx + diag * 0.82, bz - diag * 0.22, diag * 0.34, diag * 0.72, diag * 0.34, 2);
+            createBuilding(bx + diag * 1.18, bz - diag * 0.05, diag * 0.28, diag * 0.52, diag * 0.28, 3);
+
+            // Árboles urbanos pequeños
+            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6b4f32, roughness: 1 });
+            const leafMat = new THREE.MeshStandardMaterial({ color: 0x4f7a52, roughness: 1 });
+
+            const createTree = (x, z, s = 1) => {
+                const g = new THREE.Group();
+
+                const trunk = new THREE.Mesh(
+                    new THREE.CylinderGeometry(diag * 0.012 * s, diag * 0.018 * s, diag * 0.16 * s, 10),
+                    trunkMat
+                );
+                trunk.position.y = diag * 0.08 * s;
+                g.add(trunk);
+
+                const crown = new THREE.Mesh(
+                    new THREE.SphereGeometry(diag * 0.075 * s, 14, 12),
+                    leafMat
+                );
+                crown.position.y = diag * 0.22 * s;
+                g.add(crown);
+
+                g.position.set(x, modelBounds.min.y, z);
+                bogotaEnvironment.add(g);
+            };
+
+            createTree(center.x - diag * 0.75, center.z + diag * 0.38, 0.95);
+            createTree(center.x + diag * 0.62, center.z + diag * 0.42, 0.9);
+            createTree(center.x + diag * 1.00, center.z + diag * 0.32, 0.8);
+
+            // Silueta de cerros al fondo para darle sensación bogotana
+            const mountainMat = new THREE.MeshStandardMaterial({
+                color: 0x6f8473,
+                roughness: 1,
+                side: THREE.DoubleSide
+            });
+
+            const mountainGeo = new THREE.BufferGeometry();
+            const mw = diag * 3.8;
+            const mh = diag * 0.9;
+            const vertices = new Float32Array([
+                -mw / 2, 0, 0,
+                -mw / 3, mh * 0.65, 0,
+                -mw / 6, mh * 0.28, 0,
+                0, mh * 0.82, 0,
+                mw / 5, mh * 0.42, 0,
+                mw / 3, mh * 0.72, 0,
+                mw / 2, 0, 0
+            ]);
+            mountainGeo.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
+
+            const indices = [];
+            for (let i = 0; i < 5; i++) {
+                indices.push(i, i + 1, 6);
+            }
+            mountainGeo.setIndex(indices);
+
+            const mountain = new THREE.Mesh(mountainGeo, mountainMat);
+            mountain.position.set(
+                center.x,
+                modelBounds.min.y,
+                center.z - diag * 1.65
+            );
+            mountain.rotation.y = Math.PI;
+            bogotaEnvironment.add(mountain);
+
+            // Luz más fría / cielo nublado típico
+            bogotaEnvironment.userData.originalBackground = scene.background.clone();
+            bogotaEnvironment.userData.originalFog = scene.fog ? {
+                color: scene.fog.color.clone(),
+                near: scene.fog.near,
+                far: scene.fog.far
+            } : null;
+
+            bogotaEnvironment.visible = false;
+            scene.add(bogotaEnvironment);
+        }
+
+        function setBogotaEnvironment(enabled) {
+            createBogotaEnvironment();
+
+            environmentEnabled = enabled;
+            bogotaEnvironment.visible = enabled;
+
+            if (enabled) {
+                scene.background = new THREE.Color(0xdbe4ea);
+                scene.fog = new THREE.Fog(0xdbe4ea, 18, 42);
+
+                btnEnvironment.classList.add("active");
+                btnEnvironment.innerHTML = `
+                                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                                <path d="M4 4l16 16" />
+                                                                <path d="M3 21h18" />
+                                                            </svg>
+                                                            <span>Quitar ambiente</span>
+                                                        `;
+            } else {
+                scene.background = bogotaEnvironment.userData.originalBackground.clone();
+
+                const oldFog = bogotaEnvironment.userData.originalFog;
+                scene.fog = oldFog
+                    ? new THREE.Fog(oldFog.color, oldFog.near, oldFog.far)
+                    : null;
+
+                btnEnvironment.classList.remove("active");
+                btnEnvironment.innerHTML = `
+                                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                                <path d="M3 21h18" />
+                                                                <path d="M5 21V9l4-3v15" />
+                                                                <path d="M9 21V5l5-3v19" />
+                                                                <path d="M14 21V8l5 2v11" />
+                                                            </svg>
+                                                            <span>Ambiente Bogotá</span>
+                                                        `;
+            }
+        }
+
+        function toggleBogotaEnvironment() {
+            setBogotaEnvironment(!environmentEnabled);
+        }
+
+        function ensureCracks() {
+            if (crackGroup || !model) return;
+
+            crackGroup = new THREE.Group();
+            crackGroup.visible = false;
+
+            const diag = Math.max(modelSize.length(), 1);
+            const crackMaterial = new THREE.LineBasicMaterial({
+                color: 0x4a2a2a,
+                transparent: true,
+                opacity: 0.72,
+                depthTest: false,
+                depthWrite: false
+            });
+
+            const makeCrack = (points, position, rotationY = 0, scale = 1) => {
+                const geometry = new THREE.BufferGeometry().setFromPoints(
+                    points.map(p => new THREE.Vector3(p[0], p[1], p[2]))
+                );
+                const line = new THREE.Line(geometry, crackMaterial.clone());
+                line.position.copy(position);
+                line.rotation.y = rotationY;
+                line.scale.setScalar(scale);
+                line.renderOrder = 10000;
+                crackGroup.add(line);
+                return line;
+            };
+
+            // Grietas tipo zig-zag visibles en varias caras de la casa.
+            const crackA = [
+                [0, 0, 0], [0.06, -0.08, 0], [-0.02, -0.18, 0],
+                [0.08, -0.28, 0], [0.00, -0.40, 0], [0.10, -0.55, 0]
+            ];
+            const crackB = [
+                [0, 0, 0], [-0.05, -0.08, 0], [0.05, -0.17, 0],
+                [-0.02, -0.29, 0], [0.07, -0.39, 0]
+            ];
+
+            const sx = modelSize.x || diag * .35;
+            const sy = modelSize.y || diag * .35;
+            const sz = modelSize.z || diag * .35;
+
+            const frontZ = modelCenter.z + sz * 0.50 + diag * 0.002;
+            const backZ = modelCenter.z - sz * 0.50 - diag * 0.002;
+            const leftX = modelCenter.x - sx * 0.50 - diag * 0.002;
+            const rightX = modelCenter.x + sx * 0.50 + diag * 0.002;
+
+            makeCrack(
+                crackA,
+                new THREE.Vector3(modelCenter.x - sx * .18, modelCenter.y + sy * .28, frontZ),
+                0,
+                diag * .10
+            );
+
+            makeCrack(
+                crackB,
+                new THREE.Vector3(modelCenter.x + sx * .19, modelCenter.y + sy * .16, frontZ),
+                0,
+                diag * .09
+            );
+
+            makeCrack(
+                crackA,
+                new THREE.Vector3(rightX, modelCenter.y + sy * .20, modelCenter.z + sz * .12),
+                Math.PI / 2,
+                diag * .09
+            );
+
+            makeCrack(
+                crackB,
+                new THREE.Vector3(leftX, modelCenter.y + sy * .10, modelCenter.z - sz * .10),
+                -Math.PI / 2,
+                diag * .08
+            );
+
+            makeCrack(
+                crackB,
+                new THREE.Vector3(modelCenter.x + sx * .05, modelCenter.y + sy * .32, backZ),
+                Math.PI,
+                diag * .08
+            );
+
+            scene.add(crackGroup);
+
+            // Adjuntar las grietas al modelo conservando su posición mundial.
+            // Así se mueven y caen junto con la casa en vez de quedarse flotando.
+            model.updateMatrixWorld(true);
+            crackGroup.updateMatrixWorld(true);
+            model.attach(crackGroup);
+        }
+
+        function showCracks(progress = 1) {
+            ensureCracks();
+            if (!crackGroup) return;
+
+            crackGroup.visible = true;
+            cracksVisible = true;
+
+            const p = Math.max(0, Math.min(1, progress));
+            crackGroup.children.forEach((line, i) => {
+                const localP = Math.max(0, Math.min(1, p * 1.35 - i * 0.08));
+                line.visible = localP > 0.03;
+
+                if (line.material) {
+                    line.material.opacity = 0.20 + localP * 0.80;
+                }
+            });
+        }
+
+        function hideCracks() {
+            cracksVisible = false;
+            if (crackGroup) {
+                crackGroup.visible = false;
+            }
+        }
+
+        function reconstructHouse() {
+            if (!model) return;
+
+            earthquakePlaying = false;
+            earthquakeStartedAt = 0;
+            collapseActive = false;
+            collapseStartedAt = 0;
+            hideCracks();
+
+            model.position.copy(modelBasePosition);
+            model.rotation.copy(modelBaseRotation);
+
+            if (sensorMarker) sensorMarker.position.copy(sensorMarkerBasePosition);
+            if (sensorMarkerHalo) sensorMarkerHalo.position.copy(sensorMarkerBasePosition);
+
+            btnQuake.classList.remove("active");
+            btnQuake.innerHTML = `
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                            <path d="M3 12h3l2-5 4 10 3-7 2 2h4" />
+                                                        </svg>
+                                                        <span>Simular sismo</span>
+                                                    `;
+        }
+
+        function stopEarthquake() {
+            earthquakePlaying = false;
+            earthquakeStartedAt = 0;
+            collapseActive = false;
+            collapseStartedAt = 0;
+            hideCracks();
+
+            if (model) {
+                model.position.copy(modelBasePosition);
+                model.rotation.copy(modelBaseRotation);
+            }
+
+            if (sensorMarker) sensorMarker.position.copy(sensorMarkerBasePosition);
+            if (sensorMarkerHalo) sensorMarkerHalo.position.copy(sensorMarkerBasePosition);
+
+            btnQuake.classList.remove("active");
+            btnQuake.innerHTML = `
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                            <path d="M3 12h3l2-5 4 10 3-7 2 2h4" />
+                                                        </svg>
+                                                        <span>Simular sismo</span>
+                                                    `;
+        }
+
+        function startEarthquake() {
+            // El sismo visual independiente detiene cualquier reproducción histórica.
+            if (simulationPlaying) {
+                stopSimulation();
+                restoreSensorPlaybackTransform();
+            }
+
+            if (!model) return;
+
+            // Si ya está activo, el mismo botón sirve para detenerlo.
+            if (earthquakePlaying) {
+                stopEarthquake();
+                return;
+            }
+
+            // Siempre empieza desde la casa reconstruida.
+            reconstructHouse();
+
+            earthquakePlaying = true;
+            earthquakeStartedAt = performance.now();
+
+            btnQuake.classList.add("active");
+            btnQuake.innerHTML = `
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                            <path d="M6 6l12 12M18 6 6 18" />
+                                                        </svg>
+                                                        <span>Detener sismo</span>
+                                                    `;
+        }
+
+        function stopSimulation() {
+            simulationPlaying = false;
+            if (simulationTimer) {
+                clearInterval(simulationTimer);
+                simulationTimer = null;
+            }
+            btnSimPlay.textContent = "▶ Reproducir";
+        }
+
+        function clearChart(message) {
+            stopSimulation();
+            simulationPoints = [];
+            simulationChannel = "";
+            simulationIndex = 0;
+
+            chartSvg.innerHTML = "";
+            if (chartModePill) chartModePill.textContent = "Sin datos";
+            chartEmpty.style.display = "grid";
+            chartEmpty.textContent = message;
+
+            statCurrent.textContent = "—";
+            statMax.textContent = "—";
+            statMin.textContent = "—";
+            statCount.textContent = "0";
+
+            simProgress.min = "0";
+            simProgress.max = "0";
+            simProgress.value = "0";
+            simProgress.disabled = true;
+
+            btnSimPlay.disabled = true;
+            btnSimReset.disabled = true;
+            simTime.textContent = "0.00 s / 0.00 s";
+        }
+
+        function safeNumber(value) {
+            const n = Number(value);
+            return Number.isFinite(n) ? n : null;
+        }
+
+
+
+        // Crea una coordenada X visual basada en el tiempo real.
+        // Mantiene la separación temporal normal entre muestras, pero comprime
+        // únicamente pausas extraordinariamente grandes para que la señal no
+        // quede arrinconada en un extremo del gráfico.
+        function buildAdaptiveTimeAxis(points, maxGapMultiplier = 8) {
+            if (!points.length) {
+                return { points: [], minVisualX: 0, maxVisualX: 1, medianDelta: 1 };
+            }
+
+            const deltas = [];
+            for (let i = 1; i < points.length; i++) {
+                const dt = points[i].x - points[i - 1].x;
+                if (Number.isFinite(dt) && dt > 0) deltas.push(dt);
+            }
+
+            const ordered = deltas.slice().sort((a, b) => a - b);
+            const medianDelta = ordered.length
+                ? ordered[Math.floor(ordered.length / 2)]
+                : 1;
+
+            const maxGap = Math.max(medianDelta * maxGapMultiplier, medianDelta);
+
+            let visualX = 0;
+            const mapped = points.map((p, i) => {
+                if (i > 0) {
+                    const dt = p.x - points[i - 1].x;
+                    const safeDt = Number.isFinite(dt) && dt > 0
+                        ? Math.min(dt, maxGap)
+                        : medianDelta;
+                    visualX += safeDt;
+                }
+
+                return { ...p, visualX };
+            });
+
+            return {
+                points: mapped,
+                minVisualX: 0,
+                maxVisualX: Math.max(mapped.at(-1)?.visualX || 0, 1),
+                medianDelta
+            };
+        }
+
+        function chartNiceNumber(value) {
+            const abs = Math.abs(value);
+            if (abs >= 1000) return value.toFixed(0);
+            if (abs >= 100) return value.toFixed(1);
+            if (abs >= 10) return value.toFixed(2);
+            if (abs >= 1) return value.toFixed(3);
+            return value.toFixed(4);
+        }
+
+        function applySensorMovement() {
+            if (!model || !simulationPoints.length) return;
+
+            const point = simulationPoints[Math.min(simulationIndex, simulationPoints.length - 1)];
+            const diag = Math.max(modelSize.length(), 1);
+
+            // Quitamos el valor base para usar solamente la variación de la señal.
+            const centered = point.y - simulationBaseline;
+            const normalized = Math.max(
+                -1,
+                Math.min(1, centered / Math.max(simulationDeviationMax, 0.000001))
+            );
+
+            // Movimiento visual moderado. No representa una predicción estructural.
+            const horizontal = diag * 0.012 * normalized;
+            const secondary = diag * 0.0035 * normalized;
+            const vertical = diag * 0.0018 * normalized;
+
+            const channelText = String(simulationChannel || "").toLowerCase();
+            const typeText = String(selectedEntry?.type || "").toLowerCase();
+
+            let dx = horizontal;
+            let dz = secondary;
+            let dy = 0;
+
+            // Para sensores verticales, privilegiamos el desplazamiento vertical.
+            if (typeText.includes("vertical") || channelText.includes("vertical") || channelText.includes("vert")) {
+                dx = secondary * 0.35;
+                dz = secondary * 0.25;
+                dy = vertical * 2.0;
+            }
+
+            // Para LVDT diagonales combinamos horizontal + vertical.
+            if (typeText.includes("diagonal") || channelText.includes("diag")) {
+                dx = horizontal * 0.75;
+                dz = secondary * 0.50;
+                dy = vertical;
+            }
+
+            model.position.set(
+                modelBasePosition.x + dx,
+                modelBasePosition.y + dy,
+                modelBasePosition.z + dz
+            );
+
+            model.rotation.set(
+                modelBaseRotation.x + normalized * 0.0018,
+                modelBaseRotation.y,
+                modelBaseRotation.z + normalized * 0.0040
+            );
+
+            // El marcador del sensor acompaña a la casa durante la reproducción.
+            if (sensorMarker) {
+                sensorMarker.position.set(
+                    sensorMarkerBasePosition.x + dx,
+                    sensorMarkerBasePosition.y + dy,
+                    sensorMarkerBasePosition.z + dz
+                );
+            }
+
+            if (sensorMarkerHalo) {
+                sensorMarkerHalo.position.set(
+                    sensorMarkerBasePosition.x + dx,
+                    sensorMarkerBasePosition.y + dy,
+                    sensorMarkerBasePosition.z + dz
+                );
+            }
+        }
+
+        function restoreSensorPlaybackTransform() {
+            if (!model || earthquakePlaying) return;
+
+            model.position.copy(modelBasePosition);
+            model.rotation.copy(modelBaseRotation);
+
+            if (sensorMarker) {
+                sensorMarker.position.copy(sensorMarkerBasePosition);
+            }
+            if (sensorMarkerHalo) {
+                sensorMarkerHalo.position.copy(sensorMarkerBasePosition);
+            }
+        }
+
+        function renderSimulationFrame() {
+            if (!simulationPoints.length || !simulationChannel) return;
+
+            const points = simulationPoints;
+            const currentIndex = Math.min(simulationIndex, points.length - 1);
+            const currentPoint = points[currentIndex];
+            const reached = points.slice(0, currentIndex + 1);
+
+            // =====================================================
+            // MONITOR REAL · VENTANA FIJA
+            //
+            // - El dato actual SIEMPRE está en el borde derecho.
+            // - La ventana tiene 160 posiciones fijas.
+            // - Si apenas hay 17 muestras, NO se estiran.
+            //   Ocupan solo 17 posiciones pegadas al lado derecho.
+            // - Al entrar nuevas muestras, el histórico se desplaza
+            //   naturalmente hacia la izquierda.
+            // =====================================================
+            const WINDOW_SAMPLES = 160;
+
+            const visibleRaw = reached.slice(-WINDOW_SAMPLES);
+
+            if (!visibleRaw.length) return;
+
+            const visible = visibleRaw.map((p, idx) => ({
+                ...p,
+                // El último punto queda siempre en WINDOW_SAMPLES - 1.
+                // Si hay pocas muestras, quedan agrupadas hacia la derecha.
+                slot: WINDOW_SAMPLES - visibleRaw.length + idx
+            }));
+
+            const visibleY = visible.map(p => p.y);
+
+            let minY = Math.min(...visibleY);
+            let maxY = Math.max(...visibleY);
+
+            if (minY === maxY) {
+                const pad = Math.max(Math.abs(minY) * 0.08, 0.01);
+                minY -= pad;
+                maxY += pad;
+            } else {
+                const rangeY = maxY - minY;
+                const pad = Math.max(
+                    rangeY * 0.12,
+                    Math.abs(maxY) * 0.002,
+                    0.001
+                );
+                minY -= pad;
+                maxY += pad;
+            }
+
+            const W = 900;
+            const H = 220;
+            const left = 54;
+            const right = 16;
+            const top = 16;
+            const bottom = 32;
+
+            const innerW = W - left - right;
+            const innerH = H - top - bottom;
+
+            // Escala fija de 0..159 posiciones.
+            const sx = slot =>
+                left + (slot / (WINDOW_SAMPLES - 1)) * innerW;
+
+            const sy = y =>
+                top + (1 - (y - minY) / (maxY - minY || 1)) * innerH;
+
+            const path = visible.map((p, i) =>
+                `${i === 0 ? "M" : "L"}${sx(p.slot).toFixed(2)},${sy(p.y).toFixed(2)}`
+            ).join(" ");
+
+            let area = "";
+
+            if (visible.length > 1) {
+                area =
+                    `${path} ` +
+                    `L${sx(visible.at(-1).slot).toFixed(2)},${(top + innerH).toFixed(2)} ` +
+                    `L${sx(visible[0].slot).toFixed(2)},${(top + innerH).toFixed(2)} Z`;
+            }
+
+            const yMid = (minY + maxY) / 2;
+
+            const reachedY = reached.map(p => p.y);
+            const reachedMax = Math.max(...reachedY);
+            const reachedMin = Math.min(...reachedY);
+
+            // Rejilla vertical fija. Así la "pantalla" no cambia de tamaño.
+            let xGrid = "";
+            for (let t = 0; t <= 4; t++) {
+                const px = left + (innerW / 4) * t;
+                xGrid += `
+                                    <line class="chart-grid"
+                                          x1="${px}" y1="${top}"
+                                          x2="${px}" y2="${top + innerH}"/>
+                                `;
+            }
+
+            // Etiquetas de tiempo SOLO donde existen datos reales.
+            // Se muestran inicio visible, centro y actual.
+            let xLabels = "";
+
+            if (visible.length === 1) {
+                xLabels = `
+                                    <text class="chart-axis"
+                                          x="${W - right}"
+                                          y="${H - 9}"
+                                          text-anchor="end">
+                                        ${visible[0].x.toFixed(2)} s
+                                    </text>
+                                `;
+            } else {
+                const first = visible[0];
+                const middle = visible[Math.floor((visible.length - 1) / 2)];
+                const last = visible.at(-1);
+
+                xLabels = `
+                                    <text class="chart-axis"
+                                          x="${sx(first.slot)}"
+                                          y="${H - 9}"
+                                          text-anchor="start">
+                                        ${first.x.toFixed(2)} s
+                                    </text>
+
+                                    <text class="chart-axis"
+                                          x="${sx(middle.slot)}"
+                                          y="${H - 9}"
+                                          text-anchor="middle">
+                                        ${middle.x.toFixed(2)} s
+                                    </text>
+
+                                    <text class="chart-axis"
+                                          x="${W - right}"
+                                          y="${H - 9}"
+                                          text-anchor="end">
+                                        ${last.x.toFixed(2)} s
+                                    </text>
+                                `;
+            }
+
+            const currentVisible = visible.at(-1);
+            const currentXpx = W - right;
+
+            chartSvg.setAttribute("viewBox", "0 0 900 220");
+
+            chartSvg.innerHTML = `
+                                <defs>
+                                    <linearGradient id="liveAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="#f5c400" stop-opacity=".22"/>
+                                        <stop offset="100%" stop-color="#f5c400" stop-opacity="0"/>
+                                    </linearGradient>
+                                </defs>
+
+                                <line class="chart-grid"
+                                      x1="${left}" y1="${top}"
+                                      x2="${W - right}" y2="${top}"/>
+
+                                <line class="chart-grid"
+                                      x1="${left}" y1="${sy(yMid)}"
+                                      x2="${W - right}" y2="${sy(yMid)}"/>
+
+                                <line class="chart-grid"
+                                      x1="${left}" y1="${top + innerH}"
+                                      x2="${W - right}" y2="${top + innerH}"/>
+
+                                ${xGrid}
+
+                                <text class="chart-axis"
+                                      x="5" y="${top + 4}">
+                                    ${chartNiceNumber(maxY)}
+                                </text>
+
+                                <text class="chart-axis"
+                                      x="5" y="${sy(yMid) + 4}">
+                                    ${chartNiceNumber(yMid)}
+                                </text>
+
+                                <text class="chart-axis"
+                                      x="5" y="${top + innerH + 4}">
+                                    ${chartNiceNumber(minY)}
+                                </text>
+
+                                ${xLabels}
+
+                                ${area
+                    ? `<path d="${area}" fill="url(#liveAreaGradient)"/>`
+                    : ""
+                }
+
+                                ${path
+                    ? `<path class="chart-line" d="${path}"/>`
+                    : ""
+                }
+
+                                <line class="chart-current-line"
+                                      x1="${currentXpx}" y1="${top}"
+                                      x2="${currentXpx}" y2="${top + innerH}"/>
+
+                                <circle class="chart-dot"
+                                        cx="${currentXpx}"
+                                        cy="${sy(currentVisible.y)}"
+                                        r="4.6"/>
+                            `;
+
+            chartEmpty.style.display = "none";
+
+            chartModePill.textContent =
+                `En vivo · ${visible.length}/${WINDOW_SAMPLES} muestras`;
+
+            statCurrent.textContent = currentPoint.y.toFixed(4);
+            statMax.textContent = reachedMax.toFixed(4);
+            statMin.textContent = reachedMin.toFixed(4);
+            statCount.textContent = String(reached.length);
+
+            simProgress.value = String(currentIndex);
+
+            simTime.textContent =
+                `${currentPoint.x.toFixed(2)} s / ${points.at(-1).x.toFixed(2)} s`;
+
+            const sensorText = selectedEntry
+                ? selectedEntry.label
+                : "Sensor";
+
+            chartTitle.textContent =
+                `${sensorText} · ${simulationChannel.replace(" (Mean)", "")}`;
+
+            chartNote.innerHTML =
+                `Monitor en vivo · ventana fija de <b>${WINDOW_SAMPLES} muestras</b> · el dato actual permanece a la <b>derecha</b> y el histórico se desplaza hacia la <b>izquierda</b> sin estirar las primeras lecturas.`;
+        }
+
+
+        function renderCompletedSimulation() {
+            if (!simulationPoints.length || !simulationChannel) return;
+
+            const originalPoints = simulationPoints;
+
+            // =====================================================
+            // AL FINAL:
+            // mostramos TODAS las muestras ocupando todo el ancho,
+            // sin importar la duración total del ensayo.
+            // =====================================================
+            const points = originalPoints.map((p, idx) => ({
+                ...p,
+                visualIndex: idx
+            }));
+
+            const ys = points.map(p => p.y);
+
+            let minY = Math.min(...ys);
+            let maxY = Math.max(...ys);
+
+            if (minY === maxY) {
+                const pad = Math.max(Math.abs(minY) * 0.08, 0.01);
+                minY -= pad;
+                maxY += pad;
+            } else {
+                const rangeY = maxY - minY;
+                const pad = Math.max(
+                    rangeY * 0.10,
+                    Math.abs(maxY) * 0.002,
+                    0.001
+                );
+                minY -= pad;
+                maxY += pad;
+            }
+
+            const W = 900;
+            const H = 220;
+            const left = 54;
+            const right = 16;
+            const top = 16;
+            const bottom = 32;
+
+            const innerW = W - left - right;
+            const innerH = H - top - bottom;
+
+            const visualMax = Math.max(1, points.length - 1);
+
+            const sx = idx =>
+                left + (idx / visualMax) * innerW;
+
+            const sy = y =>
+                top + (1 - (y - minY) / (maxY - minY || 1)) * innerH;
+
+            // -----------------------------------------------------
+            // Detectar huecos grandes SOLO para no unirlos con una
+            // diagonal falsa. El hueco NO crea espacio vacío.
+            // -----------------------------------------------------
+            const deltas = [];
+
+            for (let i = 1; i < points.length; i++) {
+                const dt = points[i].x - points[i - 1].x;
+                if (Number.isFinite(dt) && dt > 0) {
+                    deltas.push(dt);
+                }
+            }
+
+            const ordered = deltas.slice().sort((a, b) => a - b);
+
+            const medianDelta = ordered.length
+                ? ordered[Math.floor(ordered.length / 2)]
+                : 1;
+
+            const GAP_THRESHOLD =
+                Math.max(medianDelta * 15, 2);
+
+            const segments = [];
+            let segment = [];
+
+            points.forEach((p, i) => {
+                if (
+                    i > 0 &&
+                    (p.x - points[i - 1].x) > GAP_THRESHOLD &&
+                    segment.length
+                ) {
+                    segments.push(segment);
+                    segment = [];
+                }
+
+                segment.push(p);
+            });
+
+            if (segment.length) {
+                segments.push(segment);
+            }
+
+            const pathMarkup = segments.map(seg => {
+                const d = seg.map((p, i) =>
+                    `${i === 0 ? "M" : "L"}${sx(p.visualIndex).toFixed(2)},${sy(p.y).toFixed(2)}`
+                ).join(" ");
+
+                return `<path class="chart-line" d="${d}"/>`;
+            }).join("");
+
+            const areaMarkup = segments.map(seg => {
+                if (seg.length < 2) return "";
+
+                const d = seg.map((p, i) =>
+                    `${i === 0 ? "M" : "L"}${sx(p.visualIndex).toFixed(2)},${sy(p.y).toFixed(2)}`
+                ).join(" ");
+
+                return `
+                                    <path
+                                        d="${d}
+                                           L${sx(seg.at(-1).visualIndex).toFixed(2)},${top + innerH}
+                                           L${sx(seg[0].visualIndex).toFixed(2)},${top + innerH}
+                                           Z"
+                                        fill="url(#completeAreaGradient)"
+                                    />
+                                `;
+            }).join("");
+
+            const yMid = (minY + maxY) / 2;
+
+            let xGrid = "";
+            let xLabels = "";
+
+            const tickCount = Math.min(
+                5,
+                Math.max(1, points.length - 1)
+            );
+
+            for (let t = 0; t <= tickCount; t++) {
+                const ratio = t / tickCount;
+
+                const sampleIndex = Math.min(
+                    points.length - 1,
+                    Math.round(ratio * (points.length - 1))
+                );
+
+                const pTick = points[sampleIndex];
+                const px = sx(pTick.visualIndex);
+
+                xGrid += `
+                                    <line class="chart-grid"
+                                          x1="${px}" y1="${top}"
+                                          x2="${px}" y2="${top + innerH}"/>
+                                `;
+
+                xLabels += `
+                                    <text class="chart-axis"
+                                          x="${px}"
+                                          y="${H - 9}"
+                                          text-anchor="${t === 0 ? "start" : t === tickCount ? "end" : "middle"}">
+                                        ${pTick.x.toFixed(1)} s
+                                    </text>
+                                `;
+            }
+
+            const last = points.at(-1);
+
+            chartSvg.setAttribute("viewBox", "0 0 900 220");
+
+            chartSvg.innerHTML = `
+                                <defs>
+                                    <linearGradient id="completeAreaGradient"
+                                                    x1="0" y1="0"
+                                                    x2="0" y2="1">
+                                        <stop offset="0%"
+                                              stop-color="#f5c400"
+                                              stop-opacity=".20"/>
+                                        <stop offset="100%"
+                                              stop-color="#f5c400"
+                                              stop-opacity="0"/>
+                                    </linearGradient>
+                                </defs>
+
+                                <line class="chart-grid"
+                                      x1="${left}" y1="${top}"
+                                      x2="${W - right}" y2="${top}"/>
+
+                                <line class="chart-grid"
+                                      x1="${left}" y1="${sy(yMid)}"
+                                      x2="${W - right}" y2="${sy(yMid)}"/>
+
+                                <line class="chart-grid"
+                                      x1="${left}" y1="${top + innerH}"
+                                      x2="${W - right}" y2="${top + innerH}"/>
+
+                                ${xGrid}
+
+                                <text class="chart-axis"
+                                      x="5" y="${top + 4}">
+                                    ${chartNiceNumber(maxY)}
+                                </text>
+
+                                <text class="chart-axis"
+                                      x="5" y="${sy(yMid) + 4}">
+                                    ${chartNiceNumber(yMid)}
+                                </text>
+
+                                <text class="chart-axis"
+                                      x="5" y="${top + innerH + 4}">
+                                    ${chartNiceNumber(minY)}
+                                </text>
+
+                                ${xLabels}
+
+                                ${areaMarkup}
+                                ${pathMarkup}
+
+                                <circle class="chart-dot"
+                                        cx="${W - right}"
+                                        cy="${sy(last.y)}"
+                                        r="4.6"/>
+                            `;
+
+            chartEmpty.style.display = "none";
+
+            chartModePill.textContent =
+                `Ensayo completo · ${points.length} muestras`;
+
+            const realLast = originalPoints.at(-1);
+
+            statCurrent.textContent =
+                realLast.y.toFixed(4);
+
+            statMax.textContent =
+                Math.max(...originalPoints.map(p => p.y)).toFixed(4);
+
+            statMin.textContent =
+                Math.min(...originalPoints.map(p => p.y)).toFixed(4);
+
+            statCount.textContent =
+                String(originalPoints.length);
+
+            simProgress.value =
+                String(originalPoints.length - 1);
+
+            simTime.textContent =
+                `${realLast.x.toFixed(2)} s / ${realLast.x.toFixed(2)} s`;
+
+            const sensorText = selectedEntry
+                ? selectedEntry.label
+                : "Sensor";
+
+            chartTitle.textContent =
+                `${sensorText} · ${simulationChannel.replace(" (Mean)", "")}`;
+
+            chartNote.innerHTML =
+                `Ensayo completo · todas las muestras se conservan y se ajustan al ancho disponible · canal: <b>${simulationChannel.replace(" (Mean)", "")}</b>.`;
+        }
+
+        function resetSimulation() {
+            stopSimulation();
+            restoreSensorPlaybackTransform();
+
+            if (!simulationPoints.length) return;
+            simulationIndex = 0;
+            renderSimulationFrame();
+        }
+
+        function stepSimulation() {
+            if (!simulationPoints.length) return;
+
+            if (simulationIndex < simulationPoints.length - 1) {
+                simulationIndex++;
+                applySensorMovement();
+                renderSimulationFrame();
+            }
+
+            // Al finalizar:
+            // detener la animación y mostrar la curva COMPLETA del ensayo.
+            // Así no queda congelada únicamente la última ventana de 60 s.
+            if (simulationIndex >= simulationPoints.length - 1) {
+                stopSimulation();
+                restoreSensorPlaybackTransform();
+                simulationIndex = simulationPoints.length - 1;
+                renderCompletedSimulation();
+                btnSimPlay.textContent = "▶ Reproducir";
+            }
+        }
+
+        function playSimulation() {
+            if (!simulationPoints.length) return;
+
+            // El sismo visual del botón superior y la reproducción del sensor
+            // no se ejecutan al mismo tiempo.
+            if (earthquakePlaying) {
+                stopEarthquake();
+            }
+
+            if (simulationPlaying) {
+                stopSimulation();
+                return;
+            }
+
+            // Si terminó anteriormente, comenzar desde cero.
+            if (simulationIndex >= simulationPoints.length - 1) {
+                simulationIndex = 0;
+                restoreSensorPlaybackTransform();
+                renderSimulationFrame();
+            }
+
+            simulationPlaying = true;
+            btnSimPlay.textContent = "❚❚ Pausar";
+
+            applySensorMovement();
+
+            const interval = Number(simSpeed.value) || 25;
+            simulationTimer = setInterval(stepSimulation, interval);
+        }
+
+        function drawSensorChart(channel) {
+            stopSimulation();
+
+            if (!channel || !historico.length) {
+                clearChart("No hay datos históricos disponibles.");
+                return;
+            }
+
+            const rawPoints = historico
+                .map(row => ({
+                    x: safeNumber(row.x_value),
+                    y: safeNumber(row?.datos?.[channel])
+                }))
+                .filter(p => p.x !== null && p.y !== null)
+                .sort((a, b) => a.x - b.x);
+
+            // Si hay varios registros con el mismo X_Value, conservar el último.
+            // Esto evita líneas verticales o segmentos extraños en la gráfica.
+            const byX = new Map();
+            rawPoints.forEach(p => byX.set(p.x, p));
+
+            let points = Array.from(byX.values())
+                .sort((a, b) => a.x - b.x);
+
+            if (points.length) {
+                const x0 = points[0].x;
+                points = points.map(p => ({
+                    x: p.x - x0,
+                    y: p.y
+                }));
+            }
+
+            if (!points.length) {
+                clearChart(`El canal "${channel}" no tiene valores numéricos en el histórico.`);
+                return;
+            }
+
+            simulationPoints = points;
+            simulationChannel = channel;
+            simulationIndex = 0;
+
+            simulationMaxAbs = Math.max(
+                ...points.map(p => Math.abs(p.y)),
+                0.000001
+            );
+
+            // Usar la media de las primeras lecturas como referencia para evitar
+            // que una señal con offset grande desplace permanentemente la casa.
+            const baselineCount = Math.min(25, points.length);
+            simulationBaseline =
+                points.slice(0, baselineCount).reduce((sum, p) => sum + p.y, 0) /
+                Math.max(baselineCount, 1);
+
+            simulationDeviationMax = Math.max(
+                ...points.map(p => Math.abs(p.y - simulationBaseline)),
+                0.000001
+            );
+
+            simProgress.min = "0";
+            simProgress.max = String(points.length - 1);
+            simProgress.value = "0";
+            simProgress.disabled = false;
+
+            btnSimPlay.disabled = false;
+            btnSimReset.disabled = false;
+
+            restoreSensorPlaybackTransform();
+            simulationIndex = 0;
+            renderSimulationFrame();
+        }
+
+        // ------------------------------------------------------------------
+        // Detección del tramo sísmico (mismo criterio que "Evento sísmico"
+        // en casa.html: energía de los acelerómetros AA/AS/AW contra su
+        // propio ruido base, agrupando en bloques y quedándose con el de
+        // mayor energía acumulada, con 5 s de margen antes y después). Se
+        // aplica aquí para que el modelo 3D nunca muestre el ensayo
+        // completo (con todo el tiempo muerto antes/después del sismo) —
+        // solo el tramo donde realmente pasó algo.
+        function detectarVentanaSismica(filas, canales) {
+            const sensoresAcel = canales.filter(n => {
+                const prefijo = n.trim().toUpperCase().slice(0, 2);
+                return prefijo === "AA" || prefijo === "AS" || prefijo === "AW";
+            });
+            if (!sensoresAcel.length || !filas.length) return null;
+
+            const energia = filas.map(f => {
+                let suma = 0, n = 0;
+                sensoresAcel.forEach(s => {
+                    const v = Number(f.datos[s]);
+                    if (Number.isFinite(v)) { suma += v * v; n++; }
+                });
+                return n ? suma / n : 0;
+            });
+
+            const nBase = Math.max(1, Math.min(filas.length, Math.max(20, Math.round(filas.length * 0.1))));
+            const muestraBase = energia.slice(0, nBase);
+            const mediaBase = muestraBase.reduce((a, b) => a + b, 0) / muestraBase.length;
+            const varBase = muestraBase.reduce((a, b) => a + (b - mediaBase) ** 2, 0) / muestraBase.length;
+            const stdBase = Math.sqrt(varBase);
+            const umbral = mediaBase + Math.max(stdBase * 5, mediaBase * 0.5, 1e-9);
+
+            const tramos = [];
+            for (let i = 0; i < energia.length;) {
+                if (energia[i] > umbral) {
+                    let j = i;
+                    while (j + 1 < energia.length && energia[j + 1] > umbral) j++;
+                    tramos.push([i, j]);
+                    i = j + 1;
+                } else { i++; }
+            }
+            if (!tramos.length) return null;
+
+            const TOLERANCIA_HUECO_SEG = 1;
+            const bloques = [tramos[0].slice()];
+            for (let k = 1; k < tramos.length; k++) {
+                const bloqueActual = bloques[bloques.length - 1];
+                const tFinBloque = Number(filas[bloqueActual[1]].x_value);
+                const tInicioTramo = Number(filas[tramos[k][0]].x_value);
+                const hueco = tInicioTramo - tFinBloque;
+                if (Number.isFinite(hueco) && hueco <= TOLERANCIA_HUECO_SEG) {
+                    bloqueActual[1] = tramos[k][1];
+                } else { bloques.push(tramos[k].slice()); }
+            }
+
+            const MIN_MUESTRAS_BLOQUE = 3;
+            const bloquesValidos = bloques.filter(([ini, fin]) => (fin - ini + 1) >= MIN_MUESTRAS_BLOQUE);
+            if (!bloquesValidos.length) return null;
+
+            let mejorBloque = null, mejorEnergia = -Infinity;
+            bloquesValidos.forEach(([ini, fin]) => {
+                let energiaAcumulada = 0;
+                for (let k = ini; k <= fin; k++) energiaAcumulada += energia[k];
+                if (energiaAcumulada > mejorEnergia) { mejorEnergia = energiaAcumulada; mejorBloque = [ini, fin]; }
+            });
+
+            const [idxInicio, idxFin] = mejorBloque;
+            const tInicioEvento = Number(filas[idxInicio].x_value);
+            const tFinEvento = Number(filas[idxFin].x_value);
+            const tMinTotal = Number(filas[0].x_value);
+            const tMaxTotal = Number(filas.at(-1).x_value);
+            if (!Number.isFinite(tInicioEvento) || !Number.isFinite(tFinEvento)) return null;
+
+            const MARGEN_ANTES_SEG = 5;
+            const MARGEN_DESPUES_SEG = 5;
+            return {
+                ventanaIni: Math.max(tMinTotal, tInicioEvento - MARGEN_ANTES_SEG),
+                ventanaFin: Math.min(tMaxTotal, tFinEvento + MARGEN_DESPUES_SEG),
+            };
+        }
+
+        async function loadHistoricalData() {
+            const connected = await checkApiConnection();
+
+            if (!connected) {
+                historico = [];
+                apiChannels = [];
+                clearChart("No hay conexión con la API. Inicia Flask y vuelve a pulsar “Actualizar”.");
+                dataChannel.innerHTML = '<option value="">API no disponible</option>';
+                dataChannel.disabled = true;
+                return;
+            }
+
+            btnRefreshData.disabled = true;
+
+            try {
+                setApiStatus("ok", "API conectada", "Cargando histórico…");
+
+                // Se pide TODO el ensayo elegido (no solo las últimas 5000
+                // filas) porque el recorte al tramo sísmico necesita ver
+                // el ensayo completo para encontrar dónde está el evento;
+                // el filtro de abajo es el que se encarga de dejarlo corto.
+                const archivo = ensayoSelect ? ensayoSelect.value : "";
+                const url = archivo
+                    ? `${API_BASE}/api/labview/historico?archivo=${encodeURIComponent(archivo)}&limite=60000`
+                    : `${API_BASE}/api/labview/historico?limite=5000`;
+
+                const response = await fetch(url, { cache: "no-store" });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const rows = await response.json();
+
+                if (!Array.isArray(rows) || !rows.length) {
+                    historico = [];
+                    apiChannels = [];
+                    setApiStatus("ok", "API conectada", "Sin lecturas guardadas");
+                    clearChart("La API está conectada, pero todavía no hay lecturas guardadas en la base de datos.");
+                    dataChannel.innerHTML = '<option value="">Sin datos históricos</option>';
+                    dataChannel.disabled = true;
+                    return;
+                }
+
+                let filasOrdenadas = rows.slice().sort((a, b) => Number(a.x_value) - Number(b.x_value));
+
+                const firstWithData = filasOrdenadas.find(r => r && r.datos && typeof r.datos === "object");
+                apiChannels = firstWithData
+                    ? Object.keys(firstWithData.datos).filter(k => k !== "X_Value" && k !== "Comment")
+                    : [];
+
+                // Filtro puramente visual: nos quedamos solo con el tramo
+                // del sismo detectado (5 s antes y después del evento
+                // principal). No se borra ni se modifica nada en la base
+                // de datos, solo lo que se muestra aquí en el modelo 3D.
+                let notaVentana = "";
+                const ventana = detectarVentanaSismica(filasOrdenadas, apiChannels);
+                if (ventana) {
+                    const totalAntes = filasOrdenadas.length;
+                    filasOrdenadas = filasOrdenadas.filter(f => {
+                        const x = Number(f.x_value);
+                        return Number.isFinite(x) && x >= ventana.ventanaIni && x <= ventana.ventanaFin;
+                    });
+                    notaVentana = ` · sismo: ${ventana.ventanaIni.toFixed(1)}–${ventana.ventanaFin.toFixed(1)} s (de ${totalAntes} a ${filasOrdenadas.length} lecturas)`;
+                }
+
+                historico = filasOrdenadas;
+
+                setApiStatus("ok", "API conectada", `${historico.length} lecturas disponibles${notaVentana}`);
+
+                if (selectedEntry) {
+                    populateChannelSelect(selectedEntry);
+                } else {
+                    dataChannel.innerHTML = '<option value="">Selecciona primero un sensor</option>';
+                    dataChannel.disabled = true;
+                    clearChart("Selecciona un sensor desde el panel azul de la izquierda para cargar su gráfica.");
+                    chartTitle.textContent = "Selecciona un sensor";
+                }
+
+            } catch (error) {
+                console.error(error);
+                setApiStatus("error", "Error de datos", "La API responde, pero falló /api/labview/historico");
+                clearChart("La API está activa, pero no fue posible cargar el histórico.");
+                dataChannel.innerHTML = '<option value="">No se pudo cargar el histórico</option>';
+                dataChannel.disabled = true;
+            } finally {
+                btnRefreshData.disabled = false;
+            }
+        }
+
+        const loader = new GLTFLoader();
+
+        loader.load(
+            "casavibratoria.glb",
+            gltf => {
+                model = gltf.scene;
+
+                modelBasePosition.copy(model.position);
+                modelBaseRotation.copy(model.rotation);
+
+                model.traverse(obj => {
+                    if (obj.isMesh) {
+                        obj.castShadow = true;
+                        obj.receiveShadow = true;
+                    }
+                });
+
+                forzarMaterialesOpacos(model);
+                marcarPisosEnModelo();
+                ubicarElementosOpcionales();
+
+                scene.add(model);
+                fitCameraToModel(true);
+                buildSensorEntries();
+
+                loading.style.display = "none";
+            },
+            event => {
+                if (event.total) {
+                    const pct = Math.max(4, Math.min(100, Math.round(event.loaded / event.total * 100)));
+                    loadingText.textContent = `Cargando modelo 3D… ${pct}%`;
+                    loadingProgress.style.width = `${pct}%`;
+                }
+            },
+            error => {
+                console.error(error);
+                loadingText.textContent = "No se pudo cargar casavibratoria.glb";
+                loadingProgress.style.width = "100%";
+                loadingProgress.style.background = "#dc2626";
+                sensorListEl.innerHTML =
+                    '<div class="empty-sensors">Verifica que <b>casavibratoria.glb</b> esté en la misma carpeta y abre la página mediante localhost.</div>';
+            }
+        );
+
+        // El modelo se usa solo para navegación (girar, zoom y desplazar).
+        // Los sensores se seleccionan exclusivamente desde el panel azul.
+        sensorSearch.addEventListener("input", e => {
+            renderSensorList(e.target.value);
+        });
+
+        btnEnvironment.addEventListener("click", toggleBogotaEnvironment);
+        btnQuake.addEventListener("click", startEarthquake);
+        btnRebuild.addEventListener("click", reconstructHouse);
+
+        btnPisoTodo.addEventListener("click", () => aplicarFiltroPiso("todos"));
+        btnPiso1.addEventListener("click", () => aplicarFiltroPiso(1));
+        btnPiso2.addEventListener("click", () => aplicarFiltroPiso(2));
+        btnToggleMuros.addEventListener("click", toggleMurosTransparentes);
+
+        btnHome.addEventListener("click", resetView);
+
+        btnRotate.addEventListener("click", () => {
+            controls.autoRotate = !controls.autoRotate;
+            btnRotate.classList.toggle("active", controls.autoRotate);
+        });
+
+
+        dataChannel.addEventListener("change", () => {
+            const channel = dataChannel.value;
+
+            if (selectedEntry && channel) {
+                sensorChannelMap[selectedEntry.rawName] = channel;
+                localStorage.setItem("ciamSensorChannelMap", JSON.stringify(sensorChannelMap));
+            }
+
+            if (channel) {
+                drawSensorChart(channel);
+            } else {
+                clearChart("Selecciona un canal de datos.");
+            }
+        });
+
+        btnRefreshData.addEventListener("click", loadHistoricalData);
+
+        if (ensayoSelect) {
+            ensayoSelect.addEventListener("change", loadHistoricalData);
+        }
+
+        btnSimPlay.addEventListener("click", playSimulation);
+
+        btnSimReset.addEventListener("click", resetSimulation);
+
+        simProgress.addEventListener("input", e => {
+            stopSimulation();
+            simulationIndex = Number(e.target.value);
+            applySensorMovement();
+            renderSimulationFrame();
+        });
+
+        simSpeed.addEventListener("change", () => {
+            if (simulationPlaying) {
+                stopSimulation();
+                playSimulation();
+            }
+        });
+
+
+        function easeInOutCubic(t) {
+            return t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        }
+
+        function animate(time) {
+            if (cameraTween) {
+                const elapsed = time - cameraTween.start;
+                const rawT = Math.min(1, elapsed / cameraTween.duration);
+                const t = easeInOutCubic(rawT);
+
+                camera.position.lerpVectors(cameraTween.fromPos, cameraTween.toPos, t);
+                controls.target.lerpVectors(cameraTween.fromTarget, cameraTween.toTarget, t);
+
+                if (rawT >= 1) cameraTween = null;
+            }
+
+            controls.update();
+            updateModelLabel();
+
+            // ---------------------------------------------------------
+            // SIMULACIÓN VISUAL DE SISMO
+            // Es completamente independiente de "Reproducir" la gráfica.
+            // ---------------------------------------------------------
+            if (model && earthquakePlaying) {
+                const now = performance.now();
+                const elapsed = now - earthquakeStartedAt;
+                const diag = Math.max(modelSize.length(), 1);
+
+                // La intensidad aumenta suavemente con el tiempo.
+                const ramp = Math.min(1, elapsed / 7000);
+                const intensity = 0.16 + ramp * 0.30;
+
+                // Movimiento moderado de mesa vibratoria.
+                const maxHorizontal = diag * 0.0030;
+                const maxVertical = diag * 0.00040;
+
+                const dx = Math.sin(time * 0.038) * maxHorizontal * intensity;
+                const dz = Math.sin(time * 0.031 + 1.25) * maxHorizontal * 0.28 * intensity;
+                const dy = Math.sin(time * 0.052 + 0.6) * maxVertical * intensity;
+
+                // Desde el segundo 4 aparecen grietas visuales progresivas.
+                if (elapsed >= CRACKS_START_MS && elapsed < COLLAPSE_AFTER_MS) {
+                    const crackProgress =
+                        (elapsed - CRACKS_START_MS) /
+                        Math.max(COLLAPSE_AFTER_MS - CRACKS_START_MS, 1);
+
+                    showCracks(crackProgress);
+                }
+
+                // A los 7 s comienza el colapso visual.
+                if (!collapseActive && elapsed >= COLLAPSE_AFTER_MS) {
+                    collapseActive = true;
+                    collapseStartedAt = now;
+                }
+
+                if (!collapseActive) {
+                    model.position.set(
+                        modelBasePosition.x + dx,
+                        modelBasePosition.y + dy,
+                        modelBasePosition.z + dz
+                    );
+
+                    model.rotation.set(
+                        modelBaseRotation.x + Math.sin(time * 0.025) * 0.0006 * intensity,
+                        modelBaseRotation.y,
+                        modelBaseRotation.z + Math.sin(time * 0.030 + 0.8) * 0.0009 * intensity
+                    );
+
+                    if (sensorMarker) {
+                        sensorMarker.position.set(
+                            sensorMarkerBasePosition.x + dx,
+                            sensorMarkerBasePosition.y + dy,
+                            sensorMarkerBasePosition.z + dz
+                        );
+                    }
+
+                    if (sensorMarkerHalo) {
+                        sensorMarkerHalo.position.set(
+                            sensorMarkerBasePosition.x + dx,
+                            sensorMarkerBasePosition.y + dy,
+                            sensorMarkerBasePosition.z + dz
+                        );
+                    }
+                } else {
+                    showCracks(1);
+
+                    const tCollapse = Math.min(
+                        1,
+                        (now - collapseStartedAt) / COLLAPSE_DURATION_MS
+                    );
+                    const eased = tCollapse * tCollapse;
+
+                    const fallX = diag * 0.055 * eased;
+                    const fallY = diag * 0.050 * eased;
+                    const fallZ = diag * 0.020 * eased;
+
+                    model.position.set(
+                        modelBasePosition.x + fallX,
+                        modelBasePosition.y - fallY,
+                        modelBasePosition.z + fallZ
+                    );
+
+                    model.rotation.set(
+                        modelBaseRotation.x + 0.13 * eased,
+                        modelBaseRotation.y + 0.05 * eased,
+                        modelBaseRotation.z - 0.95 * eased
+                    );
+
+                    if (sensorMarker) {
+                        sensorMarker.position.set(
+                            sensorMarkerBasePosition.x + fallX,
+                            sensorMarkerBasePosition.y - fallY,
+                            sensorMarkerBasePosition.z + fallZ
+                        );
+                    }
+
+                    if (sensorMarkerHalo) {
+                        sensorMarkerHalo.position.set(
+                            sensorMarkerBasePosition.x + fallX,
+                            sensorMarkerBasePosition.y - fallY,
+                            sensorMarkerBasePosition.z + fallZ
+                        );
+                    }
+                }
+            }
+
+            if (sensorMarker && sensorMarker.visible && markerVisiblePhase) {
+                // Pulso visible durante los 5 segundos activos.
+                const pulse = 1 + Math.sin(time * 0.010) * 0.26;
+                sensorMarker.scale.setScalar(sensorMarkerBaseScale * pulse);
+
+                if (sensorMarkerHalo) {
+                    const haloPulse = 1.45 + Math.sin(time * 0.007) * 0.34;
+                    sensorMarkerHalo.scale.setScalar(sensorMarkerBaseScale * haloPulse);
+                    sensorMarkerHalo.rotation.y += 0.02;
+
+                    // También hacemos variar ligeramente la opacidad del halo.
+                    if (sensorMarkerHalo.material) {
+                        sensorMarkerHalo.material.opacity = 0.12 + (Math.sin(time * 0.010) + 1) * 0.06;
+                    }
+                }
+            }
+
+            renderer.render(scene, camera);
+
+            requestAnimationFrame(animate);
+        }
+
+        // Cargar el histórico una sola vez al abrir la página.
+        // El botón "Actualizar" vuelve a consultar la API manualmente.
+        loadHistoricalData();
+
+        requestAnimationFrame(animate);
+    </script>
+
+    <!-- ==========================================
+         AGENTE IA · BOTÓN FLOTANTE Y PANEL DE CHAT (ICDE)
+         Mismo bloque que en Index.html, para que el agente
+         esté disponible en todas las páginas del sitio.
+    =========================================== -->
+
+    <button class="agent-launcher" id="agentLauncher" type="button" aria-label="Abrir asistente ICDE">
+        <svg class="agent-launcher-icon-open" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 4h16v11H8l-4 4V4Z"></path>
+            <path d="M8 9h8M8 12h5"></path>
+        </svg>
+        <svg class="agent-launcher-icon-close" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18"></path>
+        </svg>
+    </button>
+
+    <section class="agent-panel" id="agentPanel" aria-label="Asistente ICDE">
+        <header class="agent-panel-head">
+            <div class="agent-panel-title">
+                <span class="agent-panel-icon">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 4h16v11H8l-4 4V4Z"></path>
+                        <path d="M8 9h8M8 12h5"></path>
+                    </svg>
+                </span>
+                <div>
+                    <small>Laboratorio Digital SinergIA</small>
+                    <h2>Asistente ICDE</h2>
+                </div>
+            </div>
+            <button class="agent-panel-close" id="agentPanelClose" type="button" aria-label="Cerrar asistente">×</button>
+        </header>
+
+        <div class="agent-panel-log" id="agentPanelLog">
+            <div class="agent-bubble agent-bubble-bot">
+                Hola, soy el asistente del portal ICDE. Cuéntame qué
+                información geográfica necesitas y busco en el catálogo
+                los datasets que más te sirvan.
+            </div>
+        </div>
+
+        <form class="agent-panel-input" id="agentForm">
+            <input type="text" id="agentInput" placeholder="Escribe qué información necesitas…" disabled aria-label="Mensaje para el asistente" autocomplete="off">
+            <button type="submit" disabled>Enviar</button>
+        </form>
+    </section>
+
+    <script src="agente1/agente.js"></script>
+
+</body>
+</html>

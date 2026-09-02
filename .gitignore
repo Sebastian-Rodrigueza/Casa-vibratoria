@@ -1,0 +1,21 @@
+# Basura de Visual Studio / cache de Python
+.vs/
+__pycache__/
+*.pyc
+
+# Copia de la base de datos: contiene los datos ya cargados,
+# no hace falta que este en GitHub (es publico). Se usa solo
+# una vez para migrar la info a la base de datos en la nube.
+backup_geodbandes.sql
+
+# Otros archivos de proyectos aparte que no hacen falta en el sitio
+NubePuntos/conversion_log.txt
+requirements_gdb.txt
+
+# Proyecto aparte (webscraping) que no se usa en el sitio y tiene
+# una contraseña de MySQL escrita directo en el codigo
+Webscraping/
+
+# Proyecto aparte de nube de puntos (9+ GB, ningun html del sitio
+# lo usa) - GitHub no admite archivos de ese tamano de todos modos
+NubePuntos/

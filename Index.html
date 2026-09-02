@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <meta name="theme-color"
+          content="#ffffff">
+
+    <meta name="description"
+          content="Portal Geodata CIAM de la Universidad de los Andes">
+
+    <title>
+        Portal Geodata | Universidad de los Andes
+    </title>
+
+    <link rel="preconnect"
+          href="https://fonts.googleapis.com">
+
+    <link rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Sans+3:wght@600;700;800&display=swap"
+          rel="stylesheet">
+
+    <link rel="stylesheet"
+          href="geodata.css">
+
+    <link rel="stylesheet"
+          href="agente1/agente-panel.css">
+
+    <style>
+
+        /* Botones de aplicaciones externas */
+        .map-direct-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 38px;
+            padding: 9px 16px;
+            color: #2b2f33;
+            background: #ffffff;
+            border: 1px solid #d8dde5;
+            border-radius: 12px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: .2s ease;
+            white-space: nowrap;
+        }
+
+            .map-direct-link:hover {
+                border-color: #f5c400;
+                background: #fff9dd;
+                transform: translateY(-1px);
+            }
+
+            .map-direct-link svg {
+                width: 17px;
+                height: 17px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 1.8;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+
+        .nav-primary {
+            background: #f5c400 !important;
+            color: #1f2937 !important;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="page-shell">
+
+        <!-- ==========================================
+             ENCABEZADO
+        =========================================== -->
+
+        <header class="topbar">
+
+            <div class="topbar-inner">
+
+                <button class="brand"
+                        type="button"
+                        data-accion="Inicio">
+
+                    <span class="logo-wrap">
+
+                        <img src="Imagenes/logo-uniandes.png"
+                             alt="Universidad de los Andes"
+                             onerror="
+                                this.style.display='none';
+                                this.parentElement.classList.add('logo-error');
+                            ">
+
+                    </span>
+
+                    <span class="brand-copy">
+
+                        <small>
+                            Universidad de los Andes · CIAM
+                        </small>
+
+                        <strong>
+                            Portal Geodata
+                        </strong>
+
+                    </span>
+
+                </button>
+
+                <button class="menu-toggle"
+                        id="menuToggle"
+                        type="button"
+                        aria-label="Abrir menú">
+
+                    <span></span>
+                    <span></span>
+                    <span></span>
+
+                </button>
+
+                <nav class="nav"
+                     id="mainNav"
+                     aria-label="Navegación principal">
+
+                    <button type="button"
+                            data-accion="Inicio">
+                        Inicio
+                    </button>
+
+                    <button type="button"
+                            data-accion="Geodata">
+                        Geodata
+                    </button>
+
+                    <button type="button"
+                            data-accion="Ayuda">
+                        Ayuda
+                    </button>
+
+                    <button class="nav-primary"
+                            type="button"
+                            data-accion="Explorar">
+                        Explorar
+                    </button>
+
+
+                    <a class="map-direct-link"
+                       href="casa.html"
+                       aria-label="Abrir dashboard CIAM">
+
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M3 3h18v18H3z"></path>
+                            <path d="M7 15l3-3 3 2 4-5"></path>
+                        </svg>
+
+                        Dashboard CIAM
+                    </a>
+
+                    <a class="map-direct-link"
+                       href="modelo3d.html"
+                       aria-label="Abrir experimento mesa vibratoria 3D">
+
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z"></path>
+                            <path d="M3 7l9 5 9-5M12 12v10"></path>
+                        </svg>
+
+                        Experimento mesa vibratoria
+                    </a>
+
+                    <a class="map-direct-link"
+                       href="Mapa.html"
+                       aria-label="Abrir mapa interactivo para probar archivos GIS">
+
+                        <svg viewBox="0 0 24 24"
+                             aria-hidden="true">
+                            <path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"></path>
+                            <path d="M9 3v15M15 6v15"></path>
+                        </svg>
+
+                        Probar mapa
+                    </a>
+
+                </nav>
+
+            </div>
+
+        </header>
+
+        <!-- ==========================================
+             CONTENIDO PRINCIPAL
+        =========================================== -->
+
+        <main>
+
+            <!-- ======================================
+                 HERO PRINCIPAL
+            ======================================= -->
+
+            <section class="hero">
+
+                <div class="hero-copy">
+
+                    <div class="hero-tag">
+
+                        <span></span>
+
+                        Plataforma geográfica CIAM
+
+                    </div>
+
+                    <h1>
+                        Información territorial de
+                        <em>Colombia</em>.
+                    </h1>
+
+                    <p>
+                        Accede a colecciones geográficas organizadas por
+                        cobertura, consulta mapas y centraliza recursos
+                        cartográficos en una interfaz institucional,
+                        clara y fácil de utilizar.
+                    </p>
+
+                    <div class="hero-actions">
+
+                        <button class="btn btn-primary"
+                                type="button"
+                                data-accion="Ver colecciones">
+
+                            Ver colecciones
+
+                            <svg viewBox="0 0 24 24"
+                                 aria-hidden="true">
+                                <path d="M5 12h14M13 6l6 6-6 6"></path>
+                            </svg>
+
+                        </button>
+
+                        <button class="btn btn-secondary"
+                                type="button"
+                                data-accion="Información">
+                            Información
+                        </button>
+
+                        <a class="map-direct-link"
+                           href="Mapa.html"
+                           aria-label="Abrir mapa interactivo para probar capas y archivos">
+
+                            <svg viewBox="0 0 24 24"
+                                 aria-hidden="true">
+                                <path d="M4 5h16v14H4Z"></path>
+                                <path d="M4 10h16M9 5v14"></path>
+                            </svg>
+
+                            Abrir mapa GIS
+                        </a>
+
+                    </div>
+
+                </div>
+
+                <!-- ==================================
+                     PANEL DERECHO
+                =================================== -->
+
+                <div class="hero-visual"
+                     aria-label="Portal de información geográfica">
+
+                    <img class="hero-background"
+                         src="Imagenes/principal.jpg"
+                         alt="Información y análisis geográfico">
+
+                    <div class="hero-image-overlay"></div>
+
+                    <!-- Tarjeta pequeña superior -->
+
+                    <div class="visual-pill visual-pill-top">
+
+                        <svg viewBox="0 0 24 24">
+
+                            <path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"></path>
+
+                            <circle cx="12"
+                                    cy="10"
+                                    r="2.2"></circle>
+
+                        </svg>
+
+                        <span>
+                            Cobertura territorial
+                        </span>
+
+                    </div>
+
+                    <!-- Tarjeta central -->
+
+                    <div class="hero-logo-card">
+
+                        <img src="Imagenes/logo-uniandes.png"
+                             alt="Universidad de los Andes"
+                             onerror="
+                                this.style.display='none';
+                                this.parentElement.classList.add('logo-error');
+                            ">
+
+                        <span>
+                            Laboratorio Digital CIAM
+                        </span>
+
+                        <strong>
+                            Portal de información geográfica
+                        </strong>
+
+                    </div>
+
+                    <!-- Tarjeta pequeña inferior -->
+
+                    <div class="visual-pill visual-pill-bottom">
+
+                        <svg viewBox="0 0 24 24">
+
+                            <path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"></path>
+
+                            <path d="M9 3v15M15 6v15"></path>
+
+                        </svg>
+
+                        <span>
+                            Capas geográficas
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+            <!-- ======================================
+                 COLECCIONES
+            ======================================= -->
+
+            <section class="section">
+
+                <div class="section-head">
+
+                    <div>
+
+                        <small>
+                            Colecciones disponibles
+                        </small>
+
+                        <h2>
+                            Selecciona una cobertura
+                        </h2>
+
+                        <p>
+                            Selecciona una colección para consultar los mapas,
+                            las capas geográficas y la información territorial
+                            disponible.
+                        </p>
+
+                    </div>
+
+                </div>
+
+                <div class="geodata-grid">
+
+                    <!-- ==================================
+                         01 · GEODATA COLOMBIA
+                    =================================== -->
+
+                    <article class="geodata-card"
+                             aria-label="Seleccionar Geodata Colombia">
+
+                        <img src="Imagenes/mapacolombiaia.jpg"
+                             alt="Geodata Colombia">
+
+                        <div class="card-overlay"></div>
+
+                        <div class="card-body">
+
+                            <span class="card-number">
+                                01
+                            </span>
+
+                            <p class="card-kicker">
+                                Cobertura nacional
+                            </p>
+
+                            <h3>
+                                Geodata Colombia
+                            </h3>
+
+                            <p>
+                                Información geográfica, capas territoriales y
+                                recursos cartográficos de Colombia.
+                            </p>
+
+                            <a class="card-action"
+                               href="./Geodata%20Colombia/Index.html">
+
+                                Seleccionar
+
+                                <svg viewBox="0 0 24 24"
+                                     aria-hidden="true">
+                                    <path d="M5 12h14M13 6l6 6-6 6"></path>
+                                </svg>
+
+                            </a>
+
+                        </div>
+
+                    </article>
+
+                    <!-- ==================================
+                         02 · GEODATA BOGOTÁ
+                    =================================== -->
+
+                    <article class="geodata-card"
+                             id="cardGeodataBogota"
+                             tabindex="0"
+                             aria-label="Seleccionar Geodata Bogotá">
+
+                        <img src="Imagenes/bogota.jpg"
+                             alt="Geodata Bogotá">
+
+                        <div class="card-overlay"></div>
+
+                        <div class="card-body">
+
+                            <span class="card-number">
+                                02
+                            </span>
+
+                            <p class="card-kicker">
+                                Cobertura distrital
+                            </p>
+
+                            <h3>
+                                Geodata Bogotá
+                            </h3>
+
+                            <p>
+                                Información geográfica, capas urbanas y
+                                recursos territoriales de Bogotá.
+                            </p>
+
+                            <button class="card-action"
+                                    type="button"
+                                    data-accion="Geodata Bogotá">
+
+                                Seleccionar
+
+                                <svg viewBox="0 0 24 24"
+                                     aria-hidden="true">
+                                    <path d="M5 12h14M13 6l6 6-6 6"></path>
+                                </svg>
+
+                            </button>
+
+                        </div>
+
+                    </article>
+
+                </div>
+
+            </section>
+
+        </main>
+
+        <footer>
+            © 2026 Laboratorio Digital CIAM · Universidad de los Andes
+        </footer>
+
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- ==========================================
+         AGENTE IA · BOTÓN FLOTANTE Y PANEL DE CHAT (ICDE)
+         Este mismo bloque (HTML + agente-panel.css +
+         agente1/agente.js) se repite igual en las demás
+         páginas del sitio para que el agente este disponible
+         en todas partes.
+    =========================================== -->
+
+    <button class="agent-launcher"
+            id="agentLauncher"
+            type="button"
+            aria-label="Abrir asistente ICDE">
+
+        <svg class="agent-launcher-icon-open" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 4h16v11H8l-4 4V4Z"></path>
+            <path d="M8 9h8M8 12h5"></path>
+        </svg>
+
+        <svg class="agent-launcher-icon-close" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18"></path>
+        </svg>
+
+    </button>
+
+    <section class="agent-panel"
+             id="agentPanel"
+             aria-label="Asistente ICDE">
+
+        <header class="agent-panel-head">
+
+            <div class="agent-panel-title">
+
+                <span class="agent-panel-icon">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 4h16v11H8l-4 4V4Z"></path>
+                        <path d="M8 9h8M8 12h5"></path>
+                    </svg>
+                </span>
+
+                <div>
+                    <small>Laboratorio Digital CIAM</small>
+                    <h2>Asistente ICDE</h2>
+                </div>
+
+            </div>
+
+            <button class="agent-panel-close"
+                    id="agentPanelClose"
+                    type="button"
+                    aria-label="Cerrar asistente">
+                ×
+            </button>
+
+        </header>
+
+        <div class="agent-panel-log" id="agentPanelLog">
+
+            <div class="agent-bubble agent-bubble-bot">
+                Hola, soy el asistente del portal ICDE. Cuéntame qué
+                información geográfica necesitas y busco en el catálogo
+                los datasets que más te sirvan.
+            </div>
+
+        </div>
+
+        <form class="agent-panel-input" id="agentForm">
+            <input type="text"
+                   id="agentInput"
+                   placeholder="Escribe qué información necesitas…"
+                   disabled
+                   aria-label="Mensaje para el asistente"
+                   autocomplete="off">
+            <button type="submit" disabled>Enviar</button>
+        </form>
+
+    </section>
+
+    <script src="geodata.js"></script>
+    <script src="agente1/agente.js"></script>
+
+</body>
+</html>

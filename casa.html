@@ -1,0 +1,2634 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#ffffff">
+    <!-- Mismo problema que ya tuvimos con modelo3d.html: el navegador
+         puede servir una copia vieja de este archivo desde caché en vez
+         de recargar los cambios. Estas 3 etiquetas piden que siempre
+         revise si hay una versión más nueva. -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Dashboard de Sensores | CIAM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Sans+3:wght@600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+    <style>
+        /* =========================================================
+           TOKENS Y VARIABLES
+        ========================================================= */
+        :root {
+            --bg-body: #f1f5f9;
+            --bg-card: #ffffff;
+            --bg-element: #f8fafc;
+            --accent-main: #f5c400;
+            --accent-dark: #b58900;
+            --accent-light: #fef9c3;
+            --text-dark: #0f172a;
+            --text-main: #334155;
+            --text-muted: #64748b;
+            --border-light: #e2e8f0;
+            --border-medium: #cbd5e1;
+            --success: #0ca30c;
+            --danger: #dc2626;
+            --shadow-card: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.025);
+            --shadow-hover: 0 10px 15px -3px rgba(0,0,0,.08), 0 4px 6px -4px rgba(0,0,0,.04);
+            --sidebar-w: 0px;
+            --topbar-h: 78px;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --sp-1: 4px;
+            --sp-2: 8px;
+            --sp-3: 12px;
+            --sp-4: 16px;
+            --sp-5: 20px;
+            --sp-6: 24px;
+            --sp-8: 32px;
+            --font-main: "Inter", sans-serif;
+            --font-title: "Source Sans 3", sans-serif;
+            --font-mono: "JetBrains Mono", "Fira Code", monospace;
+            --series-1: #2a78d6;
+            --series-2: #eb6834;
+            --series-3: #1baf7a;
+            --series-4: #8b5cf6;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            -webkit-font-smoothing: antialiased;
+            overflow: hidden;
+        }
+
+        button, select, input {
+            font: inherit;
+            outline: none;
+            border: none;
+        }
+
+        button {
+            cursor: pointer;
+            transition: all .15s ease;
+        }
+
+        ::selection {
+            background: var(--accent-light);
+            color: var(--text-dark);
+        }
+        /* ================= NAVEGACIÓN SUPERIOR MODERNA ================= */
+        .sidebar {
+            display: none;
+        }
+
+        .topbar {
+            position: fixed;
+            top: 14px;
+            left: 20px;
+            right: 20px;
+            z-index: 1100;
+            min-height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 10px 14px 10px 18px;
+            background: rgba(255,255,255,.82);
+            backdrop-filter: blur(18px) saturate(145%);
+            -webkit-backdrop-filter: blur(18px) saturate(145%);
+            border: 1px solid rgba(226,232,240,.9);
+            border-radius: 18px;
+            box-shadow: 0 12px 35px rgba(15,23,42,.08);
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            min-width: 0;
+        }
+
+        .brand-mark {
+            width: 78px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            background: transparent;
+        }
+
+            .brand-mark img {
+                width: 78px;
+                height: auto;
+                max-height: 50px;
+                object-fit: contain;
+                filter: drop-shadow(0 4px 10px rgba(15,23,42,.12));
+            }
+
+        .top-title {
+            min-width: 0;
+        }
+
+            .top-title small {
+                display: block;
+                margin-bottom: 2px;
+                color: var(--text-muted);
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: .08em;
+                text-transform: uppercase;
+            }
+
+            .top-title h1 {
+                overflow: hidden;
+                color: var(--text-dark);
+                font: 700 18px var(--font-title);
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .btn-3d {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 12px;
+            color: #111827;
+            background: linear-gradient(145deg, #ffd60a, #f5c400);
+            border: 1px solid #e0b300;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+            text-decoration: none;
+            box-shadow: 0 6px 16px rgba(245,196,0,.18);
+            transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+            white-space: nowrap;
+        }
+
+            .btn-3d:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 9px 20px rgba(245,196,0,.26);
+                filter: brightness(1.02);
+            }
+
+            .btn-3d svg {
+                width: 16px;
+                height: 16px;
+            }
+
+        .top-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 8px 11px;
+            color: var(--text-main);
+            background: rgba(248,250,252,.9);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--sp-2);
+            padding: 8px 12px;
+            color: var(--text-dark);
+            background: #ffffff;
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 650;
+            box-shadow: 0 3px 10px rgba(15,23,42,.04);
+        }
+
+            .status-badge i {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--text-muted);
+                transition: background .2s;
+            }
+
+            .status-badge.ok i {
+                background: var(--success);
+                box-shadow: 0 0 0 4px rgba(12,163,12,.10);
+            }
+
+            .status-badge.error i {
+                background: var(--danger);
+                box-shadow: 0 0 0 4px rgba(220,38,38,.10);
+            }
+        /* ================= WORKSPACE Y NUEVO LAYOUT ================= */
+        .workspace {
+            position: absolute;
+            top: 96px;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            overflow-y: auto;
+            padding: 8px 20px 28px;
+            display: flex;
+            flex-direction: column;
+            gap: var(--sp-6);
+            scroll-behavior: smooth;
+        }
+
+            .workspace::before {
+                content: "";
+                position: fixed;
+                inset: 0;
+                z-index: -1;
+                pointer-events: none;
+                background: radial-gradient(circle at 10% 10%, rgba(245,196,0,.08), transparent 23%), radial-gradient(circle at 90% 15%, rgba(42,120,214,.06), transparent 24%);
+            }
+        /* 1. Panel de Control Superior */
+        /* El panel ahora es un acordeón: la tarjeta (.control-panel) solo
+           pone el fondo/borde; la franja compacta (.control-panel-toggle)
+           siempre visible; el contenido real (.control-panel-body) se
+           pliega/despliega igual que "Mostrar valores" de los sensores. */
+        .control-panel {
+            background: rgba(255,255,255,.92);
+            border: 1px solid rgba(226,232,240,.95);
+            border-radius: 20px;
+            box-shadow: 0 12px 28px rgba(15,23,42,.06);
+            /* BUG encontrado y corregido: .control-panel es un ítem flex
+               dentro de .workspace (display:flex). Con "overflow:hidden"
+               puesto, el navegador le calcula un alto automático de 0
+               (regla de "tamaño mínimo automático" de flexbox para
+               overflow != visible) y la tarjeta entera colapsaba a ~1px,
+               aunque su contenido interno sí medía lo que debía — por
+               eso el panel "desaparecía". Se quita "overflow" (ya no
+               hace falta: el redondeado de esquinas ahora lo ponen
+               directamente el toggle y el body, ver abajo) y se fija
+               flex-shrink:0 para que nunca se encoja.
+            */
+            flex-shrink: 0;
+        }
+
+        .control-panel-toggle {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 14px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 20px 20px 0 0;
+            color: var(--text-dark);
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .09em;
+        }
+
+            .control-panel-toggle:hover {
+                background: var(--bg-element);
+            }
+
+            /* Con el body colapsado, el toggle es lo único visible de la
+               tarjeta — se redondea completo en vez de solo arriba. */
+            .control-panel-toggle:has(+ .control-panel-body[hidden]) {
+                border-radius: 20px;
+            }
+
+        .control-panel-resumen {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: none;
+            letter-spacing: normal;
+            text-align: right;
+        }
+
+        .control-panel-chevron {
+            flex-shrink: 0;
+            color: var(--text-muted);
+            font-size: 11px;
+        }
+
+        .control-panel-body {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            padding: 14px 16px 16px;
+            border-top: 1px solid var(--border-light);
+            border-radius: 0 0 20px 20px;
+        }
+
+            .control-panel-body[hidden] {
+                display: none;
+            }
+
+        .btn {
+            padding: 10px var(--sp-5);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: var(--sp-2);
+            border: 1px solid var(--border-medium);
+            background: var(--bg-card);
+            color: var(--text-dark);
+            box-shadow: 0 1px 2px rgba(0,0,0,.02);
+        }
+
+            .btn:hover:not(:disabled) {
+                background: var(--bg-element);
+                border-color: var(--text-muted);
+            }
+
+        .btn-primary {
+            background: var(--text-dark);
+            color: var(--bg-card);
+            border-color: var(--text-dark);
+        }
+
+            .btn-primary:hover:not(:disabled) {
+                background: #1e293b;
+                box-shadow: var(--shadow-hover);
+                transform: translateY(-1px);
+            }
+
+        .btn:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+        }
+
+        .dot-en-vivo {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border-medium);
+            display: inline-block;
+        }
+
+            /* Solo parpadea en rojo cuando "En vivo" está realmente
+               conectado — con el botón apagado no tiene sentido mostrar
+               un indicador de "en vivo" parpadeando. */
+            .btn-primary .dot-en-vivo {
+                background: var(--danger);
+                animation: parpadeo-en-vivo 1.4s infinite;
+            }
+
+        @keyframes parpadeo-en-vivo {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .25; }
+        }
+
+        .panel-archivos-lab {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            padding: var(--sp-4);
+            margin-bottom: var(--sp-5);
+            box-shadow: var(--shadow-card);
+        }
+
+        .panel-archivos-lab-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--sp-3);
+            color: var(--text-dark);
+        }
+
+        .panel-archivos-lab-lista {
+            display: flex;
+            flex-direction: column;
+            gap: var(--sp-2);
+            max-height: 260px;
+            overflow-y: auto;
+        }
+
+        .archivo-lab-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--sp-3);
+            padding: var(--sp-2) var(--sp-3);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            background: var(--bg-element);
+        }
+
+        .archivo-lab-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            overflow: hidden;
+        }
+
+            .archivo-lab-info strong {
+                color: var(--text-dark);
+                font-size: 13px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .archivo-lab-info span {
+                font-size: 12px;
+                color: var(--text-muted);
+            }
+
+        .progress-container {
+            flex: 1;
+            min-width: 250px;
+            display: flex;
+            align-items: center;
+            gap: var(--sp-3);
+        }
+
+        .progress-time {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--text-muted);
+            min-width: 64px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: var(--border-light);
+            border-radius: 4px;
+            appearance: none;
+            cursor: pointer;
+        }
+
+            input[type="range"]::-webkit-slider-thumb {
+                appearance: none;
+                width: 16px;
+                height: 16px;
+                border-radius: 50%;
+                background: var(--text-dark);
+                cursor: pointer;
+                box-shadow: 0 2px 4px rgba(0,0,0,.2);
+                transition: transform .1s;
+            }
+
+            input[type="range"]:active::-webkit-slider-thumb {
+                transform: scale(1.2);
+            }
+
+        .speed-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+            .speed-wrapper select {
+                padding: 8px 14px;
+                border-radius: var(--radius-sm);
+                border: 1px solid var(--border-medium);
+                font-size: 13px;
+                font-weight: 500;
+                background: var(--bg-card);
+                cursor: pointer;
+            }
+        /* 2. Sección de Gráficas: 4 gráficas en cuadrícula 2x2, todas del mismo tamaño */
+        .graphs-section {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--sp-6);
+        }
+
+        .graph-card {
+            background: rgba(255,255,255,.96);
+            border: 1px solid rgba(226,232,240,.95);
+            border-radius: 20px;
+            padding: var(--sp-5);
+            box-shadow: var(--shadow-card);
+            transition: box-shadow .2s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+            .graph-card:hover {
+                box-shadow: var(--shadow-hover);
+            }
+
+        .graph-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--sp-3);
+            gap: var(--sp-4);
+        }
+
+        .graph-controls {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-3);
+            min-width: 0;
+        }
+
+        .graph-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            background: var(--bg-element);
+            color: var(--text-muted);
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            border: 1px solid var(--border-light);
+            border-left: 3px solid var(--serie-color, var(--text-muted));
+            flex-shrink: 0;
+        }
+
+        .graph-controls label {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            flex-shrink: 0;
+        }
+
+        .graph-controls select {
+            border: 1px solid var(--border-light);
+            padding: 6px var(--sp-3);
+            font-size: 13px;
+            background: var(--bg-element);
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            color: var(--text-dark);
+            cursor: pointer;
+            transition: border .2s;
+            max-width: 180px;
+        }
+
+            .graph-controls select:hover {
+                border-color: var(--border-medium);
+            }
+
+        .graph-current {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-dark);
+            background: var(--bg-element);
+            border: 1px solid var(--border-light);
+            padding: 4px 10px;
+            border-radius: var(--radius-sm);
+            white-space: nowrap;
+        }
+
+        .graph-viewport {
+            background: var(--bg-card);
+            border-radius: var(--radius-sm);
+            height: 150px;
+            position: relative;
+            flex: 1;
+        }
+
+            .graph-viewport svg {
+                width: 100%;
+                height: 100%;
+                cursor: grab;
+                touch-action: none;
+            }
+
+                .graph-viewport svg:active {
+                    cursor: grabbing;
+                }
+
+        .graph-maxmin {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            font-size: 10px;
+            text-align: right;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            background: rgba(255,255,255,.8);
+            backdrop-filter: blur(4px);
+            padding: 6px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(226,232,240,.8);
+            line-height: 1.4;
+            box-shadow: 0 2px 4px rgba(0,0,0,.02);
+        }
+
+            .graph-maxmin span {
+                color: var(--text-dark);
+                font-weight: 600;
+            }
+
+        .linea-grilla {
+            stroke: #eef2f6;
+            stroke-width: 1;
+        }
+
+        .linea-base {
+            stroke: var(--border-medium);
+            stroke-width: 1;
+        }
+
+        .graph-empty {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+        /* 3. Sección de Tarjetas (Tablas) Inferiores en 3 columnas */
+        .indicators-section {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 3 tarjetas lado a lado */
+            gap: var(--sp-4);
+            /* Cada tarjeta se ajusta a su propio contenido — antes, al
+               estirarse todas a la altura de la más alta (LVDT con más
+               sensores), Hilos y Acelerómetros quedaban con espacio
+               vacío enorme abajo. */
+            align-items: start;
+        }
+
+        .indicator-card {
+            background: rgba(255,255,255,.96);
+            border: 1px solid rgba(226,232,240,.95);
+            border-radius: 16px;
+            padding: var(--sp-4);
+            box-shadow: var(--shadow-card);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .indicator-card-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--sp-2);
+            margin-bottom: var(--sp-2);
+        }
+
+            .indicator-card h3 {
+                font-size: 12px;
+                color: var(--text-muted);
+                font-weight: 700;
+                margin: 0;
+                text-transform: uppercase;
+                letter-spacing: .08em;
+                display: flex;
+                align-items: center;
+                gap: var(--sp-2);
+            }
+
+                .indicator-card h3::before {
+                    content: "";
+                    display: block;
+                    width: 6px;
+                    height: 6px;
+                    border-radius: 50%;
+                    background: var(--accent-dark);
+                }
+
+        .grupo-conteo {
+            color: var(--text-dark);
+            background: var(--bg-element);
+            border: 1px solid var(--border-light);
+            border-radius: 999px;
+            padding: 1px 8px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: normal;
+            text-transform: none;
+        }
+
+        .toggle-grupo {
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .indicator-grid {
+            display: grid;
+            /* Auto ajuste interno para que quepan varias variables por
+               fila — con familias de hasta 24 sensores (LVDT) conviene
+               un mínimo más angosto que antes. */
+            grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
+            gap: var(--sp-2);
+        }
+
+            /* "display:grid" de arriba pesa lo mismo que la regla nativa
+               [hidden]{display:none}, así que sin esto el atributo
+               "hidden" no lograría ocultar la cuadrícula. */
+            .indicator-grid[hidden] {
+                display: none;
+            }
+
+        .indicator-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px var(--sp-2);
+            background: var(--bg-element);
+            border: 1px solid transparent;
+            border-radius: 10px;
+            transition: all .15s ease;
+        }
+
+        .future-graphs-slot {
+            min-height: 0;
+        }
+
+            .future-graphs-slot:not([hidden]) {
+                min-height: 140px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: var(--text-muted);
+                font-size: 12px;
+                background: rgba(255,255,255,.6);
+                border: 1px dashed var(--border-medium);
+                border-radius: 16px;
+            }
+
+            .indicator-item:hover {
+                background: #f1f5f9;
+                border-color: var(--border-light);
+            }
+
+        .indicator-label {
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 80px;
+        }
+
+        .indicator-value {
+            color: var(--text-dark);
+            font-family: var(--font-mono);
+            font-size: 13px;
+            font-weight: 600;
+            background: var(--bg-card);
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid var(--border-light);
+            box-shadow: 0 1px 2px rgba(0,0,0,.02);
+            min-width: 75px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            transition: color .15s;
+        }
+
+            .indicator-value.actualizado {
+                color: var(--series-1);
+            }
+
+        .tabla-footer {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 15px;
+        }
+
+        .link-tabla {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 12px;
+            text-decoration: underline;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .tabla-wrap {
+            display: none;
+            max-height: 260px;
+            overflow: auto;
+            margin-top: var(--sp-3);
+            border-top: 1px solid var(--border-light);
+            padding-top: var(--sp-3);
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 12px;
+        }
+
+        th, td {
+            text-align: right;
+            padding: 4px var(--sp-2);
+            border-bottom: 1px solid var(--border-light);
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+
+            th:first-child, td:first-child {
+                text-align: left;
+            }
+
+        th {
+            color: var(--text-muted);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            background: var(--bg-card);
+        }
+        /* Pantallas más pequeñas */
+        @media (max-width: 1200px) {
+            .graphs-section {
+                grid-template-columns: 1fr;
+            }
+
+            .indicators-section {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 800px) {
+            .indicators-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 700px) {
+            .topbar {
+                top: 8px;
+                left: 8px;
+                right: 8px;
+                min-height: 60px;
+                padding: 8px 10px;
+                border-radius: 16px;
+            }
+
+            .brand-mark {
+                width: 38px;
+                height: 38px;
+                border-radius: 12px;
+            }
+
+            .top-title small,
+            .top-chip {
+                display: none;
+            }
+
+            .btn-3d .btn-3d-text {
+                display: none;
+            }
+
+            .btn-3d {
+                padding: 9px 10px;
+            }
+
+            .top-title h1 {
+                font-size: 15px;
+                max-width: 52vw;
+            }
+
+            .status-badge {
+                padding: 7px 9px;
+            }
+
+            .workspace {
+                top: 82px;
+                padding: 8px 10px 20px;
+            }
+
+            .control-panel {
+                border-radius: 16px;
+            }
+
+            .control-panel-toggle,
+            .control-panel-body {
+                padding: 12px;
+            }
+
+            .progress-container {
+                order: 3;
+                width: 100%;
+                min-width: 100%;
+            }
+
+            .graphs-section,
+            .indicators-section {
+                gap: 14px;
+            }
+
+            .graph-card,
+            .indicator-card {
+                border-radius: 16px;
+                padding: 15px;
+            }
+
+            .graph-header {
+                align-items: flex-start;
+            }
+
+            .graph-controls {
+                flex-wrap: wrap;
+            }
+        }
+
+        /* ================= MEJORAS DASHBOARD V2 ================= */
+        :root {
+            --panel-glow: 0 18px 50px rgba(15,23,42,.08);
+            --grid-strong: #dce4ee;
+        }
+
+        .workspace {
+            gap: 18px;
+        }
+
+        .control-panel {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+
+        .overview-strip {
+            display: grid;
+            grid-template-columns: repeat(4,minmax(0,1fr));
+            gap: 14px;
+        }
+
+        .overview-card {
+            min-height: 92px;
+            padding: 16px 18px;
+            border-radius: 18px;
+            border: 1px solid rgba(226,232,240,.95);
+            background: linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,250,252,.92));
+            box-shadow: var(--shadow-card);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 7px;
+            position: relative;
+            overflow: hidden;
+        }
+
+            .overview-card::after {
+                content: "";
+                position: absolute;
+                width: 80px;
+                height: 80px;
+                right: -30px;
+                top: -30px;
+                border-radius: 50%;
+                background: rgba(245,196,0,.08);
+            }
+
+        .overview-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: .09em;
+            font-weight: 800;
+        }
+
+        .overview-value {
+            color: var(--text-dark);
+            font: 700 22px var(--font-title);
+            line-height: 1;
+        }
+
+        .overview-sub {
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .graph-card {
+            min-height: 285px;
+            padding: 18px 18px 14px;
+            box-shadow: var(--panel-glow);
+        }
+
+        .graph-title-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            min-width: 0;
+        }
+
+        .graph-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--text-dark);
+        }
+
+        .graph-subtitle {
+            font-size: 10px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .graph-current {
+            display: flex;
+            align-items: baseline;
+            gap: 5px;
+            font-size: 15px;
+            padding: 7px 11px;
+            border-radius: 10px;
+        }
+
+        .graph-viewport {
+            height: 205px;
+            border: 1px solid #eef2f6;
+            background: linear-gradient(to bottom, rgba(248,250,252,.65), rgba(255,255,255,.95));
+            overflow: hidden;
+        }
+
+        .graph-axis-label {
+            fill: #94a3b8;
+            font-size: 20px;
+            font-family: var(--font-mono);
+            font-weight: 500;
+        }
+
+        .graph-window-chip {
+            position: absolute;
+            left: 10px;
+            top: 10px;
+            z-index: 2;
+            font-size: 10px;
+            font-weight: 700;
+            color: #64748b;
+            padding: 5px 8px;
+            border: 1px solid rgba(226,232,240,.9);
+            border-radius: 8px;
+            background: rgba(255,255,255,.82);
+            backdrop-filter: blur(4px);
+        }
+
+        .linea-grilla {
+            stroke: #edf2f7;
+            stroke-width: 1;
+        }
+
+        .linea-base {
+            stroke: #d7e0ea;
+            stroke-width: 1.2;
+        }
+
+        .live-dot {
+            filter: drop-shadow(0 0 5px rgba(42,120,214,.35));
+        }
+
+        .modo-vista-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .modo-vista-nota {
+            flex-basis: 100%;
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+
+        @media(max-width:1000px) {
+            .overview-strip {
+                grid-template-columns: repeat(2,1fr)
+            }
+        }
+
+        @media(max-width:600px) {
+            .overview-strip {
+                grid-template-columns: 1fr
+            }
+
+            .overview-card {
+                min-height: 78px
+            }
+
+            .graph-card {
+                min-height: 260px
+            }
+
+            .graph-viewport {
+                height: 190px
+            }
+        }
+    </style>
+
+    <link rel="stylesheet" href="agente1/agente-panel.css">
+</head>
+<body>
+    <div class="app">
+        <header class="topbar">
+            <div class="topbar-left">
+                <div class="brand-mark" aria-hidden="true">
+                    <img src="Imagenes/logo-uniandes.png" alt="Universidad de los Andes">
+                </div>
+                <div class="top-title">
+                    <small>Universidad de los Andes · CIAM</small>
+                    <h1>Dashboard de Simulación de Sensores</h1>
+                </div>
+            </div>
+            <div class="topbar-actions">
+                <div class="top-chip">Laboratorio · Tiempo real</div>
+                <a class="btn-3d" href="index.html" aria-label="Ir al inicio">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M3 11.5 12 4l9 7.5" />
+                        <path d="M5 10v10h14V10" />
+                    </svg>
+                    <span class="btn-3d-text">Inicio</span>
+                </a>
+                <a class="btn-3d" href="modelo3d.html" aria-label="Abrir modelo 3D">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M12 2 21 7v10l-9 5-9-5V7l9-5Z" />
+                        <path d="m3 7 9 5 9-5M12 12v10" />
+                    </svg>
+                    <span class="btn-3d-text">Modelo 3D</span>
+                </a>
+                <div class="status-badge" id="status-badge">
+                    <i></i> <span id="texto-estado">Conectando…</span>
+                </div>
+            </div>
+        </header>
+        <main class="workspace">
+            <section class="control-panel">
+                <button class="control-panel-toggle" id="control-panel-toggle" type="button" aria-expanded="true">
+                    <span>Controles del ensayo</span>
+                    <span class="control-panel-resumen" id="control-panel-resumen">— Seleccione un ensayo — · Ensayo completo</span>
+                    <span class="control-panel-chevron" id="control-panel-chevron">▴</span>
+                </button>
+                <div class="control-panel-body" id="control-panel-body">
+                    <label class="speed-wrapper" style="flex-basis:100%;">
+                        Ensayo
+                        <select id="select-ensayo" style="min-width:280px;max-width:100%;">
+                            <option value="">Cargando ensayos…</option>
+                        </select>
+                    </label>
+                    <div class="modo-vista-group" role="group" aria-label="Modo de visualización">
+                        <button class="btn btn-primary" id="btn-modo-completo" type="button" title="Muestra todos los datos del ensayo, sin recortar nada.">Ensayo completo</button>
+                        <button class="btn" id="btn-modo-sismico" type="button" title="Detecta automáticamente el bloque de mayor energía en los acelerómetros y limita la reproducción y las 4 gráficas a 5 s antes del inicio y 5 s después del final de ese evento. Es un filtro visual: no borra ni cambia datos.">Evento sísmico</button>
+                    </div>
+                    <span class="modo-vista-nota" id="modo-vista-nota"></span>
+                    <button class="btn" id="btn-en-vivo" type="button" title="Activa el monitoreo en vivo del laboratorio.">
+                        <span class="dot-en-vivo" aria-hidden="true"></span>
+                        <span class="txt-en-vivo">Iniciar monitoreo en vivo</span>
+                    </button>
+                    <button class="btn" id="btn-archivos" type="button" title="Ver todas las pruebas guardadas en el laboratorio">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h5l2 2h11v10H3V7z" /></svg>
+                        Archivos
+                    </button>
+                    <button class="btn btn-primary" id="btn-play" disabled>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" id="icon-play"><path d="M5 3l14 9-14 9V3z" /></svg>
+                        <span id="txt-play">Reproducir ensayo</span>
+                    </button>
+                    <button class="btn" id="btn-reset" disabled>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>
+                        Reiniciar
+                    </button>
+                    <div class="progress-container">
+                        <span class="progress-time" id="progress-time">0.00 s</span>
+                        <input type="range" id="barra-progreso" min="0" max="0" value="0" disabled />
+                    </div>
+                    <label class="speed-wrapper">
+                        Velocidad
+                        <select id="select-velocidad">
+                            <option value="200">Lento (0.5x)</option>
+                            <option value="80" selected>Normal (1x)</option>
+                            <option value="30">Rápido (3x)</option>
+                            <option value="10">Turbo (8x)</option>
+                            <option value="5">Máxima (16x)</option>
+                        </select>
+                    </label>
+                </div>
+            </section>
+
+            <section class="panel-archivos-lab" id="panelArchivosLab" hidden>
+                <div class="panel-archivos-lab-head">
+                    <strong>Archivos .lvm en el laboratorio</strong>
+                    <button class="link-tabla" id="cerrarPanelArchivos" type="button">Cerrar ✕</button>
+                </div>
+                <div class="panel-archivos-lab-lista" id="listaArchivosLab">Cargando…</div>
+            </section>
+
+            <section class="overview-strip">
+                <div class="overview-card">
+                    <span class="overview-label">Lectura actual</span>
+                    <strong class="overview-value" id="ov-time">0.00 s</strong>
+                    <span class="overview-sub">Tiempo del ensayo</span>
+                </div>
+                <div class="overview-card">
+                    <span class="overview-label">Progreso</span>
+                    <strong class="overview-value" id="ov-progress">0%</strong>
+                    <span class="overview-sub" id="ov-progress-sub">0 de 0 lecturas</span>
+                </div>
+                <div class="overview-card">
+                    <span class="overview-label">Canales disponibles</span>
+                    <strong class="overview-value" id="ov-sensors">0</strong>
+                    <span class="overview-sub">Sensores detectados</span>
+                </div>
+                <div class="overview-card">
+                    <span class="overview-label">Ventana gráfica</span>
+                    <strong class="overview-value" id="ov-window">—</strong>
+                    <span class="overview-sub">Desplazamiento en tiempo real</span>
+                </div>
+            </section>
+            <!-- NUEVA ARQUITECTURA -->
+            <!-- 1. GRÁFICAS: 4, en cuadrícula 2x2, todas del mismo tamaño -->
+            <div class="graphs-section" id="graphs-col">
+                <!-- Se arman las 4 gráficas vía JavaScript en cuanto carga la página -->
+            </div>
+            <!-- 2. TABLAS/TARJETAS DE VARIABLES (3 familias reales, compactas,
+                 colapsadas por defecto para ocupar poco espacio) -->
+            <div class="indicators-section">
+                <div class="indicator-card">
+                    <div class="indicator-card-head">
+                        <h3>Acelerómetros <span class="grupo-conteo" id="conteo-acel">0</span></h3>
+                        <button class="link-tabla toggle-grupo" data-grupo="acel" type="button">Mostrar valores ▾</button>
+                    </div>
+                    <div class="indicator-grid" id="grp-acel" hidden></div>
+                </div>
+                <div class="indicator-card">
+                    <div class="indicator-card-head">
+                        <h3>LVDT <span class="grupo-conteo" id="conteo-lvdt">0</span></h3>
+                        <button class="link-tabla toggle-grupo" data-grupo="lvdt" type="button">Mostrar valores ▾</button>
+                    </div>
+                    <div class="indicator-grid" id="grp-lvdt" hidden></div>
+                </div>
+                <div class="indicator-card">
+                    <div class="indicator-card-head">
+                        <h3>Hilos <span class="grupo-conteo" id="conteo-hilo">0</span></h3>
+                        <button class="link-tabla toggle-grupo" data-grupo="hilo" type="button">Mostrar valores ▾</button>
+                    </div>
+                    <div class="indicator-grid" id="grp-hilo" hidden></div>
+                    <div class="tabla-footer">
+                        <button class="link-tabla" id="toggle-tabla">Ver como tabla ↓</button>
+                    </div>
+                    <div class="tabla-wrap" id="tabla-wrap"><table id="tabla-datos"></table></div>
+                </div>
+            </div>
+            <!-- 3. ESPACIO RESERVADO PARA FUTURAS GRÁFICAS DERIVADAS
+                 (comparaciones entre sensores, relaciones X-Y, etc.).
+                 Vacío por ahora a propósito — no se inventan datos. -->
+            <div class="future-graphs-slot" id="future-graphs-slot" hidden></div>
+        </main>
+    </div>
+    <script>
+        const API_BASE = "http://127.0.0.1:5000";
+        const COLORES = ["var(--series-1)", "var(--series-2)", "var(--series-3)", "var(--series-4)"];
+        const COLORES_HEX = ["#2a78d6", "#eb6834", "#1baf7a", "#8b5cf6"];
+        // Sensores reales sugeridos por defecto para las 4 gráficas (una
+        // muestra de cada familia). Si un ensayo viejo no los trae, el
+        // código de más abajo ya cae de vuelta a los primeros sensores
+        // disponibles.
+        const DEFAULTS_SUGERIDOS = ["AA01", "LD01", "TH01", "LV01"];
+        let filas = [];
+        let nombresSensores = [];
+        let canalesGraficas = ["", "", "", ""];
+        let indiceActual = 0;
+        let reproduciendo = false;
+        let timerId = null;
+        let archivoActual = null;
+        let autoRefrescoId = null;
+        const INTERVALO_AUTOREFRESCO_MS = 3000;
+        // Interruptor real de "en vivo": mientras está en true, cada ciclo
+        // de auto-refresco revisa si el laboratorio empezó una prueba
+        // nueva y se cambia solo hacia ella. Mientras está en false, el
+        // dashboard se queda quieto mostrando exactamente el ensayo que el
+        // usuario eligió a mano, sin saltar a otro por su cuenta.
+        // Arranca en false: para una sustentación, el dashboard debe
+        // abrir en blanco y esperar a que el usuario decida qué mostrar
+        // (un ensayo histórico o el monitoreo en vivo), no adelantarse.
+        let modoEnVivo = false;
+
+        // ============ ZOOM POR GRÁFICA (rueda del mouse + arrastrar) ============
+        // Cada gráfica puede tener su propia ventana de zoom, guardada en
+        // tiempo real (segundos del ensayo), no en índices — así el zoom se
+        // mantiene estable aunque sigan llegando datos nuevos por detrás.
+        let zoomVentanas = [
+            { activo: false, xIni: 0, xFin: 0 },
+            { activo: false, xIni: 0, xFin: 0 },
+            { activo: false, xIni: 0, xFin: 0 },
+            { activo: false, xIni: 0, xFin: 0 },
+        ];
+        // Guarda los puntos exactos que se dibujaron por última vez en cada
+        // gráfica (con su tiempo real), para poder traducir la posición del
+        // mouse a un instante del ensayo cuando se hace zoom o se arrastra.
+        let ultimosPuntosRenderizados = [null, null, null, null];
+        let arrastreZoom = { indice: null, xInicioArrastre: null, ventanaInicial: null };
+
+        // ============ MODO DE VISTA: ENSAYO COMPLETO / EVENTO SÍSMICO ============
+        // "completo": se ve todo el ensayo (comportamiento de siempre).
+        // "sismico": filtro puramente VISUAL — no borra ni cambia nada en
+        // la base de datos — que recorta las 4 gráficas a la ventana
+        // detectada automáticamente alrededor de la excitación real,
+        // para poder comparar acelerómetros, LVDT e hilos en la misma
+        // franja de tiempo exacta.
+        let modoVista = "completo";
+        // { tInicioEvento, tFinEvento, ventanaIni, ventanaFin } o null si
+        // no se ha calculado / no se pudo detectar un evento claro.
+        let eventoDetectado = null;
+        // Vista puntual y asimétrica: poco antes del evento (solo la
+        // referencia basal), más después (para ver la respuesta y el
+        // amortiguamiento residual de la estructura).
+        const MARGEN_ANTES_EVENTO_SEG = 5;
+        const MARGEN_DESPUES_EVENTO_SEG = 5;
+
+        // Ventana temporal móvil: el dato nuevo entra por la derecha y
+        // el histórico se desplaza hacia la izquierda, como un monitor real.
+        const VENTANA_TIEMPO_SEG = 20;
+        const MIN_PUNTOS_VENTANA = 35;
+        const MUESTRAS_VENTANA = 180; // cantidad máxima visible durante reproducción
+        const el = (id) => document.getElementById(id);
+        function plantillaGrafica(i) {
+            return `
+                            <div class="graph-card">
+                                <div class="graph-header">
+                                    <div class="graph-controls">
+                                        <span class="graph-badge" style="--serie-color:${COLORES_HEX[i]}">${i + 1}</span>
+                                        <div class="graph-title-wrap">
+                                            <span class="graph-title">Canal de medición</span>
+                                            <span class="graph-subtitle">Escala adaptativa · tiempo real</span>
+                                        </div>
+                                        <select id="sel-g${i + 1}" data-index="${i}"><option value="">—</option></select>
+                                    </div>
+                                    <div class="graph-current" id="cur-g${i + 1}">—</div>
+                                </div>
+                                <div class="graph-viewport">
+                                    <div class="graph-window-chip" id="win-g${i + 1}">Sin ensayo</div>
+                                    <div class="graph-maxmin" id="mm-g${i + 1}">Max: <span>—</span><br>Min: <span>—</span></div>
+                                    <svg id="svg-g${i + 1}" viewBox="0 0 1000 220" preserveAspectRatio="none"
+                                         title="Rueda del mouse: zoom · Arrastrar: mover · Doble clic: restablecer"></svg>
+                                    <div class="graph-empty" id="empty-g${i + 1}">Seleccione un ensayo o active En vivo.</div>
+                                </div>
+                            </div>`;
+        }
+        function tiempoEnFraccion(indice, fraccion) {
+            const puntos = ultimosPuntosRenderizados[indice];
+            if (!puntos || !puntos.length) return null;
+            const idx = Math.max(0, Math.min(puntos.length - 1, Math.round(fraccion * (puntos.length - 1))));
+            return puntos[idx].x;
+        }
+        function manejarZoomRueda(indice, evento) {
+            evento.preventDefault();
+            const puntos = ultimosPuntosRenderizados[indice];
+            if (!puntos || puntos.length < 2) return;
+
+            const svg = el(`svg-g${indice + 1}`);
+            const rect = svg.getBoundingClientRect();
+            const fraccionCursor = Math.max(0, Math.min(1, (evento.clientX - rect.left) / rect.width));
+            const tiempoCursor = tiempoEnFraccion(indice, fraccionCursor);
+            if (tiempoCursor === null) return;
+
+            const zoom = zoomVentanas[indice];
+            const xMinTotal = puntos[0].x;
+            const xMaxTotal = puntos.at(-1).x;
+            const anchoTotal = xMaxTotal - xMinTotal;
+            if (anchoTotal <= 0) return;
+
+            const xIniActual = zoom.activo ? zoom.xIni : xMinTotal;
+            const xFinActual = zoom.activo ? zoom.xFin : xMaxTotal;
+            const anchoActual = xFinActual - xIniActual;
+
+            // Rueda hacia arriba = acercar; rueda hacia abajo = alejar.
+            const factor = evento.deltaY < 0 ? 0.8 : 1.25;
+            const anchoMinimo = Math.max(anchoTotal * 0.001, 0.0005);
+            let nuevoAncho = Math.max(anchoMinimo, Math.min(anchoTotal, anchoActual * factor));
+
+            let nuevoIni = tiempoCursor - (tiempoCursor - xIniActual) * (nuevoAncho / anchoActual);
+            let nuevoFin = nuevoIni + nuevoAncho;
+
+            if (nuevoIni < xMinTotal) { nuevoIni = xMinTotal; nuevoFin = nuevoIni + nuevoAncho; }
+            if (nuevoFin > xMaxTotal) { nuevoFin = xMaxTotal; nuevoIni = nuevoFin - nuevoAncho; }
+
+            if (nuevoAncho >= anchoTotal * 0.995) {
+                zoomVentanas[indice] = { activo: false, xIni: 0, xFin: 0 };
+            } else {
+                zoomVentanas[indice] = { activo: true, xIni: nuevoIni, xFin: nuevoFin };
+            }
+            dibujar();
+        }
+        function iniciarArrastreZoom(indice, evento) {
+            if (!zoomVentanas[indice].activo) return;
+            evento.preventDefault();
+            arrastreZoom = {
+                indice,
+                xInicioArrastre: evento.clientX,
+                ventanaInicial: { ...zoomVentanas[indice] },
+            };
+        }
+        function moverArrastreZoom(evento) {
+            if (arrastreZoom.indice === null) return;
+            const { indice, xInicioArrastre, ventanaInicial } = arrastreZoom;
+            const puntos = ultimosPuntosRenderizados[indice];
+            if (!puntos || !puntos.length) return;
+
+            const svg = el(`svg-g${indice + 1}`);
+            const rect = svg.getBoundingClientRect();
+            const ancho = ventanaInicial.xFin - ventanaInicial.xIni;
+            const deltaPixeles = evento.clientX - xInicioArrastre;
+            const deltaTiempo = -(deltaPixeles / rect.width) * ancho;
+
+            const xMinTotal = puntos[0].x;
+            const xMaxTotal = puntos.at(-1).x;
+
+            let nuevoIni = ventanaInicial.xIni + deltaTiempo;
+            let nuevoFin = ventanaInicial.xFin + deltaTiempo;
+
+            if (nuevoIni < xMinTotal) { nuevoIni = xMinTotal; nuevoFin = nuevoIni + ancho; }
+            if (nuevoFin > xMaxTotal) { nuevoFin = xMaxTotal; nuevoIni = nuevoFin - ancho; }
+
+            zoomVentanas[indice] = { activo: true, xIni: nuevoIni, xFin: nuevoFin };
+            dibujar();
+        }
+        function terminarArrastreZoom() {
+            arrastreZoom = { indice: null, xInicioArrastre: null, ventanaInicial: null };
+        }
+        function configurarZoomGraficas() {
+            [0, 1, 2, 3].forEach(i => {
+                const svg = el(`svg-g${i + 1}`);
+                if (!svg) return;
+                svg.addEventListener("wheel", (e) => manejarZoomRueda(i, e), { passive: false });
+                svg.addEventListener("mousedown", (e) => iniciarArrastreZoom(i, e));
+                svg.addEventListener("dblclick", () => {
+                    zoomVentanas[i] = { activo: false, xIni: 0, xFin: 0 };
+                    dibujar();
+                });
+            });
+        }
+        function marcarEstado(clase, texto) {
+            const badge = el("status-badge");
+            badge.classList.remove("ok", "error");
+            if (clase) badge.classList.add(clase);
+            el("texto-estado").textContent = texto;
+        }
+        // Arma los 3 recuadros de gráfica (con su menú de sensor) UNA
+        // sola vez, apenas carga la página — así el dashboard ya se ve
+        // con sus 3 gráficas vacías ("Seleccione un ensayo o active En
+        // vivo.") sin esperar a que el usuario elija nada. Si se
+        // reconstruyeran cada vez que cambia el ensayo (algo que pasa
+        // cada 1-3 minutos con "en vivo"), el menú de sensor que el
+        // usuario tuviera abierto justo en ese instante desaparecería
+        // debajo de su clic. En los cambios siguientes solo se
+        // actualiza la lista de sensores del menú (en llenarSelectores),
+        // sin tocar el elemento en sí.
+        function armarGraficasSiHaceFalta() {
+            const graphsCol = el("graphs-col");
+            if (graphsCol.dataset.armado) return;
+            graphsCol.innerHTML = [0, 1, 2, 3].map(plantillaGrafica).join("");
+            configurarZoomGraficas();
+            graphsCol.dataset.armado = "1";
+        }
+        async function cargarListaEnsayos() {
+            // Llena el selector de "Ensayo" con todos los archivos .lvm
+            // guardados en la base de datos (agrupados y con fecha), en vez
+            // de asumir que el ultimo por ID es siempre el que se quiere ver.
+            // IMPORTANTE: solo llena la lista — nunca elige ni carga un
+            // ensayo por su cuenta. El dashboard debe abrir en blanco y
+            // esperar una decisión explícita del usuario (elegir un
+            // ensayo o activar "En vivo").
+            const selectEnsayo = el("select-ensayo");
+            try {
+                const resp = await fetch(`${API_BASE}/api/labview/archivos`);
+                if (!resp.ok) throw new Error("Status " + resp.status);
+                const ensayos = await resp.json();
+                if (!Array.isArray(ensayos) || ensayos.length === 0) {
+                    selectEnsayo.innerHTML = '<option value="">Sin ensayos guardados</option>';
+                    marcarEstado("error", "No hay datos guardados. Importa datos primero.");
+                    return;
+                }
+                // Si ya había un ensayo elegido (por ejemplo, esta lista se
+                // está refrescando en segundo plano durante "en vivo"), se
+                // conserva esa selección; si no, se deja el marcador
+                // "— Seleccione un ensayo —".
+                const valorPrevio = selectEnsayo.value;
+                selectEnsayo.innerHTML = '<option value="">— Seleccione un ensayo —</option>' + ensayos.map(en => {
+                    const fecha = en.ultima_lectura ? en.ultima_lectura.replace("T", " ").slice(0, 16) : "";
+                    return `<option value="${en.archivo}">${en.archivo} · ${en.filas} filas · ${fecha}</option>`;
+                }).join("");
+                if (valorPrevio && ensayos.some(en => en.archivo === valorPrevio)) {
+                    selectEnsayo.value = valorPrevio;
+                } else {
+                    marcarEstado(null, "Sistema listo · Seleccione un ensayo o active el monitoreo en vivo.");
+                }
+            } catch (e) {
+                selectEnsayo.innerHTML = '<option value="">Error al listar ensayos</option>';
+                marcarEstado("error", "Error de conexión con la API local.");
+                console.error(e);
+            }
+        }
+        // opciones.finDeInmediato = true → usado por "En vivo" (y cuando el
+        // laboratorio cambia de prueba estando en vivo): salta directo a la
+        // última lectura disponible, como monitoreo en tiempo real.
+        // opciones.finDeInmediato = false (por defecto) → usado al elegir un
+        // ensayo histórico a mano: se queda en el punto 0, listo para que el
+        // usuario le dé "Reproducir ensayo" y lo vea avanzar desde el inicio.
+        async function cargarDatos(archivoSeleccionado, opciones = {}) {
+            if (!archivoSeleccionado) return;
+            const finDeInmediato = !!opciones.finDeInmediato;
+            detenerAutoRefresco();
+            archivoActual = archivoSeleccionado;
+            // Cada ensayo nuevo arranca con la vista completa, sin zoom
+            // heredado del ensayo anterior.
+            zoomVentanas = [
+                { activo: false, xIni: 0, xFin: 0 },
+                { activo: false, xIni: 0, xFin: 0 },
+                { activo: false, xIni: 0, xFin: 0 },
+                { activo: false, xIni: 0, xFin: 0 },
+            ];
+            armarGraficasSiHaceFalta();
+            pausar();
+            indiceActual = 0;
+            try {
+                // Traemos el histórico completo, pero SOLO del archivo elegido
+                // en el selector — así nunca se mezclan ensayos distintos con
+                // sets de sensores diferentes.
+                const resp = await fetch(`${API_BASE}/api/labview/historico?archivo=${encodeURIComponent(archivoSeleccionado)}&limite=200000`);
+                if (!resp.ok) throw new Error("Status " + resp.status);
+                const registros = await resp.json();
+                if (!Array.isArray(registros) || registros.length === 0) {
+                    marcarEstado("error", "Ese ensayo no tiene lecturas guardadas.");
+                    return;
+                }
+                // Nota: con ?archivo=... la API ya devuelve en orden ASC (del
+                // más viejo al más reciente), así que no hace falta invertir.
+                filas = registros.map(r => ({ x_value: r.x_value, datos: r.datos }));
+                nombresSensores = Object.keys(filas[0].datos).filter(k => k !== "X_Value" && k !== "Comment");
+                if (finDeInmediato) {
+                    // Modo en vivo: mostramos de una vez la última lectura
+                    // disponible, como si se estuviera viendo el ensayo
+                    // ocurriendo en tiempo real.
+                    indiceActual = filas.length - 1;
+                    marcarEstado("ok", `${archivoSeleccionado} — ${filas.length} lecturas · en vivo`);
+                } else {
+                    // Ensayo histórico elegido a mano: se deja cargado en el
+                    // punto 0, esperando a que el usuario le dé "Reproducir".
+                    indiceActual = 0;
+                    marcarEstado("ok", `Ensayo cargado · listo para reproducir (${archivoSeleccionado})`);
+                }
+                el("ov-sensors").textContent = nombresSensores.length;
+                el("ov-window").textContent = `${VENTANA_TIEMPO_SEG} s`;
+                construirIndicadores();
+                llenarSelectores();
+                el("barra-progreso").max = filas.length - 1;
+                el("barra-progreso").disabled = false;
+                el("btn-play").disabled = false;
+                el("btn-reset").disabled = false;
+                if (modoVista === "sismico") {
+                    calcularEventoSismico();
+                    if (eventoDetectado) {
+                        // Si ya se estaba en "Evento sísmico" y se elige
+                        // otro ensayo, se arranca directo en la ventana
+                        // del evento de ESTE ensayo, no en el archivo
+                        // completo.
+                        indiceActual = indiceDesdeTiempo(eventoDetectado.ventanaIni);
+                    }
+                }
+                actualizarLimitesBarraProgreso();
+                actualizarNotaModoVista();
+                actualizarResumenControlPanel();
+                dibujar();
+                iniciarAutoRefresco();
+            } catch (e) {
+                marcarEstado("error", "Error de conexión con la API local.");
+                console.error(e);
+            }
+        }
+        function iniciarAutoRefresco() {
+            detenerAutoRefresco();
+            autoRefrescoId = setInterval(refrescarDatosEnVivo, INTERVALO_AUTOREFRESCO_MS);
+        }
+        function detenerAutoRefresco() {
+            if (autoRefrescoId) {
+                clearInterval(autoRefrescoId);
+                autoRefrescoId = null;
+            }
+        }
+        async function cambiarAPruebaNueva(nombreArchivo) {
+            marcarEstado(null, `Prueba nueva detectada: ${nombreArchivo} · sincronizando…`);
+            try {
+                // Trae (o pone al día) esa prueba completa en la base de
+                // datos, para no perdernos las filas que ya llevaba desde
+                // antes de detectarla.
+                await fetch(`${API_BASE}/api/labview/importar?archivo=${encodeURIComponent(nombreArchivo)}`);
+            } catch (e) {
+                console.error("No se pudo importar la prueba nueva:", e);
+            }
+            await cargarListaEnsayos();
+            el("select-ensayo").value = nombreArchivo;
+            await cargarDatos(nombreArchivo, { finDeInmediato: true });
+        }
+        async function refrescarDatosEnVivo() {
+            // Solo revisamos si el laboratorio cambió de prueba cuando el
+            // modo "en vivo" está encendido. Si está apagado, el usuario
+            // eligió ver un ensayo especifico y NO lo movemos de ahí,
+            // aunque el laboratorio esté corriendo otra prueba distinta.
+            if (modoEnVivo) try {
+                const respActivo = await fetch(`${API_BASE}/api/labview/actual`);
+                if (respActivo.ok) {
+                    const dataActivo = await respActivo.json();
+                    const archivoDelLaboratorioAhora = dataActivo.archivo;
+                    if (archivoDelLaboratorioAhora && archivoDelLaboratorioAhora !== archivoActual) {
+                        await cambiarAPruebaNueva(archivoDelLaboratorioAhora);
+                        return;
+                    }
+                }
+            } catch (e) {
+                // Si el laboratorio no responde en este instante, seguimos
+                // con lo que ya teníamos cargado; se reintenta solo en el
+                // próximo ciclo.
+            }
+
+            if (!archivoActual) return;
+            try {
+                const resp = await fetch(`${API_BASE}/api/labview/historico?archivo=${encodeURIComponent(archivoActual)}&limite=200000`);
+                if (!resp.ok) return;
+                const registros = await resp.json();
+                if (!Array.isArray(registros) || registros.length === 0) return;
+
+                const nuevasFilas = registros.map(r => ({ x_value: r.x_value, datos: r.datos }));
+
+                // Si la cantidad de filas no cambió, no hay nada nuevo que
+                // pintar (evita "parpadeos" innecesarios en las gráficas).
+                if (nuevasFilas.length === filas.length) return;
+
+                // El usuario estaba "siguiendo en vivo" si estaba parado
+                // justo en la última lectura conocida. Si se devolvió con
+                // la barra de progreso a revisar un punto anterior, se
+                // respeta eso y no se lo mueve de ahí.
+                const estabaSiguiendoEnVivo = indiceActual >= filas.length - 1;
+
+                filas = nuevasFilas;
+                el("barra-progreso").max = filas.length - 1;
+
+                if (estabaSiguiendoEnVivo) {
+                    indiceActual = filas.length - 1;
+                }
+
+                // El evento se recalcula con los datos que sigan llegando
+                // (por ejemplo, si la excitación real todavía está en
+                // curso mientras se sigue en vivo). No se mueve el
+                // "cabezal" (indiceActual) por esto — solo se actualiza
+                // dónde queda el límite de la barra y la nota; forzar el
+                // salto aquí, cada 3 s, sería muy molesto si el usuario
+                // ya está viendo/reproduciendo el evento.
+                if (modoVista === "sismico") {
+                    calcularEventoSismico();
+                    actualizarNotaModoVista();
+                }
+                actualizarLimitesBarraProgreso();
+
+                marcarEstado("ok", `${archivoActual} — ${filas.length} lecturas · en vivo`);
+                dibujar();
+            } catch (e) {
+                console.error("Auto-actualización falló:", e);
+            }
+        }
+        // Familias reales de instrumentación (47 sensores):
+        //   Acelerómetros (17): AA01, AS01–AS06, AW01–AW10
+        //   LVDT (24): LD01–LD08 (diagonales), LH01–LH08 (horizontales),
+        //              LV01–LV08 (verticales)
+        //   Hilos (6): TH01–TH06
+        // Los nombres llegan como "AA01 (Mean)", "LD01 (Mean)", etc.
+        function clasificarSensor(nombre) {
+            const limpio = nombre.trim().toUpperCase();
+            const prefijo = limpio.slice(0, 2);
+            if (prefijo === "AA" || prefijo === "AS" || prefijo === "AW") return "grp-acel";
+            if (prefijo === "LD" || prefijo === "LH" || prefijo === "LV") return "grp-lvdt";
+            if (prefijo === "TH") return "grp-hilo";
+            // Compatibilidad con ensayos antiguos que no usan el formato
+            // de prefijo real (ej. "Laser E", "Lvdt 6", "Strain_0").
+            if (limpio.includes("LVDT")) return "grp-lvdt";
+            if (limpio.includes("LASER") || limpio.includes("HILO")) return "grp-hilo";
+            return "grp-acel";
+        }
+        function construirIndicadores() {
+            const contenedores = {
+                "grp-acel": el("grp-acel"),
+                "grp-lvdt": el("grp-lvdt"),
+                "grp-hilo": el("grp-hilo"),
+            };
+            Object.values(contenedores).forEach(nodo => {
+                if (nodo) nodo.innerHTML = "";
+            });
+            nombresSensores.forEach(nombre => {
+                const contenedor = contenedores[clasificarSensor(nombre)];
+                const item = document.createElement("div");
+                item.className = "indicator-item";
+                const shortName = nombre.replace(" (Mean)", "");
+                item.innerHTML = `
+                                                    <div class="indicator-label" title="${nombre}">${shortName}</div>
+                                                    <div class="indicator-value" data-sensor="${nombre}">0.0000</div>
+                                                `;
+                contenedor.appendChild(item);
+            });
+            el("conteo-acel").textContent = contenedores["grp-acel"].children.length;
+            el("conteo-lvdt").textContent = contenedores["grp-lvdt"].children.length;
+            el("conteo-hilo").textContent = contenedores["grp-hilo"].children.length;
+        }
+        // ============ DETECCIÓN AUTOMÁTICA DEL EVENTO SÍSMICO ============
+        // Filtro puramente visual: recorre las lecturas ya cargadas en
+        // `filas` (nunca las modifica ni las borra) y calcula, a partir
+        // de los acelerómetros (AA/AS/AW), el tramo donde ocurre la
+        // excitación real. Guarda el resultado en `eventoDetectado`.
+        //
+        // A diferencia de la versión anterior (que tomaba el primer y el
+        // último cruce del umbral en TODO el ensayo, y un pico de ruido
+        // aislado cerca del final podía alargar la ventana muchísimo),
+        // ahora se agrupan todos los tramos de actividad en "bloques"
+        // (tolerando huecos pequeños dentro de un mismo sismo), se
+        // descartan los bloques demasiado cortos para ser señal real, y
+        // se elige como evento principal el bloque con más energía
+        // acumulada — que en la práctica es también el que contiene el
+        // pico de mayor energía del ensayo. Cualquier pico aislado fuera
+        // de ese bloque se ignora.
+        function calcularEventoSismico() {
+            eventoDetectado = null;
+            if (!filas.length) return;
+
+            const sensoresAcel = nombresSensores.filter(n => {
+                const prefijo = n.trim().toUpperCase().slice(0, 2);
+                return prefijo === "AA" || prefijo === "AS" || prefijo === "AW";
+            });
+            // Sin acelerómetros en este ensayo no hay forma confiable de
+            // detectar el evento — se deja sin detectar (la gráfica cae
+            // de vuelta al ensayo completo).
+            if (!sensoresAcel.length) return;
+
+            // Señal de "actividad" combinada: energía media (promedio de
+            // los cuadrados) de todos los acelerómetros disponibles en
+            // cada instante.
+            const energia = filas.map(f => {
+                let suma = 0, n = 0;
+                sensoresAcel.forEach(s => {
+                    const v = Number(f.datos[s]);
+                    if (Number.isFinite(v)) { suma += v * v; n++; }
+                });
+                return n ? suma / n : 0;
+            });
+
+            // Ruido basal: se toma del primer tramo del ensayo (10%,
+            // mínimo 20 muestras o todo el ensayo si es más corto),
+            // asumiendo que la mesa arranca en reposo antes de la
+            // excitación real.
+            const nBase = Math.max(1, Math.min(filas.length, Math.max(20, Math.round(filas.length * 0.1))));
+            const muestraBase = energia.slice(0, nBase);
+            const mediaBase = muestraBase.reduce((a, b) => a + b, 0) / muestraBase.length;
+            const varBase = muestraBase.reduce((a, b) => a + (b - mediaBase) ** 2, 0) / muestraBase.length;
+            const stdBase = Math.sqrt(varBase);
+
+            // La energía debe superar claramente el ruido basal (media +
+            // 5 desviaciones estándar) para considerarse actividad.
+            const umbral = mediaBase + Math.max(stdBase * 5, mediaBase * 0.5, 1e-9);
+
+            // 1) Tramos "en bruto" de muestras consecutivas por encima
+            //    del umbral.
+            const tramos = [];
+            for (let i = 0; i < energia.length;) {
+                if (energia[i] > umbral) {
+                    let j = i;
+                    while (j + 1 < energia.length && energia[j + 1] > umbral) j++;
+                    tramos.push([i, j]);
+                    i = j + 1;
+                } else {
+                    i++;
+                }
+            }
+            if (!tramos.length) return;
+
+            // 2) Se agrupan en "bloques", uniendo tramos separados por un
+            //    hueco corto (en tiempo real, no en muestras, para no
+            //    depender de la frecuencia de muestreo) — así una caída
+            //    momentánea de la señal DENTRO del mismo sismo no lo
+            //    parte en dos eventos distintos.
+            const TOLERANCIA_HUECO_SEG = 1;
+            const bloques = [tramos[0].slice()];
+            for (let k = 1; k < tramos.length; k++) {
+                const bloqueActual = bloques[bloques.length - 1];
+                const tFinBloque = Number(filas[bloqueActual[1]].x_value);
+                const tInicioTramo = Number(filas[tramos[k][0]].x_value);
+                const hueco = tInicioTramo - tFinBloque;
+                if (Number.isFinite(hueco) && hueco <= TOLERANCIA_HUECO_SEG) {
+                    bloqueActual[1] = tramos[k][1];
+                } else {
+                    bloques.push(tramos[k].slice());
+                }
+            }
+
+            // 3) Se descartan bloques demasiado cortos (ruido eléctrico,
+            //    un golpe aislado) para quedarse solo con actividad real.
+            const MIN_MUESTRAS_BLOQUE = 3;
+            const bloquesValidos = bloques.filter(([ini, fin]) => (fin - ini + 1) >= MIN_MUESTRAS_BLOQUE);
+            if (!bloquesValidos.length) return;
+
+            // 4) Evento principal = el bloque con mayor energía
+            //    acumulada (equivalente, en la práctica, al bloque que
+            //    contiene el pico de energía más alto del ensayo).
+            let mejorBloque = null;
+            let mejorEnergia = -Infinity;
+            bloquesValidos.forEach(([ini, fin]) => {
+                let energiaAcumulada = 0;
+                for (let k = ini; k <= fin; k++) energiaAcumulada += energia[k];
+                if (energiaAcumulada > mejorEnergia) {
+                    mejorEnergia = energiaAcumulada;
+                    mejorBloque = [ini, fin];
+                }
+            });
+
+            const [idxInicio, idxFin] = mejorBloque;
+            const tInicioEvento = Number(filas[idxInicio].x_value);
+            const tFinEvento = Number(filas[idxFin].x_value);
+            const tMinTotal = Number(filas[0].x_value);
+            const tMaxTotal = Number(filas.at(-1).x_value);
+            if (!Number.isFinite(tInicioEvento) || !Number.isFinite(tFinEvento)) return;
+
+            eventoDetectado = {
+                tInicioEvento,
+                tFinEvento,
+                // Vista puntual y asimétrica: poco margen "antes" (solo
+                // basal de referencia) y más margen "después" (para ver
+                // la respuesta/amortiguamiento residual de la estructura).
+                ventanaIni: Math.max(tMinTotal, tInicioEvento - MARGEN_ANTES_EVENTO_SEG),
+                ventanaFin: Math.min(tMaxTotal, tFinEvento + MARGEN_DESPUES_EVENTO_SEG),
+            };
+        }
+        function actualizarNotaModoVista() {
+            const nota = el("modo-vista-nota");
+            if (modoVista !== "sismico") { nota.textContent = ""; return; }
+            if (!filas.length) { nota.textContent = "Cargue un ensayo o active En vivo para detectar el evento."; return; }
+            if (!eventoDetectado) {
+                nota.textContent = "No se detectó un evento claro (o el ensayo no tiene acelerómetros) · mostrando el ensayo completo.";
+                return;
+            }
+            nota.textContent = `Evento: ${eventoDetectado.tInicioEvento.toFixed(2)}–${eventoDetectado.tFinEvento.toFixed(2)} s · Vista: ${MARGEN_ANTES_EVENTO_SEG} s antes + evento + ${MARGEN_DESPUES_EVENTO_SEG} s después`;
+        }
+        function actualizarBotonesModoVista() {
+            el("btn-modo-completo").classList.toggle("btn-primary", modoVista === "completo");
+            el("btn-modo-sismico").classList.toggle("btn-primary", modoVista === "sismico");
+        }
+        // Índice de la PRIMERA fila cuyo x_value >= t (para el inicio de
+        // una ventana). `filas` ya viene ordenada ASC, así que basta un
+        // recorrido lineal — igual que el resto del archivo.
+        function indiceDesdeTiempo(t) {
+            for (let i = 0; i < filas.length; i++) {
+                const x = Number(filas[i].x_value);
+                if (Number.isFinite(x) && x >= t) return i;
+            }
+            return Math.max(0, filas.length - 1);
+        }
+        // Índice de la ÚLTIMA fila cuyo x_value <= t (para el final de
+        // una ventana).
+        function indiceHastaTiempo(t) {
+            let resultado = 0;
+            for (let i = 0; i < filas.length; i++) {
+                const x = Number(filas[i].x_value);
+                if (Number.isFinite(x) && x <= t) resultado = i;
+                else break;
+            }
+            return resultado;
+        }
+        // Limita (o restaura) el rango de la barra de progreso según el
+        // modo de vista actual. Es solo una limitación VISUAL del control
+        // deslizante — no toca `filas` ni el índice recorrido realmente.
+        function actualizarLimitesBarraProgreso() {
+            const barra = el("barra-progreso");
+            if (modoVista === "sismico" && eventoDetectado) {
+                barra.min = indiceDesdeTiempo(eventoDetectado.ventanaIni);
+                barra.max = indiceHastaTiempo(eventoDetectado.ventanaFin);
+            } else {
+                barra.min = 0;
+                barra.max = Math.max(0, filas.length - 1);
+            }
+        }
+        // Resumen compacto que se ve en la franja del acordeón cuando
+        // está cerrado (o siempre, junto al chevron).
+        function actualizarResumenControlPanel() {
+            const resumen = el("control-panel-resumen");
+            const nombreEnsayo = archivoActual || "— Seleccione un ensayo —";
+            const modoTexto = modoVista === "sismico" ? "Evento sísmico" : "Ensayo completo";
+            resumen.textContent = `${nombreEnsayo} · ${modoTexto}`;
+        }
+        function cambiarModoVista(nuevoModo) {
+            if (modoVista === nuevoModo) return;
+            modoVista = nuevoModo;
+            actualizarBotonesModoVista();
+            // Cambiar de modo pausa cualquier reproducción en curso — no
+            // tiene sentido seguir avanzando con un límite distinto al
+            // que se acaba de fijar.
+            pausar();
+            if (modoVista === "sismico") {
+                calcularEventoSismico();
+                if (eventoDetectado) {
+                    // La reproducción (y la barra) arrancan directo en la
+                    // primera muestra de la ventana del evento, no en el
+                    // inicio del archivo.
+                    indiceActual = indiceDesdeTiempo(eventoDetectado.ventanaIni);
+                }
+            }
+            actualizarLimitesBarraProgreso();
+            actualizarNotaModoVista();
+            actualizarResumenControlPanel();
+            dibujar();
+        }
+        function llenarSelectores() {
+            const selectores = [el("sel-g1"), el("sel-g2"), el("sel-g3"), el("sel-g4")];
+            selectores.forEach((sel, i) => {
+                sel.innerHTML = "";
+                nombresSensores.forEach(nombre => {
+                    const opt = document.createElement("option");
+                    opt.value = nombre;
+                    opt.textContent = nombre.replace(" (Mean)", "");
+                    sel.appendChild(opt);
+                });
+                // Si ya habías elegido un sensor para esta gráfica y ese
+                // mismo sensor sigue existiendo en la prueba actual, se
+                // respeta tu elección — antes se reseteaba al sugerido por
+                // defecto cada vez que el sistema detectaba una prueba
+                // nueva (lo cual, en un dia con muchas pruebas seguidas,
+                // pasaba todo el tiempo).
+                const eleccionPrevia = canalesGraficas[i];
+                const sigueDisponible = eleccionPrevia && nombresSensores.includes(eleccionPrevia);
+                const sugerido = nombresSensores.find(n => n.toLowerCase().includes(DEFAULTS_SUGERIDOS[i].toLowerCase()));
+                sel.value = sigueDisponible ? eleccionPrevia : (sugerido || nombresSensores[i] || nombresSensores[0]);
+                canalesGraficas[i] = sel.value;
+                sel.addEventListener("change", (e) => {
+                    canalesGraficas[i] = e.target.value;
+                    dibujar();
+                });
+            });
+        }
+        function escala(valor, min, max, destinoMin, destinoMax) {
+            if (max === min) return (destinoMin + destinoMax) / 2;
+            return destinoMin + ((valor - min) / (max - min)) * (destinoMax - destinoMin);
+        }
+        function dibujar() {
+            if (filas.length === 0) return;
+
+            const fActual = filas[indiceActual].datos;
+
+            nombresSensores.forEach(sensor => {
+                const divVal = document.querySelector(
+                    `.indicator-value[data-sensor="${CSS.escape(sensor)}"]`
+                );
+                if (!divVal) return;
+
+                const val = Number(fActual[sensor]);
+                const texto = Number.isFinite(val) ? val.toFixed(4) : "—";
+
+                if (divVal.textContent !== texto) {
+                    divVal.textContent = texto;
+                    divVal.classList.add("actualizado");
+                    setTimeout(() => divVal.classList.remove("actualizado"), 220);
+                }
+            });
+
+            const innerW = 1000;
+            const innerH = 220;
+            const padTop = 18;
+            const padBottom = 28;
+            const yBottom = innerH - padBottom;
+
+            const tiempoActual = Number(filas[indiceActual].x_value);
+            const progreso = filas.length > 1
+                ? (indiceActual / (filas.length - 1)) * 100
+                : 100;
+
+            el("ov-time").textContent = Number.isFinite(tiempoActual)
+                ? `${tiempoActual.toFixed(2)} s`
+                : "—";
+            el("ov-progress").textContent = `${Math.round(progreso)}%`;
+            el("ov-progress-sub").textContent = `${indiceActual + 1} de ${filas.length} lecturas`;
+            el("ov-window").textContent = indiceActual >= filas.length - 1
+                ? `${filas.length} muestras`
+                : `${Math.min(MUESTRAS_VENTANA, indiceActual + 1)} muestras`;
+
+            canalesGraficas.forEach((canal, i) => {
+                const svg = el(`svg-g${i + 1}`);
+                const mm = el(`mm-g${i + 1}`);
+                const cur = el(`cur-g${i + 1}`);
+                const vacio = el(`empty-g${i + 1}`);
+                const winChip = el(`win-g${i + 1}`);
+
+                if (!canal || !svg) return;
+
+                const recorridas = filas.slice(0, indiceActual + 1);
+                let puntosTodos = recorridas
+                    .map(f => ({
+                        x: Number(f.x_value),
+                        y: Number(f.datos[canal])
+                    }))
+                    .filter(p => Number.isFinite(p.x) && Number.isFinite(p.y));
+
+                // Modo "Evento sísmico": recorte puramente VISUAL a la
+                // ventana detectada automáticamente (no se borra ni se
+                // modifica ningún dato). Se aplica la MISMA ventana a
+                // las 4 gráficas, sin importar qué sensor tengan
+                // seleccionado, para poder comparar exactamente el mismo
+                // tramo de tiempo en acelerómetros, LVDT o hilos.
+                if (modoVista === "sismico" && eventoDetectado) {
+                    puntosTodos = puntosTodos.filter(p =>
+                        p.x >= eventoDetectado.ventanaIni && p.x <= eventoDetectado.ventanaFin
+                    );
+                }
+
+                if (!puntosTodos.length) {
+                    vacio.style.display = "flex";
+                    svg.innerHTML = "";
+                    cur.textContent = "—";
+                    mm.innerHTML = `Max: <span>—</span><br>Min: <span>—</span>`;
+                    return;
+                }
+
+                vacio.style.display = "none";
+
+                // ===================================================
+                // ESCALADO X ADAPTATIVO POR MUESTRAS
+                //
+                // En vez de reservar espacio según el tiempo absoluto,
+                // distribuimos las muestras reales a lo ancho de la gráfica.
+                // Esto evita que un salto de tiempo (ej. 50 s -> 1195 s)
+                // comprima toda la señal a la izquierda.
+                //
+                // - Durante reproducción: se muestran las últimas N muestras.
+                // - Al finalizar: se muestran TODAS las muestras.
+                // - Las etiquetas X siguen mostrando el tiempo real.
+                // ===================================================
+                // En modo "Evento sísmico" la reproducción se detiene al
+                // llegar a ventanaFin, no al final real del archivo, así
+                // que "indiceActual >= filas.length - 1" casi nunca se
+                // cumple ahí. Sin este OR, al terminar el evento la
+                // gráfica se quedaba mostrando solo la ventana móvil de
+                // las últimas muestras en vez del evento completo.
+                const terminoVentanaSismica = modoVista === "sismico" && eventoDetectado &&
+                    Number(filas[indiceActual]?.x_value) >= eventoDetectado.ventanaFin;
+                const esFinal = indiceActual >= filas.length - 1 || terminoVentanaSismica;
+                const zoom = zoomVentanas[i];
+
+                let puntos;
+                if (zoom.activo) {
+                    puntos = puntosTodos.filter(p => p.x >= zoom.xIni && p.x <= zoom.xFin);
+                    // Si el zoom quedó tan cerrado que no alcanza a haber ni
+                    // 2 puntos dentro, se usan los 2 más recientes para no
+                    // dejar la gráfica en blanco.
+                    if (puntos.length < 2) puntos = puntosTodos.slice(-2);
+                } else if (esFinal) {
+                    puntos = puntosTodos;
+                } else {
+                    puntos = puntosTodos.slice(-MUESTRAS_VENTANA);
+                }
+
+                if (!puntos.length) return;
+
+                // ===================================================
+                // EJE X VISUAL BASADO EN TIEMPO REAL
+                //
+                // Conservamos la forma temporal de la señal.
+                // Solo comprimimos saltos de tiempo extraordinariamente grandes
+                // (por ejemplo, pausas o huecos sin muestras) para evitar que
+                // toda la curva quede arrinconada a la izquierda.
+                // ===================================================
+                const deltasValidos = [];
+                for (let j = 1; j < puntos.length; j++) {
+                    const dt = puntos[j].x - puntos[j - 1].x;
+                    if (Number.isFinite(dt) && dt > 0) deltasValidos.push(dt);
+                }
+
+                const deltasOrdenados = deltasValidos.slice().sort((a, b) => a - b);
+                const deltaMediano = deltasOrdenados.length
+                    ? deltasOrdenados[Math.floor(deltasOrdenados.length / 2)]
+                    : 1;
+
+                // Un hueco puede ocupar como máximo 8 intervalos normales.
+                // Así preservamos la forma real sin dejar espacios gigantes.
+                const MAX_GAP_VISUAL = Math.max(deltaMediano * 8, deltaMediano);
+
+                let xVisualAcumulado = 0;
+
+                puntos = puntos.map((p, idx) => {
+                    if (idx > 0) {
+                        const dtReal = p.x - puntos[idx - 1].x;
+                        const dtSeguro = Number.isFinite(dtReal) && dtReal > 0
+                            ? Math.min(dtReal, MAX_GAP_VISUAL)
+                            : deltaMediano;
+
+                        xVisualAcumulado += dtSeguro;
+                    }
+
+                    return {
+                        ...p,
+                        visualX: xVisualAcumulado
+                    };
+                });
+
+                const xMin = 0;
+                const xMax = Math.max(1, puntos.at(-1).visualX);
+
+                const deltasTiempo = [];
+                for (let j = 1; j < puntos.length; j++) {
+                    const dt = puntos[j].x - puntos[j - 1].x;
+                    if (Number.isFinite(dt) && dt > 0) deltasTiempo.push(dt);
+                }
+
+                const ord = deltasTiempo.slice().sort((a, b) => a - b);
+                const medianaTiempo = ord.length
+                    ? ord[Math.floor(ord.length / 2)]
+                    : 0;
+
+                // Solo partimos la curva si existe un hueco temporal realmente extraordinario.
+                // El hueco NO ocupa espacio horizontal vacío.
+                const UMBRAL_SALTO = medianaTiempo > 0
+                    ? Math.max(medianaTiempo * 25, 5)
+                    : Infinity;
+
+                const segmentos = [];
+                let segmento = [];
+
+                puntos.forEach((p, idx) => {
+                    if (
+                        idx > 0 &&
+                        (p.x - puntos[idx - 1].x) > UMBRAL_SALTO &&
+                        segmento.length
+                    ) {
+                        segmentos.push(segmento);
+                        segmento = [];
+                    }
+
+                    segmento.push(p);
+                });
+
+                if (segmento.length) segmentos.push(segmento);
+
+                const ys = puntos.map(p => p.y);
+                let minY = Math.min(...ys);
+                let maxY = Math.max(...ys);
+
+                if (minY === maxY) {
+                    const pad = Math.max(Math.abs(minY) * .08, .01);
+                    minY -= pad;
+                    maxY += pad;
+                } else {
+                    const rango = maxY - minY;
+                    const pad = Math.max(rango * .12, Math.abs(maxY) * .002, .001);
+                    minY -= pad;
+                    maxY += pad;
+                }
+
+                const sx = x => escala(x, xMin, xMax, 0, innerW);
+                const sy = y => escala(y, minY, maxY, yBottom, padTop);
+
+                const gridY = [padTop, padTop + (yBottom - padTop) * .25, padTop + (yBottom - padTop) * .5,
+                    padTop + (yBottom - padTop) * .75, yBottom]
+                    .map(y => `<line class="linea-grilla" x1="0" y1="${y}" x2="${innerW}" y2="${y}" />`)
+                    .join("");
+
+                const xTicks = Math.min(5, Math.max(1, puntos.length - 1));
+                let gridX = "";
+                let labelsX = "";
+
+                for (let t = 0; t <= xTicks; t++) {
+                    const objetivoVisual = (xMax / xTicks) * t;
+
+                    // Buscar la muestra más cercana a esta posición visual.
+                    let idxTick = 0;
+                    let mejorDist = Infinity;
+
+                    for (let k = 0; k < puntos.length; k++) {
+                        const dist = Math.abs(puntos[k].visualX - objetivoVisual);
+                        if (dist < mejorDist) {
+                            mejorDist = dist;
+                            idxTick = k;
+                        }
+                    }
+
+                    const pTick = puntos[idxTick];
+                    const px = sx(pTick.visualX);
+
+                    gridX += `<line class="linea-grilla"
+                                                x1="${px}" y1="${padTop}"
+                                                x2="${px}" y2="${yBottom}" />`;
+
+                    const tiempoTick = Number.isFinite(pTick?.x)
+                        ? `${pTick.x.toFixed(1)}s`
+                        : "";
+
+                    labelsX += `<text class="graph-axis-label"
+                                                  x="${px}"
+                                                  y="${innerH - 7}"
+                                                  text-anchor="${t === 0 ? "start" : t === xTicks ? "end" : "middle"}">${tiempoTick}</text>`;
+                }
+
+                const defs = `
+                                <defs>
+                                    <linearGradient id="grad-${i}" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="${COLORES_HEX[i]}" stop-opacity=".20"/>
+                                        <stop offset="100%" stop-color="${COLORES_HEX[i]}" stop-opacity="0"/>
+                                    </linearGradient>
+                                </defs>`;
+
+                const paths = segmentos.map(seg => {
+                    if (!seg.length) return "";
+                    const lineD = seg.map((p, idx) =>
+                        `${idx === 0 ? "M" : "L"}${sx(p.visualX).toFixed(1)},${sy(p.y).toFixed(1)}`
+                    ).join(" ");
+
+                    let area = "";
+                    if (seg.length > 1) {
+                        area = `<path d="${lineD} L${sx(seg.at(-1).visualX).toFixed(1)},${yBottom} L${sx(seg[0].visualX).toFixed(1)},${yBottom} Z"
+                                                  fill="url(#grad-${i})" stroke="none"/>`;
+                    }
+
+                    return `${area}
+                                        <path d="${lineD}" fill="none"
+                                              stroke="${COLORES_HEX[i]}"
+                                              stroke-width="3"
+                                              vector-effect="non-scaling-stroke"
+                                              stroke-linejoin="round"
+                                              stroke-linecap="round"/>`;
+                }).join("");
+
+                const ultimo = puntos.at(-1);
+                const puntoActual = ultimo
+                    ? `<circle class="live-dot"
+                                           cx="${sx(ultimo.visualX)}"
+                                           cy="${sy(ultimo.y)}"
+                                           r="5.2"
+                                           fill="${COLORES_HEX[i]}"
+                                           stroke="#fff"
+                                           stroke-width="2.5"
+                                           vector-effect="non-scaling-stroke"/>`
+                    : "";
+
+                const maxReal = Math.max(...ys);
+                const minReal = Math.min(...ys);
+
+                mm.innerHTML =
+                    `Max: <span>${maxReal.toFixed(2)}</span><br>` +
+                    `Min: <span>${minReal.toFixed(2)}</span>`;
+
+                cur.textContent = Number.isFinite(ultimo?.y)
+                    ? ultimo.y.toFixed(4)
+                    : "—";
+
+                winChip.textContent = zoom.activo
+                    ? `Zoom · ${puntos.length} muestras · rueda: zoom, arrastrar: mover, doble clic: restablecer`
+                    : esFinal
+                        ? `Ensayo completo · ${puntos.length} muestras`
+                        : `Últimas ${Math.min(MUESTRAS_VENTANA, puntosTodos.length)} muestras`;
+
+                ultimosPuntosRenderizados[i] = puntos;
+
+                svg.innerHTML = `
+                                ${defs}
+                                ${gridY}
+                                ${gridX}
+                                ${paths}
+                                ${puntoActual}
+                                ${labelsX}
+                            `;
+            });
+
+            el("barra-progreso").value = indiceActual;
+            el("progress-time").textContent =
+                Number(filas[indiceActual].x_value).toFixed(2) + " s";
+        }
+
+        function renderTabla() {
+            const canales = canalesGraficas.filter(Boolean);
+            const cols = ["X_Value", ...canales];
+            let html = "<thead><tr>" + cols.map(c => `<th>${c.replace(" (Mean)", "")}</th>`).join("") + "</tr></thead><tbody>";
+            const paso = Math.max(1, Math.floor(filas.length / 200));
+            for (let i = 0; i < filas.length; i += paso) {
+                const f = filas[i];
+                html += "<tr><td>" + Number(f.x_value).toFixed(4) + "</td>" +
+                    canales.map(c => {
+                        const v = Number(f.datos[c]);
+                        return `<td>${Number.isFinite(v) ? v.toFixed(4) : "—"}</td>`;
+                    }).join("") + "</tr>";
+            }
+            html += "</tbody>";
+            el("tabla-datos").innerHTML = html;
+        }
+        function avanzar() {
+            if (indiceActual >= filas.length - 1) {
+                pausar();
+                // La gráfica queda exactamente en su último estado válido.
+                // No se limpia ni se vuelve a escalar con datos fuera del recorrido.
+                marcarEstado("ok", "Simulación finalizada · mostrando ensayo completo.");
+                return;
+            }
+
+            // En modo "Evento sísmico" la reproducción se detiene al
+            // llegar al final de la VENTANA del evento (ventanaFin), no
+            // al final del archivo completo.
+            if (modoVista === "sismico" && eventoDetectado &&
+                Number(filas[indiceActual].x_value) >= eventoDetectado.ventanaFin) {
+                pausar();
+                marcarEstado("ok", "Evento sísmico completo · fin de la ventana mostrada.");
+                return;
+            }
+
+            indiceActual++;
+            dibujar();
+        }
+        function reproducir() {
+            if (reproduciendo) return;
+            reproduciendo = true;
+            el("txt-play").textContent = "Pausar";
+            el("icon-play").innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+            const intervalo = Number(el("select-velocidad").value);
+            timerId = setInterval(avanzar, intervalo);
+        }
+        function pausar() {
+            reproduciendo = false;
+            el("txt-play").textContent = "Reproducir ensayo";
+            el("icon-play").innerHTML = '<path d="M5 3l14 9-14 9V3z"/>';
+            clearInterval(timerId);
+        }
+        el("btn-play").addEventListener("click", () => reproduciendo ? pausar() : reproducir());
+        el("btn-reset").addEventListener("click", () => {
+            pausar();
+            // En "Evento sísmico" se reinicia al comienzo de la ventana
+            // del evento (no al inicio del archivo completo).
+            indiceActual = (modoVista === "sismico" && eventoDetectado)
+                ? indiceDesdeTiempo(eventoDetectado.ventanaIni)
+                : 0;
+            dibujar();
+        });
+        el("barra-progreso").addEventListener("input", (e) => { pausar(); indiceActual = Number(e.target.value); dibujar(); });
+        el("select-velocidad").addEventListener("change", () => { if (reproduciendo) { pausar(); reproducir(); } });
+        function actualizarBotonEnVivo() {
+            const boton = el("btn-en-vivo");
+            boton.classList.toggle("btn-primary", modoEnVivo);
+            boton.querySelector(".txt-en-vivo").textContent = modoEnVivo ? "En vivo: conectado" : "Iniciar monitoreo en vivo";
+            boton.title = modoEnVivo
+                ? "En vivo activado: sigue solo la prueba más reciente del laboratorio. Clic para apagarlo."
+                : "Activa el monitoreo en vivo del laboratorio.";
+        }
+        el("select-ensayo").addEventListener("change", (e) => {
+            // Elegir un ensayo a mano es una decisión explícita del
+            // usuario: apagamos el "en vivo" para que el dashboard se
+            // quede mostrando justo ese, sin saltar solo a otro.
+            modoEnVivo = false;
+            actualizarBotonEnVivo();
+            // El ensayo se carga "listo para reproducir" (indiceActual=0,
+            // finDeInmediato por defecto en false) — no se dibuja el
+            // ensayo completo de inmediato.
+            cargarDatos(e.target.value);
+        });
+        el("btn-en-vivo").addEventListener("click", async () => {
+            modoEnVivo = !modoEnVivo;
+            actualizarBotonEnVivo();
+            if (!modoEnVivo) {
+                // Apagar "en vivo" solo deja de perseguir pruebas nuevas
+                // (ver el guard "if (modoEnVivo)" dentro de
+                // refrescarDatosEnVivo) — los últimos datos recibidos se
+                // quedan tal cual en pantalla, sin borrarlos.
+                return;
+            }
+
+            marcarEstado(null, "Buscando la prueba más reciente del laboratorio…");
+            try {
+                // Le pedimos a la API que traiga (o actualice) el archivo
+                // que el laboratorio considera "el más reciente" ahora
+                // mismo, aunque nadie lo haya importado todavía.
+                await fetch(`${API_BASE}/api/labview/importar`);
+            } catch (e) {
+                console.error("No se pudo sincronizar con el laboratorio:", e);
+            }
+
+            let archivoEnVivo = null;
+            try {
+                const respActivo = await fetch(`${API_BASE}/api/labview/actual`);
+                if (respActivo.ok) {
+                    const dataActivo = await respActivo.json();
+                    archivoEnVivo = dataActivo.archivo || null;
+                }
+            } catch (e) {
+                console.error("No se pudo detectar el ensayo actual del laboratorio:", e);
+            }
+
+            await cargarListaEnsayos();
+
+            if (!archivoEnVivo) {
+                marcarEstado("error", "No se pudo detectar la prueba actual del laboratorio.");
+                return;
+            }
+
+            el("select-ensayo").value = archivoEnVivo;
+            // "En vivo" muestra de una vez las últimas lecturas disponibles
+            // (no arranca desde el punto 0 como un ensayo histórico).
+            await cargarDatos(archivoEnVivo, { finDeInmediato: true });
+        });
+        el("btn-archivos").addEventListener("click", () => {
+            const panel = el("panelArchivosLab");
+            if (!panel.hasAttribute("hidden")) {
+                panel.setAttribute("hidden", "");
+                return;
+            }
+            panel.removeAttribute("hidden");
+            cargarArchivosLab();
+        });
+        el("cerrarPanelArchivos").addEventListener("click", () => {
+            el("panelArchivosLab").setAttribute("hidden", "");
+        });
+        async function cargarArchivosLab() {
+            const lista = el("listaArchivosLab");
+            lista.textContent = "Cargando…";
+            try {
+                const resp = await fetch(`${API_BASE}/api/labview/archivos_disponibles`);
+                if (!resp.ok) throw new Error("Status " + resp.status);
+                const data = await resp.json();
+                const archivos = data.archivos || [];
+                if (!archivos.length) {
+                    lista.textContent = "No hay archivos .lvm en el laboratorio.";
+                    return;
+                }
+                lista.innerHTML = archivos.map(a => {
+                    const fecha = a.modificado ? a.modificado.replace("T", " ").slice(0, 16) : "";
+                    const pesoMb = a.tamano_bytes ? (a.tamano_bytes / (1024 * 1024)).toFixed(1) + " MB" : "";
+                    return `
+                        <div class="archivo-lab-item">
+                            <div class="archivo-lab-info">
+                                <strong title="${a.nombre}">${a.nombre}</strong>
+                                <span>Modificado: ${fecha} · ${pesoMb}</span>
+                            </div>
+                            <button class="btn" type="button" data-importar-archivo="${a.nombre}">Importar y ver</button>
+                        </div>`;
+                }).join("");
+
+                lista.querySelectorAll("[data-importar-archivo]").forEach(boton => {
+                    boton.addEventListener("click", async () => {
+                        const nombre = boton.dataset.importarArchivo;
+                        boton.disabled = true;
+                        boton.textContent = "Importando…";
+                        try {
+                            const resp = await fetch(`${API_BASE}/api/labview/importar?archivo=${encodeURIComponent(nombre)}`);
+                            const data = await resp.json();
+                            if (!data.ok) throw new Error(data.error || "Error desconocido");
+
+                            // Elegir un archivo del laboratorio a mano es una
+                            // decisión explícita: apagamos el "en vivo" para
+                            // que el dashboard se quede mostrando justo este,
+                            // sin que el auto-refresco lo cambie por otro.
+                            modoEnVivo = false;
+                            actualizarBotonEnVivo();
+
+                            el("panelArchivosLab").setAttribute("hidden", "");
+                            await cargarListaEnsayos();
+                            // cargarListaEnsayos() ya no elige nada por su
+                            // cuenta — forzamos la selección al archivo que
+                            // realmente se acaba de importar.
+                            el("select-ensayo").value = nombre;
+                            cargarDatos(nombre);
+                        } catch (e) {
+                            boton.disabled = false;
+                            boton.textContent = "Reintentar";
+                            console.error(e);
+                        }
+                    });
+                });
+            } catch (e) {
+                lista.textContent = "Error al listar archivos del laboratorio.";
+                console.error(e);
+            }
+        }
+        // El botón "Ver como tabla" es fijo en el HTML (no se regenera al
+        // cambiar de ensayo), así que su listener se registra una sola vez.
+        el("toggle-tabla").addEventListener("click", () => {
+            const wrap = el("tabla-wrap");
+            const visible = wrap.style.display === "block";
+            wrap.style.display = visible ? "none" : "block";
+            el("toggle-tabla").textContent = visible ? "Ver como tabla ↓" : "Ocultar tabla ↑";
+            if (!visible) renderTabla();
+        });
+        el("btn-modo-completo").addEventListener("click", () => cambiarModoVista("completo"));
+        el("btn-modo-sismico").addEventListener("click", () => cambiarModoVista("sismico"));
+        // Cada tarjeta (Acelerómetros / LVDT / Hilos) arranca colapsada
+        // para ocupar poco espacio; este botón muestra u oculta sus
+        // valores sin afectar los datos ni el resto del dashboard.
+        document.querySelectorAll(".toggle-grupo").forEach(boton => {
+            boton.addEventListener("click", () => {
+                const grid = el(`grp-${boton.dataset.grupo}`);
+                const oculto = grid.hasAttribute("hidden");
+                if (oculto) {
+                    grid.removeAttribute("hidden");
+                    boton.textContent = "Ocultar valores ▴";
+                } else {
+                    grid.setAttribute("hidden", "");
+                    boton.textContent = "Mostrar valores ▾";
+                }
+            });
+        });
+        // Acordeón de "Controles del ensayo" — mismo patrón que
+        // "Mostrar/Ocultar valores" de los sensores. No borra ni
+        // reinicia ningún control, solo lo pliega/despliega.
+        el("control-panel-toggle").addEventListener("click", () => {
+            const body = el("control-panel-body");
+            const toggle = el("control-panel-toggle");
+            const chevron = el("control-panel-chevron");
+            const oculto = body.hasAttribute("hidden");
+            if (oculto) {
+                body.removeAttribute("hidden");
+                chevron.textContent = "▴";
+                toggle.setAttribute("aria-expanded", "true");
+            } else {
+                body.setAttribute("hidden", "");
+                chevron.textContent = "▾";
+                toggle.setAttribute("aria-expanded", "false");
+            }
+        });
+        // Listeners globales del arrastre de zoom: van en document (no en
+        // cada svg) para que el arrastre no se corte si el mouse se sale
+        // momentáneamente del área de la gráfica mientras se mueve.
+        document.addEventListener("mousemove", moverArrastreZoom);
+        document.addEventListener("mouseup", terminarArrastreZoom);
+
+        // Estado inicial de la demo: gráficas armadas y vacías, lista de
+        // ensayos cargada, pero SIN dibujar ni reproducir nada hasta que
+        // el usuario elija un ensayo o active "En vivo".
+        armarGraficasSiHaceFalta();
+        actualizarBotonEnVivo();
+        actualizarBotonesModoVista();
+        actualizarResumenControlPanel();
+        cargarListaEnsayos();
+    </script>
+
+    <!-- ==========================================
+         AGENTE IA · BOTÓN FLOTANTE Y PANEL DE CHAT (ICDE)
+         Mismo bloque que en Index.html, para que el agente
+         esté disponible en todas las páginas del sitio.
+    =========================================== -->
+
+    <button class="agent-launcher" id="agentLauncher" type="button" aria-label="Abrir asistente ICDE">
+        <svg class="agent-launcher-icon-open" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 4h16v11H8l-4 4V4Z"></path>
+            <path d="M8 9h8M8 12h5"></path>
+        </svg>
+        <svg class="agent-launcher-icon-close" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18"></path>
+        </svg>
+    </button>
+
+    <section class="agent-panel" id="agentPanel" aria-label="Asistente ICDE">
+        <header class="agent-panel-head">
+            <div class="agent-panel-title">
+                <span class="agent-panel-icon">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 4h16v11H8l-4 4V4Z"></path>
+                        <path d="M8 9h8M8 12h5"></path>
+                    </svg>
+                </span>
+                <div>
+                    <small>Laboratorio Digital CIAM</small>
+                    <h2>Asistente ICDE</h2>
+                </div>
+            </div>
+            <button class="agent-panel-close" id="agentPanelClose" type="button" aria-label="Cerrar asistente">×</button>
+        </header>
+
+        <div class="agent-panel-log" id="agentPanelLog">
+            <div class="agent-bubble agent-bubble-bot">
+                Hola, soy el asistente del portal ICDE. Cuéntame qué
+                información geográfica necesitas y busco en el catálogo
+                los datasets que más te sirvan.
+            </div>
+        </div>
+
+        <form class="agent-panel-input" id="agentForm">
+            <input type="text" id="agentInput" placeholder="Escribe qué información necesitas…" disabled aria-label="Mensaje para el asistente" autocomplete="off">
+            <button type="submit" disabled>Enviar</button>
+        </form>
+    </section>
+
+    <script src="agente1/agente.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <meta name="theme-color"
+          content="#ffffff">
+
+    <meta name="description"
+          content="Visores Geodata Colombia del Laboratorio Digital CIAM">
+
+    <!--
+        DESACTIVA CACHÉ DURANTE DESARROLLO
+        Ayuda a evitar que el navegador siga mostrando
+        versiones antiguas del HTML, CSS o JavaScript.
+    -->
+    <meta http-equiv="Cache-Control"
+          content="no-cache, no-store, must-revalidate">
+
+    <meta http-equiv="Pragma"
+          content="no-cache">
+
+    <meta http-equiv="Expires"
+          content="0">
+
+    <title>
+        Geodata Colombia | Universidad de los Andes
+    </title>
+
+    <link rel="preconnect"
+          href="https://fonts.googleapis.com">
+
+    <link rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Sans+3:wght@600;700;800&display=swap"
+          rel="stylesheet">
+
+    <!--
+        IMPORTANTE:
+        Se agrega una versión para evitar cargar
+        archivos CSS antiguos almacenados en caché.
+    -->
+    <link rel="stylesheet"
+          href="./css/geodata-colombia.css?v=20260814-01">
+
+    <link rel="stylesheet" href="../agente1/agente-panel.css">
+
+</head>
+
+<body>
+
+    <div class="page-shell">
+
+        <!-- ==========================================
+             ENCABEZADO
+        =========================================== -->
+
+        <header class="topbar">
+
+            <div class="topbar-inner">
+
+                <button class="brand"
+                        id="brandBtn"
+                        type="button">
+
+                    <span class="logo-box">
+
+                        <img src="../Imagenes/logo-uniandes.png"
+                             alt="Universidad de los Andes"
+                             onerror="
+                                this.style.display='none';
+                                this.parentElement.classList.add('logo-error');
+                             ">
+
+                    </span>
+
+                    <span class="brand-copy">
+
+                        <small>
+                            Universidad de los Andes · CIAM
+                        </small>
+
+                        <strong>
+                            Geodata Colombia
+                        </strong>
+
+                    </span>
+
+                </button>
+
+                <button class="menu-toggle"
+                        id="menuToggle"
+                        type="button"
+                        aria-label="Abrir menú">
+
+                    <span></span>
+                    <span></span>
+                    <span></span>
+
+                </button>
+
+                <nav class="navigation"
+                     id="mainNav"
+                     aria-label="Navegación principal">
+
+                    <button type="button"
+                            id="btnVolverInicio">
+
+                        Inicio
+
+                    </button>
+
+                    <button type="button"
+                            data-ir-colecciones="1">
+
+                        Visores
+
+                    </button>
+
+                    <button class="nav-primary"
+                            type="button"
+                            data-ir-colecciones="1">
+
+                        Explorar
+
+                    </button>
+
+                </nav>
+
+            </div>
+
+        </header>
+
+
+        <!-- ==========================================
+             CONTENIDO PRINCIPAL
+        =========================================== -->
+
+        <main>
+
+            <section class="collections-section"
+                     id="colecciones">
+
+                <div class="section-heading">
+
+                    <small>
+                        Visores disponibles
+                    </small>
+
+                    <h1>
+                        Geodata Colombia
+                    </h1>
+
+                    <p>
+                        Selecciona el visor geográfico que deseas consultar.
+                        Cada módulo reúne mapas, capas e información temática
+                        especializada para el territorio colombiano.
+                    </p>
+
+                </div>
+
+
+                <div class="collections-grid">
+
+                    <!-- ==================================
+                         01 · GEODATA GENERAL DE COLOMBIA
+                    =================================== -->
+
+                    <article class="collection-card"
+                             data-destino="./General/Index.html"
+                             tabindex="0"
+                             aria-label="Abrir Geodata General de Colombia">
+
+                        <img class="collection-background"
+                             src="../Imagenes/GeoColombia/Bandera.webp"
+                             alt="Geodata General de Colombia">
+
+                        <div class="collection-overlay"></div>
+
+                        <span class="collection-number">
+                            01
+                        </span>
+
+                        <div class="collection-icon">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"></path>
+                                <path d="M9 3v15M15 6v15"></path>
+                            </svg>
+                        </div>
+
+                        <div class="collection-content">
+
+                            <span class="collection-label">
+                                Información nacional
+                            </span>
+
+                            <h2>
+                                Geodata General de Colombia
+                            </h2>
+
+                            <p>
+                                Contiene información geográfica general del país,
+                                incluyendo límites administrativos, departamentos,
+                                municipios, ciudades, vías, hidrografía y
+                                cartografía básica.
+                            </p>
+
+                            <div class="collection-tags">
+                                <span>Límites</span>
+                                <span>Departamentos</span>
+                                <span>Municipios</span>
+                                <span>Cartografía</span>
+                            </div>
+
+                            <button class="collection-button"
+                                    type="button"
+                                    data-destino="./General/Index.html">
+
+                                Abrir visor
+
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M5 12h14M13 6l6 6-6 6"></path>
+                                </svg>
+
+                            </button>
+
+                        </div>
+
+                    </article>
+
+                    <!-- ==================================
+                         02 · GEODATA RIESGOS DE DESASTRES
+                    =================================== -->
+
+                    <article class="collection-card"
+                             data-mensaje="Geodata Riesgos de Desastres: visor preparado, sin navegación por ahora."
+                             tabindex="0"
+                             aria-label="Abrir Geodata Riesgos de Desastres">
+
+                        <img class="collection-background"
+                             src="../Imagenes/GeoColombia/Sismos_Col.gif"
+                             alt="Geodata Riesgos de Desastres">
+
+                        <div class="collection-overlay"></div>
+
+                        <span class="collection-number">
+                            02
+                        </span>
+
+                        <div class="collection-icon collection-icon-warning">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 3 22 20H2L12 3Z"></path>
+                                <path d="M12 9v5"></path>
+                                <path d="M12 17h.01"></path>
+                            </svg>
+                        </div>
+
+                        <div class="collection-content">
+
+                            <span class="collection-label">
+                                Gestión del riesgo
+                            </span>
+
+                            <h2>
+                                Geodata Riesgos de Desastres
+                            </h2>
+
+                            <p>
+                                Reúne información relacionada con actividad
+                                sísmica, inundaciones, deslizamientos,
+                                movimientos en masa, amenazas naturales y zonas
+                                de vulnerabilidad.
+                            </p>
+
+                            <div class="collection-tags">
+                                <span>Sismos</span>
+                                <span>Inundaciones</span>
+                                <span>Deslizamientos</span>
+                                <span>Vulnerabilidad</span>
+                            </div>
+
+                            <button class="collection-button"
+                                    type="button"
+                                    data-mensaje="Geodata Riesgos de Desastres: visor preparado, sin navegación por ahora.">
+
+                                Abrir visor
+
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M5 12h14M13 6l6 6-6 6"></path>
+                                </svg>
+
+                            </button>
+
+                        </div>
+
+                    </article>
+
+                </div>
+
+            </section>
+
+        </main>
+
+
+        <!-- ==========================================
+             PIE DE PÁGINA
+        =========================================== -->
+
+        <footer>
+
+            <div class="footer-inner">
+
+                <div>
+
+                    <strong>
+                        Geodata Colombia
+                    </strong>
+
+                    <span>
+                        Laboratorio Digital CIAM
+                    </span>
+
+                </div>
+
+                <p>
+                    © 2026 Universidad de los Andes
+                </p>
+
+            </div>
+
+        </footer>
+
+    </div>
+
+
+    <!-- ==========================================
+         MENSAJE TEMPORAL
+    =========================================== -->
+
+    <div class="toast" id="toast"></div>
+
+
+    <!--
+        IMPORTANTE:
+        La versión ?v=20260814-01 obliga al navegador
+        a solicitar nuevamente el JavaScript y evita
+        que siga utilizando una copia antigua.
+    -->
+
+    <script src="./js/geodata-colombia.js?v=20260814-01"></script>
+
+
+    <!-- ==========================================
+         CONTROL EXTRA DE CACHÉ
+    =========================================== -->
+
+    <script>
+
+        /*
+         * Esta parte es únicamente para desarrollo.
+         *
+         * Si vuelves atrás utilizando el botón del navegador,
+         * algunos navegadores recuperan la página completa
+         * desde memoria (bfcache) sin volver a ejecutar
+         * correctamente los archivos.
+         *
+         * Esto fuerza una recarga cuando la página vuelve
+         * desde ese tipo de caché.
+         */
+
+        window.addEventListener("pageshow", function (event) {
+
+            if (event.persisted) {
+
+                window.location.reload();
+
+            }
+
+        });
+
+    </script>
+
+    <!-- ==========================================
+         AGENTE IA · BOTÓN FLOTANTE Y PANEL DE CHAT (ICDE)
+         Mismo bloque que en Index.html, para que el agente
+         esté disponible en todas las páginas del sitio.
+    =========================================== -->
+
+    <button class="agent-launcher" id="agentLauncher" type="button" aria-label="Abrir asistente ICDE">
+        <svg class="agent-launcher-icon-open" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 4h16v11H8l-4 4V4Z"></path>
+            <path d="M8 9h8M8 12h5"></path>
+        </svg>
+        <svg class="agent-launcher-icon-close" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18"></path>
+        </svg>
+    </button>
+
+    <section class="agent-panel" id="agentPanel" aria-label="Asistente ICDE">
+        <header class="agent-panel-head">
+            <div class="agent-panel-title">
+                <span class="agent-panel-icon">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 4h16v11H8l-4 4V4Z"></path>
+                        <path d="M8 9h8M8 12h5"></path>
+                    </svg>
+                </span>
+                <div>
+                    <small>Laboratorio Digital CIAM</small>
+                    <h2>Asistente ICDE</h2>
+                </div>
+            </div>
+            <button class="agent-panel-close" id="agentPanelClose" type="button" aria-label="Cerrar asistente">×</button>
+        </header>
+
+        <div class="agent-panel-log" id="agentPanelLog">
+            <div class="agent-bubble agent-bubble-bot">
+                Hola, soy el asistente del portal ICDE. Cuéntame qué
+                información geográfica necesitas y busco en el catálogo
+                los datasets que más te sirvan.
+            </div>
+        </div>
+
+        <form class="agent-panel-input" id="agentForm">
+            <input type="text" id="agentInput" placeholder="Escribe qué información necesitas…" disabled aria-label="Mensaje para el asistente" autocomplete="off">
+            <button type="submit" disabled>Enviar</button>
+        </form>
+    </section>
+
+    <script src="../agente1/agente.js"></script>
+
+</body>
+
+</html>

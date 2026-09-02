@@ -1,0 +1,555 @@
+:root {
+    --white: #ffffff;
+    --cream: #fffdf6;
+    --beige: #fdf7e9;
+    --soft: #f7f7f3;
+    --yellow: #f5c400;
+    --yellow-dark: #d5aa00;
+    --yellow-soft: #fff5c4;
+    --charcoal: #25282c;
+    --text: #34383d;
+    --muted: #70757b;
+    --line: #e4e4dd;
+    --line-strong: #d2d2c9;
+    --shadow: 0 18px 48px rgba(34, 36, 39, 0.13);
+    --max-width: 1240px;
+}
+
+/* ======================================
+   CONFIGURACIÓN GENERAL
+====================================== */
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    position: relative;
+    color: var(--text);
+    background: linear-gradient( 180deg, var(--cream) 0%, var(--beige) 100vh );
+    font-family: "Inter", sans-serif;
+}
+
+/* Escudo de la Universidad de los Andes centrado como marca de agua,
+   muy pequeño y tenue, fijo detrás de todo el contenido. */
+body::before {
+    content: "";
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: -1;
+    width: 280px;
+    height: 280px;
+    transform: translate(-50%, -50%);
+    background: url("../../Imagenes/escudoandes.jpg") center / contain no-repeat;
+    opacity: .08;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+}
+
+button,
+a {
+    font: inherit;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+button {
+    cursor: pointer;
+}
+
+img,
+svg {
+    display: block;
+}
+
+/* ======================================
+   ENCABEZADO
+====================================== */
+
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(255, 255, 255, 0.97);
+    border-bottom: 1px solid var(--line);
+    box-shadow: 0 3px 15px rgba(34, 36, 39, 0.06);
+    backdrop-filter: blur(14px);
+}
+
+.topbar-inner {
+    width: min( var(--max-width), calc(100% - 40px) );
+    min-height: 84px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 28px;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.logo-box {
+    width: 178px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    padding-right: 18px;
+    border-right: 1px solid var(--line);
+}
+
+    .logo-box img {
+        max-width: 100%;
+        max-height: 46px;
+        object-fit: contain;
+    }
+
+.brand-copy small {
+    display: block;
+    margin-bottom: 2px;
+    color: #898d91;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.brand-copy strong {
+    display: block;
+    color: var(--charcoal);
+    font: 700 21px / 1.1 "Source Sans 3", sans-serif;
+}
+
+/* ======================================
+   NAVEGACIÓN
+====================================== */
+
+.navigation {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+    .navigation a,
+    .navigation button {
+        min-height: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 16px;
+        color: var(--muted);
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 11px;
+        font-weight: 700;
+        transition: 0.18s ease;
+    }
+
+        .navigation a:hover,
+        .navigation button:hover {
+            color: var(--charcoal);
+            background: var(--soft);
+            border-color: var(--line);
+        }
+
+    .navigation .nav-primary {
+        color: var(--charcoal);
+        background: var(--yellow);
+        border-color: var(--yellow-dark);
+    }
+
+/* ======================================
+   CONTENIDO
+====================================== */
+
+main {
+    width: min( var(--max-width), calc(100% - 40px) );
+    margin: 0 auto;
+    padding: 68px 0 92px;
+}
+
+.page-heading {
+    max-width: 780px;
+    margin: 0 auto 40px;
+    text-align: center;
+}
+
+    .page-heading small {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 13px;
+        margin-bottom: 16px;
+        color: #735b00;
+        background: var(--yellow-soft);
+        border: 1px solid #e4cf6f;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+        .page-heading small::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            background: var(--yellow-dark);
+            border-radius: 50%;
+        }
+
+    .page-heading h1 {
+        margin: 0;
+        color: var(--charcoal);
+        font: 700 clamp(42px, 5vw, 67px) / 1 "Source Sans 3", sans-serif;
+        letter-spacing: -0.035em;
+    }
+
+    .page-heading p {
+        max-width: 680px;
+        margin: 18px auto 0;
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1.7;
+    }
+
+/* ======================================
+   CUADRÍCULA DE TARJETAS
+====================================== */
+
+.viewer-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 22px;
+}
+
+.viewer-card {
+    position: relative;
+    min-height: 520px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+    padding: 25px;
+    background: var(--white);
+    border: 1px solid var(--line-strong);
+    border-radius: 23px;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    isolation: isolate;
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+    .viewer-card:hover {
+        transform: translateY(-6px);
+        border-color: var(--yellow-dark);
+        box-shadow: 0 28px 62px rgba(35, 37, 40, 0.19);
+    }
+
+    .viewer-card > img {
+        position: absolute;
+        inset: 0;
+        z-index: -3;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        transition: transform 0.6s ease;
+    }
+
+    .viewer-card:hover > img {
+        transform: scale(1.045);
+    }
+
+/* ======================================
+   CAPA OSCURA
+====================================== */
+
+.viewer-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    background: linear-gradient( 180deg, rgba(12, 16, 22, 0.10) 0%, rgba(12, 16, 22, 0.25) 38%, rgba(12, 16, 22, 0.72) 65%, rgba(12, 16, 22, 0.98) 100% );
+}
+
+/* ======================================
+   ICONOS Y NÚMEROS
+====================================== */
+
+.viewer-number {
+    position: absolute;
+    top: 24px;
+    right: 25px;
+    color: rgba(255, 255, 255, 0.94);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.13em;
+    text-shadow: 0 2px 7px rgba(0, 0, 0, 0.75);
+}
+
+.viewer-icon {
+    position: absolute;
+    top: 23px;
+    left: 24px;
+    width: 54px;
+    height: 54px;
+    display: grid;
+    place-items: center;
+    color: var(--charcoal);
+    background: rgba(255, 247, 207, 0.96);
+    border: 1px solid #e4cf6f;
+    border-radius: 15px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
+    backdrop-filter: blur(8px);
+}
+
+    .viewer-icon svg {
+        width: 26px;
+        height: 26px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+/* ======================================
+   TARJETA DETRÁS DE LOS TEXTOS
+====================================== */
+
+.viewer-content {
+    position: relative;
+    z-index: 3;
+    padding: 20px;
+    background: rgba(15, 19, 26, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 17px;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.34);
+    backdrop-filter: blur(9px);
+    -webkit-backdrop-filter: blur(9px);
+}
+
+.viewer-kicker {
+    display: block;
+    color: #ffe267;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.75);
+}
+
+.viewer-content h2 {
+    margin: 8px 0 0;
+    color: #ffffff;
+    font: 700 34px / 1.04 "Source Sans 3", sans-serif;
+    letter-spacing: -0.025em;
+    text-shadow: 0 3px 10px rgba(0, 0, 0, 0.9);
+}
+
+.viewer-content p {
+    margin: 14px 0 0;
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 13.5px;
+    line-height: 1.65;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.72);
+}
+
+/* ======================================
+   ETIQUETAS
+====================================== */
+
+.viewer-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 18px;
+}
+
+    .viewer-tags span {
+        padding: 6px 9px;
+        color: #ffffff;
+        background: rgba(255, 255, 255, 0.16);
+        border: 1px solid rgba(255, 255, 255, 0.34);
+        border-radius: 999px;
+        font-size: 10.5px;
+        font-weight: 700;
+        backdrop-filter: blur(8px);
+    }
+
+/* ======================================
+   BOTÓN
+====================================== */
+
+.viewer-button {
+    min-height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    margin-top: 22px;
+    padding: 0 18px;
+    color: var(--charcoal);
+    background: var(--yellow);
+    border: 1px solid var(--yellow-dark);
+    border-radius: 11px;
+    box-shadow: 0 9px 22px rgba(0, 0, 0, 0.24);
+    font-weight: 800;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+    .viewer-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+    }
+
+    .viewer-button svg {
+        width: 18px;
+        height: 18px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2.1;
+    }
+
+/* ======================================
+   TOAST
+====================================== */
+
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: 27px;
+    z-index: 100;
+    max-width: calc(100% - 30px);
+    transform: translate(-50%, 18px);
+    padding: 13px 18px;
+    color: var(--charcoal);
+    background: var(--white);
+    border: 1px solid var(--line-strong);
+    border-radius: 12px;
+    box-shadow: 0 16px 38px rgba(34, 36, 39, 0.18);
+    opacity: 0;
+    pointer-events: none;
+    transition: 0.22s ease;
+}
+
+    .toast.visible {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+
+/* ======================================
+   FOOTER
+====================================== */
+
+footer {
+    border-top: 1px solid var(--line);
+    background: var(--white);
+}
+
+.footer-inner {
+    width: min( var(--max-width), calc(100% - 40px) );
+    min-height: 92px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+    .footer-inner strong {
+        display: block;
+        color: var(--charcoal);
+        font-size: 14px;
+    }
+
+/* ======================================
+   TABLET
+====================================== */
+
+@media (max-width: 980px) {
+
+    .viewer-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .viewer-card {
+        min-height: 480px;
+    }
+}
+
+/* ======================================
+   CELULARES
+====================================== */
+
+@media (max-width: 720px) {
+
+    .navigation {
+        display: none;
+    }
+
+    .topbar-inner {
+        width: calc(100% - 24px);
+        min-height: 76px;
+    }
+
+    .logo-box {
+        width: 120px;
+        height: 44px;
+        padding-right: 10px;
+    }
+
+    .brand-copy small {
+        display: none;
+    }
+
+    .brand-copy strong {
+        font-size: 16px;
+    }
+
+    main {
+        width: calc(100% - 24px);
+        padding-top: 44px;
+    }
+
+    .page-heading h1 {
+        font-size: 43px;
+    }
+
+    .viewer-card {
+        min-height: 450px;
+        padding: 20px;
+    }
+
+    .viewer-content {
+        padding: 17px;
+    }
+
+        .viewer-content h2 {
+            font-size: 29px;
+        }
+
+        .viewer-content p {
+            font-size: 13px;
+        }
+
+    .footer-inner {
+        width: calc(100% - 24px);
+        padding: 22px 0;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

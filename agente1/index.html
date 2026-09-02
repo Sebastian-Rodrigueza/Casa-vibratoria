@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>NEXA AI · Instrumentación CIAM</title>
+
+    <link rel="stylesheet" href="estilo.css">
+
+</head>
+
+
+<body>
+
+
+    <div class="nexa-panel">
+
+
+        <header class="nexa-header">
+
+            <div>
+                <h1>NEXA AI</h1>
+                <p>Asistente inteligente de instrumentación</p>
+            </div>
+
+
+            <div id="estadoConexion" class="estado offline">
+                ● SISTEMA LOCAL
+            </div>
+
+
+        </header>
+
+
+
+        <section class="nexa-main">
+
+
+            <div class="avatar-section">
+
+
+                <div class="holograma">
+
+
+                    <div class="scan"></div>
+
+
+                    <svg width="170" height="170" viewBox="0 0 120 120">
+
+
+                        <circle cx="60" cy="60" r="50" class="cabeza" />
+
+
+                        <circle cx="42" cy="52" r="7" class="ojo" />
+
+                        <circle cx="78" cy="52" r="7" class="ojo" />
+
+
+                        <path id="boca"
+                              d="M42 78 Q60 78 78 78"
+                              class="boca" />
+
+
+                    </svg>
+
+
+                </div>
+
+
+
+                <h3 id="estadoAgente">
+                    EN REPOSO
+                </h3>
+
+
+            </div>
+
+
+
+
+
+            <div class="control-section">
+
+
+                <label>
+                    SENSOR ACTIVO
+                </label>
+
+
+                <select id="selectorSensor"></select>
+
+
+
+                <button id="btnPreguntar">
+
+                    Consultar sensor
+
+                </button>
+
+
+
+                <div class="ficha">
+
+
+                    <h2>Información del sensor</h2>
+
+
+                    <div id="subtitulo">
+
+                        Seleccione un sensor para iniciar análisis.
+
+                    </div>
+
+
+                </div>
+
+
+            </div>
+
+
+
+        </section>
+
+
+    </div>
+
+
+
+    <script src="agente.js"></script>
+
+
+</body>
+
+</html>

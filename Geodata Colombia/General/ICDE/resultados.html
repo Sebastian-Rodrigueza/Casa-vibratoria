@@ -1,0 +1,1534 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f5c400">
+    <meta name="description" content="Resultados temáticos del portal ICDE">
+    <title>Resultados | ICDE</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Sans+3:wght@600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --white: #ffffff;
+            --cream: #fffdf5;
+            --beige: #fdf7e9;
+            --soft: #f7f7f3;
+            --yellow: #f5c400;
+            --yellow-dark: #d4a900;
+            --yellow-soft: #fff3b0;
+            --yellow-pale: #fff9df;
+            --text: #282b2f;
+            --muted: #6f7479;
+            --line: #e5e4dc;
+            --line-strong: #d8d6cb;
+            --shadow-sm: 0 4px 14px rgba(38, 40, 43, .07);
+            --shadow-md: 0 18px 40px rgba(38, 40, 43, .12);
+            --font-body: "Inter", "Segoe UI", sans-serif;
+            --font-display: "Source Sans 3", "Segoe UI", sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            position: relative;
+            color: var(--text);
+            background: radial-gradient(circle at 8% 0%, rgba(245, 196, 0, .10), transparent 28%), linear-gradient(180deg, var(--cream) 0%, var(--beige) 100vh);
+            font-family: var(--font-body);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Escudo de la Universidad de los Andes centrado como marca de
+           agua, muy pequeño y tenue, fijo detrás de todo el contenido. */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            z-index: -1;
+            width: 280px;
+            height: 280px;
+            transform: translate(-50%, -50%);
+            background: url("../../../Imagenes/escudoandes.jpg") center / contain no-repeat;
+            opacity: .08;
+            mix-blend-mode: multiply;
+            pointer-events: none;
+        }
+
+        button, input, a {
+            font: inherit;
+        }
+
+        a {
+            color: inherit;
+        }
+
+        .page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            min-height: 76px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 14px 6vw;
+            background: rgba(255, 255, 255, .96);
+            border-bottom: 1px solid var(--line);
+            box-shadow: 0 2px 12px rgba(38, 40, 43, .05);
+            backdrop-filter: blur(12px);
+        }
+
+        .brand {
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand-mark {
+            width: 44px;
+            height: 44px;
+            flex: none;
+            display: grid;
+            place-items: center;
+            color: var(--text);
+            background: var(--yellow);
+            border-radius: 12px;
+            font-weight: 800;
+        }
+
+        .brand-copy small {
+            display: block;
+            margin-bottom: 2px;
+            color: var(--muted);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+
+        .brand-copy strong {
+            display: block;
+            font: 700 20px/1.1 var(--font-display);
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 42px;
+            padding: 10px 14px;
+            color: var(--text);
+            background: var(--white);
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            transition: .18s ease;
+        }
+
+            .back-link:hover {
+                background: var(--yellow-soft);
+                border-color: var(--yellow-dark);
+                transform: translateY(-1px);
+            }
+
+        .hero {
+            width: min(1180px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 64px 0 28px;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: end;
+            gap: 24px;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+            padding: 7px 11px;
+            color: #6f5900;
+            background: var(--yellow-soft);
+            border: 1px solid #ead46b;
+            border-radius: 999px;
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: .05em;
+            text-transform: uppercase;
+        }
+
+            .eyebrow::before {
+                content: "";
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: var(--yellow-dark);
+            }
+
+        .hero h1 {
+            margin: 0 0 10px;
+            font: 800 clamp(36px, 5vw, 58px)/1 var(--font-display);
+            letter-spacing: -.025em;
+        }
+
+        .hero p {
+            max-width: 720px;
+            margin: 0;
+            color: var(--muted);
+            font-size: 15px;
+            line-height: 1.7;
+        }
+
+        .summary-box {
+            min-width: 185px;
+            padding: 16px 18px;
+            background: var(--white);
+            border: 1px solid var(--line);
+            border-top: 4px solid var(--yellow);
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+        }
+
+            .summary-box strong {
+                display: block;
+                margin-bottom: 2px;
+                font: 800 28px/1 var(--font-display);
+            }
+
+            .summary-box span {
+                color: var(--muted);
+                font-size: 11px;
+            }
+
+        .toolbar {
+            width: min(1180px, calc(100% - 32px));
+            margin: 0 auto 24px;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 12px;
+            padding: 14px;
+            background: rgba(255, 255, 255, .94);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-height: 44px;
+            padding: 0 14px;
+            color: var(--muted);
+            background: var(--soft);
+            border: 1px solid var(--line);
+            border-radius: 9px;
+        }
+
+            .search-box svg {
+                width: 18px;
+                height: 18px;
+                flex: none;
+            }
+
+            .search-box input {
+                width: 100%;
+                color: var(--text);
+                background: transparent;
+                border: 0;
+                outline: 0;
+                font-size: 13px;
+            }
+
+        .category-chip {
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 14px;
+            color: var(--text);
+            background: var(--yellow-pale);
+            border: 1px solid #ead57a;
+            border-radius: 9px;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+            .category-chip::before {
+                content: "";
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: var(--yellow-dark);
+            }
+
+        .content {
+            width: min(1180px, calc(100% - 32px));
+            margin: 0 auto;
+            padding-bottom: 80px;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+        }
+
+        .dataset-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            min-height: 270px;
+            padding: 22px;
+            overflow: hidden;
+            background: var(--white);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            box-shadow: var(--shadow-sm);
+            transition: .18s ease;
+        }
+
+            .dataset-card:hover {
+                transform: translateY(-4px);
+                border-color: #dfcf7e;
+                box-shadow: var(--shadow-md);
+            }
+
+            .dataset-card::before {
+                content: "";
+                position: absolute;
+                inset: 0 0 auto;
+                height: 5px;
+                background: var(--yellow);
+            }
+
+        .card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+
+        .entity {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            margin-bottom: 9px;
+            color: #8b7000;
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: .045em;
+            text-transform: uppercase;
+        }
+
+            .entity::before {
+                content: "";
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: var(--yellow-dark);
+            }
+
+        .dataset-card h2 {
+            margin: 0;
+            font: 700 22px/1.15 var(--font-display);
+        }
+
+        .dataset-index {
+            flex: none;
+            min-width: 38px;
+            height: 38px;
+            display: grid;
+            place-items: center;
+            color: var(--text);
+            background: var(--yellow-soft);
+            border: 1px solid #ead46b;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .description {
+            margin: 0 0 20px;
+            color: #555b60;
+            font-size: 13.5px;
+            line-height: 1.65;
+        }
+
+        .card-actions {
+            margin-top: auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 9px;
+            padding-top: 16px;
+            border-top: 1px solid var(--line);
+        }
+
+        .action-link {
+            min-height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            padding: 9px 14px;
+            color: var(--text);
+            background: var(--yellow);
+            border: 1px solid var(--yellow-dark);
+            border-radius: 9px;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 700;
+            transition: .18s ease;
+        }
+
+            .action-link:hover {
+                background: #ffd526;
+                transform: translateY(-1px);
+            }
+
+            .action-link.secondary {
+                background: var(--white);
+                border-color: var(--line-strong);
+            }
+
+                .action-link.secondary:hover {
+                    background: var(--yellow-soft);
+                    border-color: var(--yellow-dark);
+                }
+
+        .state-panel {
+            padding: 54px 24px;
+            color: var(--muted);
+            background: var(--white);
+            border: 1px dashed var(--line-strong);
+            border-radius: 16px;
+            text-align: center;
+        }
+
+        .state-icon {
+            width: 56px;
+            height: 56px;
+            display: grid;
+            place-items: center;
+            margin: 0 auto 16px;
+            color: var(--text);
+            background: var(--yellow-soft);
+            border-radius: 15px;
+            font-size: 26px;
+        }
+
+        .state-panel h2 {
+            margin: 0 0 8px;
+            color: var(--text);
+            font: 700 22px var(--font-display);
+        }
+
+        .state-panel p {
+            max-width: 520px;
+            margin: 0 auto;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .loading-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+        }
+
+        .skeleton {
+            min-height: 260px;
+            padding: 22px;
+            background: var(--white);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .skeleton-line {
+            height: 13px;
+            margin-bottom: 12px;
+            background: linear-gradient(90deg, #efefe9 25%, #f8f8f4 45%, #efefe9 65%);
+            background-size: 220% 100%;
+            border-radius: 999px;
+            animation: shimmer 1.35s infinite linear;
+        }
+
+            .skeleton-line.short {
+                width: 38%;
+            }
+
+            .skeleton-line.medium {
+                width: 68%;
+            }
+
+            .skeleton-line.title {
+                width: 82%;
+                height: 24px;
+                margin-bottom: 24px;
+            }
+
+        @keyframes shimmer {
+            to {
+                background-position-x: -220%;
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        footer {
+            margin-top: auto;
+            padding: 22px 24px;
+            color: var(--muted);
+            background: var(--white);
+            border-top: 1px solid var(--line);
+            text-align: center;
+            font-size: 11px;
+        }
+
+        @media (max-width: 820px) {
+            .hero-grid,
+            .toolbar,
+            .results-grid,
+            .loading-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-box {
+                width: 100%;
+                min-width: 0;
+            }
+        }
+
+        @media (max-width: 560px) {
+            .topbar {
+                padding: 12px 16px;
+            }
+
+            .brand-copy small {
+                display: none;
+            }
+
+            .brand-copy strong {
+                font-size: 17px;
+            }
+
+            .back-link span {
+                display: none;
+            }
+
+            .hero {
+                padding-top: 44px;
+            }
+
+                .hero h1 {
+                    font-size: 38px;
+                }
+
+            .dataset-card {
+                padding: 19px;
+            }
+
+                .dataset-card h2 {
+                    font-size: 20px;
+                }
+
+            .card-actions {
+                flex-direction: column;
+            }
+
+            .action-link {
+                width: 100%;
+            }
+        }
+
+        .top-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .map-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 42px;
+            padding: 10px 14px;
+            color: var(--text);
+            background: var(--yellow);
+            border: 1px solid var(--yellow-dark);
+            border-radius: 9px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 700;
+            transition: .18s ease;
+        }
+
+            .map-link:hover {
+                background: #ffd526;
+                transform: translateY(-1px);
+            }
+
+            .map-link svg {
+                width: 17px;
+                height: 17px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 1.8;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+
+        @media (max-width: 560px) {
+            .top-actions {
+                width: 100%;
+            }
+
+            .map-link,
+            .back-link {
+                flex: 1;
+            }
+        }
+
+        .action-link.tertiary {
+            background: var(--yellow-pale);
+            border-color: #ead57a;
+        }
+
+        /* ==========================================
+           MODAL PERSONALIZADO PARA AVISOS DEL MAPA
+        ========================================== */
+
+        .map-modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 3000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(40, 43, 47, 0.58);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+
+            .map-modal-overlay.show {
+                display: flex;
+            }
+
+        .map-modal {
+            position: relative;
+            width: min(440px, 100%);
+            padding: 30px 28px 26px;
+            overflow: hidden;
+            background: var(--white);
+            border: 1px solid var(--line);
+            border-top: 6px solid var(--yellow);
+            border-radius: 18px;
+            box-shadow: 0 24px 70px rgba(38, 40, 43, 0.24);
+            text-align: center;
+            animation: mapModalIn 0.2s ease;
+        }
+
+            .map-modal::before {
+                content: "";
+                position: absolute;
+                width: 150px;
+                height: 150px;
+                top: -95px;
+                right: -70px;
+                border-radius: 50%;
+                background: rgba(245, 196, 0, 0.12);
+                pointer-events: none;
+            }
+
+        @keyframes mapModalIn {
+            from {
+                transform: translateY(14px) scale(0.98);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .map-modal-icon {
+            width: 58px;
+            height: 58px;
+            margin: 0 auto 16px;
+            display: grid;
+            place-items: center;
+            border-radius: 16px;
+            font-size: 26px;
+            font-weight: 800;
+        }
+
+            .map-modal-icon.warning {
+                color: #806500;
+                background: var(--yellow-soft);
+                border: 1px solid #ead46b;
+            }
+
+            .map-modal-icon.error {
+                color: #8f3434;
+                background: #f9e2e2;
+                border: 1px solid #efc7c7;
+            }
+
+            .map-modal-icon.info {
+                color: #4c4f53;
+                background: #f0f1ef;
+                border: 1px solid var(--line);
+            }
+
+        .map-modal h3 {
+            position: relative;
+            margin: 0 0 10px;
+            color: var(--text);
+            font: 800 21px / 1.2 var(--font-display);
+        }
+
+        .map-modal p {
+            position: relative;
+            margin: 0 auto 22px;
+            max-width: 350px;
+            color: var(--muted);
+            font-size: 13.5px;
+            line-height: 1.65;
+        }
+
+        .map-modal-actions {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .map-modal button {
+            min-width: 145px;
+            min-height: 43px;
+            padding: 10px 18px;
+            color: var(--text);
+            background: var(--yellow);
+            border: 1px solid var(--yellow-dark);
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 800;
+            transition: 0.18s ease;
+        }
+
+            .map-modal button:hover {
+                background: #ffd526;
+                transform: translateY(-1px);
+            }
+
+            .map-modal button:focus-visible {
+                outline: 3px solid rgba(245, 196, 0, 0.28);
+                outline-offset: 3px;
+            }
+
+        @media (max-width: 560px) {
+            .map-modal {
+                padding: 26px 20px 22px;
+                border-radius: 16px;
+            }
+
+                .map-modal button {
+                    width: 100%;
+                }
+        }
+    </style>
+
+    <link rel="stylesheet" href="../../../agente1/agente-panel.css">
+</head>
+
+<body>
+    <div class="page">
+
+        <header class="topbar">
+            <div class="brand">
+                <div class="brand-mark">IC</div>
+
+                <div class="brand-copy">
+                    <small>Universidad de los Andes · CIAM</small>
+                    <strong>Resultados ICDE</strong>
+                </div>
+            </div>
+
+            <div class="top-actions">
+
+                <a class="back-link"
+                   href="ICDE.html">
+                    ← <span>Volver a ICDE</span>
+                </a>
+
+                <a class="map-link"
+                   href="../../../Mapa.html"
+                   aria-label="Abrir mapa interactivo para probar archivos GIS">
+
+                    <svg viewBox="0 0 24 24"
+                         aria-hidden="true">
+                        <path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"></path>
+                        <path d="M9 3v15M15 6v15"></path>
+                    </svg>
+
+                    Abrir mapa GIS
+                </a>
+
+            </div>
+        </header>
+
+        <main>
+            <section class="hero">
+                <div class="hero-grid">
+                    <div>
+                        <span class="eyebrow">Consulta temática</span>
+                        <h1 id="titulo">Resultados</h1>
+                        <p>
+                            Consulta los conjuntos de datos disponibles para la categoría
+                            seleccionada y accede a su fuente oficial o enlace de descarga.
+                        </p>
+                    </div>
+
+                    <div class="summary-box">
+                        <strong id="totalResultados">—</strong>
+                        <span id="contador">Cargando resultados…</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="toolbar">
+                <label class="search-box" for="buscador">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <circle cx="11" cy="11" r="7"></circle>
+                        <path d="m21 21-4.3-4.3"></path>
+                    </svg>
+
+                    <input id="buscador"
+                           type="search"
+                           autocomplete="off"
+                           placeholder="Buscar dentro de los resultados…">
+                </label>
+
+                <div class="category-chip" id="categoriaChip">
+                    Sin categoría
+                </div>
+            </section>
+
+            <section class="content">
+                <div class="loading-grid" id="cargando">
+                    <div class="skeleton">
+                        <div class="skeleton-line short"></div>
+                        <div class="skeleton-line title"></div>
+                        <div class="skeleton-line"></div>
+                        <div class="skeleton-line"></div>
+                        <div class="skeleton-line medium"></div>
+                    </div>
+
+                    <div class="skeleton">
+                        <div class="skeleton-line short"></div>
+                        <div class="skeleton-line title"></div>
+                        <div class="skeleton-line"></div>
+                        <div class="skeleton-line"></div>
+                        <div class="skeleton-line medium"></div>
+                    </div>
+                </div>
+
+                <div class="results-grid hidden" id="lista"></div>
+
+                <div class="state-panel hidden" id="estadoVacio">
+                    <div class="state-icon">⌕</div>
+                    <h2>No se encontraron resultados</h2>
+                    <p id="mensajeVacio">
+                        No hay conjuntos de datos disponibles para esta categoría.
+                    </p>
+                </div>
+
+                <div class="state-panel hidden" id="estadoError">
+                    <div class="state-icon">!</div>
+                    <h2>No fue posible consultar la API</h2>
+                    <p id="mensajeError">
+                        Verifica que el servidor de datos esté activo en http://localhost:5000.
+                    </p>
+
+                    <p style="margin-top: 18px;">
+                        <a class="map-link"
+                           href="../../../Mapa.html">
+                            Abrir mapa para probar archivos
+                        </a>
+                    </p>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            Universidad de los Andes · Laboratorio Digital CIAM · ICDE
+        </footer>
+    </div>
+
+    <!-- ==========================================
+         MODAL PERSONALIZADO PARA AVISOS DEL MAPA
+    =========================================== -->
+    <div class="map-modal-overlay"
+         id="mapModalOverlay"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="mapModalTitle"
+         aria-describedby="mapModalText">
+
+        <div class="map-modal">
+
+            <div class="map-modal-icon warning"
+                 id="mapModalIcon">
+                !
+            </div>
+
+            <h3 id="mapModalTitle">
+                Aviso
+            </h3>
+
+            <p id="mapModalText">
+                No fue posible cargar esta capa.
+            </p>
+
+            <div class="map-modal-actions">
+                <button type="button"
+                        id="mapModalClose">
+                    Entendido
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        (() => {
+            "use strict";
+
+            const API_BASE = "http://localhost:5000/api/datasets";
+
+            /*
+             * Ruta relativa hacia Mapa.html desde esta página.
+             * Ajusta si mueves este archivo de carpeta.
+             */
+            const MAPA_HTML = "../../../Mapa.html";
+
+            const params = new URLSearchParams(window.location.search);
+            const categoria = (params.get("categoria") || "").trim();
+
+            const titulo = document.getElementById("titulo");
+            const contador = document.getElementById("contador");
+            const totalResultados = document.getElementById("totalResultados");
+            const categoriaChip = document.getElementById("categoriaChip");
+            const buscador = document.getElementById("buscador");
+            const cargando = document.getElementById("cargando");
+            const lista = document.getElementById("lista");
+            const estadoVacio = document.getElementById("estadoVacio");
+            const estadoError = document.getElementById("estadoError");
+            const mensajeVacio = document.getElementById("mensajeVacio");
+            const mensajeError = document.getElementById("mensajeError");
+
+            let datasets = [];
+
+            titulo.textContent = categoria
+                ? "Resultados de " + categoria
+                : "Resultados ICDE";
+
+            categoriaChip.textContent = categoria || "Todas las categorías";
+
+            function limpiarEstados() {
+                cargando.classList.add("hidden");
+                lista.classList.add("hidden");
+                estadoVacio.classList.add("hidden");
+                estadoError.classList.add("hidden");
+            }
+
+            function textoSeguro(valor, respaldo) {
+                const texto = String(valor || "").trim();
+                return texto || respaldo;
+            }
+
+            function descripcionCorta(texto) {
+                const contenido = textoSeguro(texto, "Sin descripción disponible.");
+
+                return contenido.length > 260
+                    ? contenido.slice(0, 260).trim() + "…"
+                    : contenido;
+            }
+
+            function crearEnlace(texto, url, secundaria) {
+                if (!url) return null;
+
+                const enlace = document.createElement("a");
+                enlace.className = "action-link" + (secundaria ? " secondary" : "");
+                enlace.href = url;
+                enlace.target = "_blank";
+                enlace.rel = "noopener noreferrer";
+                enlace.textContent = texto + " →";
+
+                return enlace;
+            }
+
+            /* ==========================================
+               MODAL DE AVISOS DEL MAPA
+            ========================================== */
+
+            const mapModalOverlay = document.getElementById("mapModalOverlay");
+            const mapModalIcon = document.getElementById("mapModalIcon");
+            const mapModalTitle = document.getElementById("mapModalTitle");
+            const mapModalText = document.getElementById("mapModalText");
+            const mapModalClose = document.getElementById("mapModalClose");
+
+            function cerrarAvisoMapa() {
+                mapModalOverlay.classList.remove("show");
+                document.body.style.overflow = "";
+            }
+
+            function mostrarAvisoMapa(titulo, mensaje, tipo = "warning") {
+                mapModalTitle.textContent = titulo || "Aviso";
+                mapModalText.textContent = mensaje || "No fue posible completar la operación.";
+                mapModalIcon.className = "map-modal-icon " + tipo;
+
+                if (tipo === "error") {
+                    mapModalIcon.textContent = "×";
+                } else if (tipo === "info") {
+                    mapModalIcon.textContent = "i";
+                } else {
+                    mapModalIcon.textContent = "!";
+                }
+
+                mapModalOverlay.classList.add("show");
+                document.body.style.overflow = "hidden";
+
+                setTimeout(() => {
+                    mapModalClose.focus();
+                }, 50);
+            }
+
+            mapModalClose.addEventListener("click", cerrarAvisoMapa);
+
+            mapModalOverlay.addEventListener("click", event => {
+                if (event.target === mapModalOverlay) {
+                    cerrarAvisoMapa();
+                }
+            });
+
+            document.addEventListener("keydown", event => {
+                if (
+                    event.key === "Escape" &&
+                    mapModalOverlay.classList.contains("show")
+                ) {
+                    cerrarAvisoMapa();
+                }
+            });
+
+            /* ==========================================
+               UTILIDADES PARA RESOLVER SERVICIOS ARCGIS
+               (misma lógica usada en Catastro.html /
+               Geodesia.html / Agua.html / GestionRiesgo.html)
+            ========================================== */
+
+            function esServicioArcGIS(url) {
+                return typeof url === "string" &&
+                    /\/(?:FeatureServer|MapServer)(?:\/\d+)?\/?$/i.test(
+                        url.trim().split("?")[0]
+                    );
+            }
+
+            function limpiarUrlArcGIS(url) {
+                return String(url || "").trim().replace(/\/+$/, "");
+            }
+
+            function extraerArcgisItemId(valor) {
+                const texto = String(valor || "").trim();
+
+                if (!texto) {
+                    return "";
+                }
+
+                if (/^[a-f0-9]{32}$/i.test(texto)) {
+                    return texto;
+                }
+
+                try {
+                    const url = new URL(texto);
+                    const idQuery = url.searchParams.get("id");
+
+                    if (idQuery && /^[a-f0-9]{32}$/i.test(idQuery)) {
+                        return idQuery;
+                    }
+
+                    const matchItems = url.pathname.match(/\/items\/([a-f0-9]{32})/i);
+
+                    if (matchItems) {
+                        return matchItems[1];
+                    }
+                } catch (_) {
+                    /* No era una URL: se continúa con regex */
+                }
+
+                const match = texto.match(/[a-f0-9]{32}/i);
+                return match ? match[0] : "";
+            }
+
+            function buscarServicioEnObjeto(objeto) {
+                if (!objeto) {
+                    return "";
+                }
+
+                if (typeof objeto === "string") {
+                    const texto = objeto.trim();
+                    const match = texto.match(
+                        /https?:\/\/[^\s"'<>]+\/(?:FeatureServer|MapServer)(?:\/\d+)?/i
+                    );
+                    return match ? limpiarUrlArcGIS(match[0]) : "";
+                }
+
+                if (Array.isArray(objeto)) {
+                    for (const elemento of objeto) {
+                        const encontrado = buscarServicioEnObjeto(elemento);
+                        if (encontrado) {
+                            return encontrado;
+                        }
+                    }
+                    return "";
+                }
+
+                if (typeof objeto === "object") {
+                    for (const valor of Object.values(objeto)) {
+                        const encontrado = buscarServicioEnObjeto(valor);
+                        if (encontrado) {
+                            return encontrado;
+                        }
+                    }
+                }
+
+                return "";
+            }
+
+            function abrirEnMapa(dataset, servicio, arcgisItem) {
+                const nombre = textoSeguro(dataset.nombre_dataset, "Capa ICDE");
+
+                const parametros = new URLSearchParams();
+                parametros.set("servicio", limpiarUrlArcGIS(servicio));
+                parametros.set("nombre", nombre);
+                parametros.set("dataset", String(dataset.id || ""));
+
+                if (arcgisItem) {
+                    parametros.set("arcgis_item", arcgisItem);
+                }
+
+                const destino = MAPA_HTML + "?" + parametros.toString();
+
+                console.log("Abriendo en Mapa.html:", destino);
+
+                window.location.href = destino;
+            }
+
+            /*
+             * Botón "Ver en mi mapa".
+             * Solo se crea cuando el dataset tiene arcgis_id.
+             * Al hacer clic consulta en vivo la API pública de
+             * ArcGIS para resolver el servicio real (FeatureServer
+             * o MapServer) y solo entonces abre el mapa.
+             */
+            function crearBotonMapa(dataset) {
+
+                if (!dataset.arcgis_id) {
+                    return null;
+                }
+
+                const boton = document.createElement("button");
+                boton.type = "button";
+                boton.className = "action-link tertiary";
+                boton.textContent = "Ver en mi mapa →";
+
+                boton.addEventListener("click", async () => {
+
+                    const textoOriginal = boton.textContent;
+                    boton.textContent = "Cargando capa…";
+                    boton.disabled = true;
+
+                    try {
+
+                        console.log("Dataset seleccionado:", dataset);
+
+                        const itemId =
+                            extraerArcgisItemId(dataset.arcgis_id) ||
+                            extraerArcgisItemId(dataset.url_fuente) ||
+                            extraerArcgisItemId(dataset.url_descarga);
+
+                        const candidatosDirectos = [
+                            dataset.url_descarga,
+                            dataset.url_fuente
+                        ];
+
+                        for (const candidato of candidatosDirectos) {
+                            if (!candidato) continue;
+
+                            const servicioDirecto = buscarServicioEnObjeto(candidato);
+
+                            if (servicioDirecto && esServicioArcGIS(servicioDirecto)) {
+                                abrirEnMapa(dataset, servicioDirecto, itemId);
+                                return;
+                            }
+                        }
+
+                        if (!itemId) {
+                            throw new Error(
+                                "Este dataset no tiene arcgis_id ni un servicio ArcGIS asociado."
+                            );
+                        }
+
+                        const infoUrl =
+                            "https://www.arcgis.com/sharing/rest/content/items/" +
+                            encodeURIComponent(itemId) + "?f=json";
+
+                        const respuestaInfo = await fetch(infoUrl);
+
+                        if (!respuestaInfo.ok) {
+                            throw new Error(
+                                "ArcGIS respondió con estado " + respuestaInfo.status
+                            );
+                        }
+
+                        const textoInfo = await respuestaInfo.text();
+
+                        if (!textoInfo.trim()) {
+                            throw new Error(
+                                "ArcGIS devolvió una respuesta vacía al consultar los metadatos. " +
+                                "Esto puede ocurrir si una extensión del navegador, un bloqueador de anuncios, " +
+                                "una herramienta de privacidad o la red está interfiriendo con arcgis.com. " +
+                                "Desactiva temporalmente el bloqueador para este sitio, recarga la página e inténtalo de nuevo."
+                            );
+                        }
+
+                        let info;
+
+                        try {
+                            info = JSON.parse(textoInfo);
+                        } catch (errorJson) {
+                            console.error("Respuesta ArcGIS no válida:", textoInfo);
+                            throw new Error(
+                                "ArcGIS respondió, pero el contenido recibido no es un JSON válido."
+                            );
+                        }
+
+                        console.log("Metadatos ArcGIS:", info);
+
+                        if (info.error) {
+                            throw new Error(
+                                info.error.message ||
+                                "ArcGIS no permitió consultar el recurso."
+                            );
+                        }
+
+                        if (info.url) {
+                            const servicioInfo = buscarServicioEnObjeto(info.url);
+
+                            if (servicioInfo && esServicioArcGIS(servicioInfo)) {
+                                abrirEnMapa(dataset, servicioInfo, itemId);
+                                return;
+                            }
+                        }
+
+                        const dataUrl =
+                            "https://www.arcgis.com/sharing/rest/content/items/" +
+                            encodeURIComponent(itemId) + "/data?f=json";
+
+                        const respuestaData = await fetch(dataUrl);
+
+                        if (respuestaData.ok) {
+
+                            const textoData = await respuestaData.text();
+
+                            if (textoData.trim()) {
+
+                                let data;
+
+                                try {
+                                    data = JSON.parse(textoData);
+                                } catch (errorJsonData) {
+                                    console.warn(
+                                        "ArcGIS devolvió datos internos no válidos:",
+                                        textoData
+                                    );
+
+                                    data = null;
+                                }
+
+                                if (data) {
+
+                                    console.log("Datos internos ArcGIS:", data);
+
+                                    const servicioData = buscarServicioEnObjeto(data);
+
+                                    if (servicioData && esServicioArcGIS(servicioData)) {
+                                        abrirEnMapa(dataset, servicioData, itemId);
+                                        return;
+                                    }
+                                }
+
+                            } else {
+                                console.warn(
+                                    "ArcGIS devolvió una respuesta vacía en /data para el item:",
+                                    itemId
+                                );
+                            }
+                        }
+
+                        throw new Error(
+                            "El Item de ArcGIS existe, pero no contiene un FeatureServer o MapServer público que pueda cargarse en el visor."
+                        );
+
+                    } catch (error) {
+
+                        console.error("Error cargando la capa:", error);
+
+                        mostrarAvisoMapa(
+                            "No fue posible cargar esta capa",
+                            error.message || "Error desconocido.",
+                            "warning"
+                        );
+
+                    } finally {
+
+                        boton.textContent = textoOriginal;
+                        boton.disabled = false;
+                    }
+                });
+
+                return boton;
+            }
+
+            function crearTarjeta(dataset, indice) {
+                const tarjeta = document.createElement("article");
+                tarjeta.className = "dataset-card";
+
+                const top = document.createElement("div");
+                top.className = "card-top";
+
+                const contenidoTitulo = document.createElement("div");
+
+                const entidad = document.createElement("div");
+                entidad.className = "entity";
+                entidad.textContent = textoSeguro(
+                    dataset.entidad_responsable,
+                    "Entidad no especificada"
+                );
+
+                const nombre = document.createElement("h2");
+                nombre.textContent = textoSeguro(
+                    dataset.nombre_dataset,
+                    "Dataset sin nombre"
+                );
+
+                contenidoTitulo.append(entidad, nombre);
+
+                const numero = document.createElement("span");
+                numero.className = "dataset-index";
+                numero.textContent = String(indice + 1).padStart(2, "0");
+
+                top.append(contenidoTitulo, numero);
+
+                const descripcion = document.createElement("p");
+                descripcion.className = "description";
+                descripcion.textContent = descripcionCorta(dataset.descripcion);
+
+                const acciones = document.createElement("div");
+                acciones.className = "card-actions";
+
+                const fuente = crearEnlace("Ver fuente", dataset.url_fuente, false);
+                const descarga = crearEnlace("Descargar", dataset.url_descarga, true);
+                const enMapa = crearBotonMapa(dataset);
+
+                if (fuente) acciones.appendChild(fuente);
+                if (descarga) acciones.appendChild(descarga);
+                if (enMapa) acciones.appendChild(enMapa);
+
+                if (!fuente && !descarga && !enMapa) {
+                    const sinEnlaces = document.createElement("span");
+                    sinEnlaces.style.color = "var(--muted)";
+                    sinEnlaces.style.fontSize = "12px";
+                    sinEnlaces.textContent = "No hay enlaces disponibles.";
+                    acciones.appendChild(sinEnlaces);
+                }
+
+                tarjeta.append(top, descripcion, acciones);
+                return tarjeta;
+            }
+
+            function renderizar(datos) {
+                limpiarEstados();
+                lista.innerHTML = "";
+
+                totalResultados.textContent = datos.length;
+                contador.textContent = datos.length === 1
+                    ? "dataset encontrado"
+                    : "datasets encontrados";
+
+                if (!datos.length) {
+                    estadoVacio.classList.remove("hidden");
+                    mensajeVacio.textContent = categoria
+                        ? "No hay conjuntos de datos disponibles para la categoría " + categoria + "."
+                        : "No hay conjuntos de datos disponibles.";
+                    return;
+                }
+
+                datos.forEach((dataset, indice) => {
+                    lista.appendChild(crearTarjeta(dataset, indice));
+                });
+
+                lista.classList.remove("hidden");
+            }
+
+            function filtrarResultados() {
+                const termino = buscador.value.trim().toLowerCase();
+
+                if (!termino) {
+                    renderizar(datasets);
+                    return;
+                }
+
+                const filtrados = datasets.filter(dataset => {
+                    const texto = [
+                        dataset.nombre_dataset,
+                        dataset.entidad_responsable,
+                        dataset.descripcion
+                    ].join(" ").toLowerCase();
+
+                    return texto.includes(termino);
+                });
+
+                renderizar(filtrados);
+            }
+
+            function mostrarError(error) {
+                limpiarEstados();
+
+                totalResultados.textContent = "0";
+                contador.textContent = "sin conexión";
+
+                mensajeError.textContent =
+                    "No se pudo conectar con la API. Comprueba que el servidor esté activo en " +
+                    "http://localhost:5000 y que permita solicitudes desde esta página.";
+
+                estadoError.classList.remove("hidden");
+
+                console.error("Error consultando datasets:", error);
+            }
+
+            buscador.addEventListener("input", filtrarResultados);
+
+            const url = API_BASE + (
+                categoria
+                    ? "?categoria=" + encodeURIComponent(categoria)
+                    : ""
+            );
+
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("La API respondió con estado " + response.status);
+                    }
+
+                    return response.json();
+                })
+                .then(datos => {
+                    if (!Array.isArray(datos)) {
+                        throw new Error("La respuesta de la API no es una lista.");
+                    }
+
+                    datasets = datos;
+                    renderizar(datasets);
+                })
+                .catch(mostrarError);
+        })();
+    </script>
+
+    <!-- ==========================================
+         AGENTE IA · BOTÓN FLOTANTE Y PANEL DE CHAT (ICDE)
+         Mismo bloque que en Index.html, para que el agente
+         esté disponible en todas las páginas del sitio.
+    =========================================== -->
+
+    <button class="agent-launcher" id="agentLauncher" type="button" aria-label="Abrir asistente ICDE">
+        <svg class="agent-launcher-icon-open" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 4h16v11H8l-4 4V4Z"></path>
+            <path d="M8 9h8M8 12h5"></path>
+        </svg>
+        <svg class="agent-launcher-icon-close" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18"></path>
+        </svg>
+    </button>
+
+    <section class="agent-panel" id="agentPanel" aria-label="Asistente ICDE">
+        <header class="agent-panel-head">
+            <div class="agent-panel-title">
+                <span class="agent-panel-icon">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 4h16v11H8l-4 4V4Z"></path>
+                        <path d="M8 9h8M8 12h5"></path>
+                    </svg>
+                </span>
+                <div>
+                    <small>Laboratorio Digital CIAM</small>
+                    <h2>Asistente ICDE</h2>
+                </div>
+            </div>
+            <button class="agent-panel-close" id="agentPanelClose" type="button" aria-label="Cerrar asistente">×</button>
+        </header>
+
+        <div class="agent-panel-log" id="agentPanelLog">
+            <div class="agent-bubble agent-bubble-bot">
+                Hola, soy el asistente del portal ICDE. Cuéntame qué
+                información geográfica necesitas y busco en el catálogo
+                los datasets que más te sirvan.
+            </div>
+        </div>
+
+        <form class="agent-panel-input" id="agentForm">
+            <input type="text" id="agentInput" placeholder="Escribe qué información necesitas…" disabled aria-label="Mensaje para el asistente" autocomplete="off">
+            <button type="submit" disabled>Enviar</button>
+        </form>
+    </section>
+
+    <script src="../../../agente1/agente.js"></script>
+
+</body>
+</html>

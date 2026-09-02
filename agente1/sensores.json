@@ -1,0 +1,52 @@
+{
+  "aceleHor01": {
+    "nombre": "Acelerómetro horizontal 01",
+    "tipo": "Acelerómetro",
+    "eje": "Horizontal",
+    "ubicacion": "Muro norte, nivel 1",
+    "unidad": "g (gravedades)",
+    "rango": "±2 g",
+    "queMide": "La aceleración lateral de la estructura durante el sismo simulado.",
+    "funcion": "Con esta señal se calcula el desplazamiento relativo y la deriva de entrepiso del muro donde está instalado. Es clave para saber qué tanto se mueve la casa de lado a lado."
+  },
+  "acelero01": {
+    "nombre": "Acelerómetro 01",
+    "tipo": "Acelerómetro",
+    "eje": "General",
+    "ubicacion": "Centro de la losa, nivel 1",
+    "unidad": "g (gravedades)",
+    "rango": "±2 g",
+    "queMide": "La respuesta dinámica global de la estructura completa.",
+    "funcion": "Sirve como sensor de referencia para comparar contra los demás acelerómetros y detectar si alguna zona se mueve de forma distinta al resto."
+  },
+  "aceleVer01": {
+    "nombre": "Acelerómetro vertical 01",
+    "tipo": "Acelerómetro",
+    "eje": "Vertical",
+    "ubicacion": "Losa nivel 1",
+    "unidad": "g (gravedades)",
+    "rango": "±2 g",
+    "queMide": "El movimiento en el eje vertical de la estructura.",
+    "funcion": "Ayuda a detectar el efecto de cabeceo (rocking) y posibles asentamientos de la base durante el ensayo."
+  },
+  "acelerometro001_01": {
+    "nombre": "Acelerometro001 01",
+    "tipo": "Acelerómetro",
+    "eje": "General",
+    "ubicacion": "Escalera, nivel 2",
+    "unidad": "g (gravedades)",
+    "rango": "±2 g",
+    "queMide": "La aceleración local en la zona de la escalera.",
+    "funcion": "Permite estudiar si un elemento no estructural, como la escalera, amplifica o amortigua el movimiento sísmico."
+  },
+  "acelero02": {
+    "nombre": "Acelerómetro 02",
+    "tipo": "Acelerómetro",
+    "eje": "General",
+    "ubicacion": "Cubierta, nivel 3",
+    "unidad": "g (gravedades)",
+    "rango": "±2 g",
+    "queMide": "La aceleración en el punto más alto de la casa.",
+    "funcion": "Los pisos superiores suelen amplificar el movimiento del suelo, así que este sensor muestra qué tan grande es esa amplificación."
+  }
+}
