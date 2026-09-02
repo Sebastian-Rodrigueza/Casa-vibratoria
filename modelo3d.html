@@ -1509,6 +1509,16 @@
                    arriba para el modelo. */
                 max-height: 30vh;
                 transition: transform .25s ease;
+                /* BUG: la regla base (mas arriba en el archivo) pone
+                   "pointer-events: none" en todo el panel, para poder
+                   tocar el modelo 3D "a traves" de los espacios vacios
+                   en escritorio. En celular ese mismo truco bloqueaba
+                   el gesto de scroll con el dedo dentro del panel (el
+                   contenedor con overflow-y:auto quedaba invisible al
+                   tacto). En celular no hace falta ese truco, asi que
+                   se reactiva el toque normal aqui. */
+                pointer-events: auto;
+                -webkit-overflow-scrolling: touch;
             }
 
             /* Se puede ocultar del todo con el botón "Ver sensores",
@@ -1587,6 +1597,10 @@
 
                 .sidebar.open {
                     transform: translateY(0);
+                }
+
+                .sidebar .sensor-list {
+                    -webkit-overflow-scrolling: touch;
                 }
 
             /* En celular la barra de arriba ocupaba media pantalla:
