@@ -3288,9 +3288,18 @@
             // relación con el tamaño real del modelo — se ajusta para
             // que empiece justo después de maxDistance, y no se "coma"
             // el piso ya agrandado arriba.
+            //
+            // OJO: esto decía maxDim*3 / maxDim*9, pero maxDistance es
+            // maxDim*6 — la niebla empezaba a la MITAD del rango de
+            // zoom permitido, no "justo después" como decía el
+            // comentario. Resultado: al alejar bastante la cámara (sin
+            // llegar siquiera al tope) la casa perdía color, se veía
+            // lavada hacia el fondo. Ahora sí empieza justo en
+            // maxDistance, así que dentro de todo el rango de zoom que
+            // el usuario puede usar la casa nunca pierde su color.
             if (scene.fog) {
-                scene.fog.near = maxDim * 3;
-                scene.fog.far = maxDim * 9;
+                scene.fog.near = maxDim * 6;
+                scene.fog.far = maxDim * 20;
             }
 
             ground.position.y = modelBounds.min.y - .035;
