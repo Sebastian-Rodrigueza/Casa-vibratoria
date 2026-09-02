@@ -1588,7 +1588,11 @@
                 display: flex;
                 inset: auto 8px 8px 8px;
                 width: auto;
-                max-height: 42vh;
+                /* Antes 42vh, pero el encabezado (logo + titulo +
+                   texto + buscador) por si solo ya media casi eso en
+                   celular: no dejaba espacio real para ver ni deslizar
+                   la lista de sensores. Se sube el alto disponible... */
+                max-height: 62vh;
                 border-radius: 18px;
                 transform: translateY(calc(100% + 20px));
                 transition: transform .25s ease;
@@ -1597,6 +1601,32 @@
 
                 .sidebar.open {
                     transform: translateY(0);
+                }
+
+                /* ...y ademas se recorta el encabezado, quitando lo que
+                   ya se repite en otro lado (el logo institucional se
+                   ve de fondo en el visor, y el titulo ya esta en la
+                   barra de arriba), para que la lista de sensores
+                   tenga la mayor parte del panel. */
+                .sidebar .institution-logo-box,
+                .sidebar .sidebar-sub {
+                    display: none;
+                }
+
+                .sidebar .sidebar-head {
+                    padding: 12px 14px 10px;
+                }
+
+                .sidebar .brand-copy strong {
+                    font-size: 15px;
+                }
+
+                .sidebar .search-wrap {
+                    padding: 10px 12px 6px;
+                }
+
+                .sidebar .sensor-summary {
+                    padding: 0 12px 8px;
                 }
 
                 .sidebar .sensor-list {
