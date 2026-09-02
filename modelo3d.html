@@ -543,11 +543,12 @@
                 pointer-events: auto;
             }
 
-        /* Boton para mostrar/ocultar el panel de sensores: solo existe
-           en celular (ver @media max-width:700px mas abajo). En
-           escritorio hay espacio de sobra y el panel siempre esta
-           visible, asi que aqui queda oculto por defecto. */
-        .rail-toggle {
+        /* Botones para mostrar/ocultar los paneles (lista de sensores
+           y grafica): solo existen en celular (ver @media
+           max-width:700px mas abajo). En escritorio hay espacio de
+           sobra y ambos paneles estan siempre visibles, asi que aqui
+           quedan ocultos por defecto. */
+        .mobile-panel-toggles {
             display: none;
         }
 
@@ -1521,16 +1522,25 @@
                 height: 110px;
             }
 
+            .mobile-panel-toggles {
+                display: flex;
+                justify-content: center;
+                gap: 10px;
+                position: fixed;
+                z-index: 22;
+                left: 8px;
+                right: 8px;
+                bottom: 10px;
+            }
+
             .rail-toggle {
                 display: flex;
                 align-items: center;
+                justify-content: center;
                 gap: 6px;
-                position: fixed;
-                z-index: 19;
-                left: 50%;
-                bottom: 10px;
-                transform: translateX(-50%);
-                padding: 9px 16px;
+                flex: 1 1 auto;
+                max-width: 220px;
+                padding: 9px 14px;
                 border: 1px solid rgba(226,232,240,.95);
                 border-radius: 999px;
                 background: #fff;
@@ -1552,6 +1562,31 @@
                    agregando/quitando esta clase. */
                 .rail-toggle.panel-open svg {
                     transform: rotate(180deg);
+                }
+
+            /* Lista de sensores ("Elegir sensores"): en escritorio es
+               un panel fijo a la izquierda, siempre visible. En
+               celular no cabe junto al modelo, asi que se convierte en
+               otra hoja deslizable desde abajo (igual que el panel de
+               la grafica), oculta por defecto y controlada por su
+               propio boton. */
+            .sidebar {
+                /* Mas arriba, en el primer bloque para celular, queda
+                   "display:none" (pensado para cuando este panel no
+                   existia en celular). Se reactiva aqui como la ultima
+                   palabra para pantallas angostas. */
+                display: flex;
+                inset: auto 8px 8px 8px;
+                width: auto;
+                max-height: 42vh;
+                border-radius: 18px;
+                transform: translateY(calc(100% + 20px));
+                transition: transform .25s ease;
+                z-index: 21;
+            }
+
+                .sidebar.open {
+                    transform: translateY(0);
                 }
 
             /* En celular la barra de arriba ocupaba media pantalla:
@@ -1685,7 +1720,7 @@
     <div id="viewer"></div>
     <div class="model-label" id="model-label"></div>
 
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebarPanel">
         <div class="sidebar-head">
             <div class="institution-logo-box">
                 <img class="uniandes-logo" src="Imagenes/logo-uniandes.png" alt="Universidad de los Andes">
@@ -1869,10 +1904,17 @@
 
 
 
-    <button class="rail-toggle" id="railToggle" type="button" aria-label="Mostrar u ocultar el panel de sensores">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 15 6-6 6 6" /></svg>
-        <span id="railToggleText">Ver sensores</span>
-    </button>
+    <div class="mobile-panel-toggles">
+        <button class="rail-toggle" id="sidebarToggle" type="button" aria-label="Mostrar u ocultar la lista de sensores">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 15 6-6 6 6" /></svg>
+            <span id="sidebarToggleText">Elegir sensores</span>
+        </button>
+
+        <button class="rail-toggle" id="railToggle" type="button" aria-label="Mostrar u ocultar el panel de sensores">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 15 6-6 6 6" /></svg>
+            <span id="railToggleText">Ver gráfica</span>
+        </button>
+    </div>
 
     <aside class="right-rail" id="rightRail">
         <section class="selection-card">
@@ -3093,6 +3135,15 @@
                 dataChannel.innerHTML = '<option value="">Esperando conexión con la API…</option>';
                 dataChannel.disabled = true;
                 clearChart("El sensor está seleccionado. Falta cargar los datos desde la API.");
+            }
+
+            // En celular, al elegir un sensor de la lista tiene más
+            // sentido cerrar esa lista y mostrar de una vez el panel
+            // con su gráfica, en vez de que el usuario tenga que
+            // cerrar un panel y abrir el otro a mano.
+            if (typeof setSidebarOpen === "function" && typeof setRailCollapsed === "function" && esMobile()) {
+                setSidebarOpen(false);
+                setRailCollapsed(false);
             }
         }
 
@@ -4804,27 +4855,50 @@
             btnRotate.classList.toggle("active", controls.autoRotate);
         });
 
-        // Panel de sensores plegable en celular: por defecto arranca
-        // oculto (para que el modelo 3D use toda la pantalla) y un
-        // botón flotante lo saca/mete deslizándolo hacia abajo. En
-        // escritorio este botón ni siquiera se muestra (ver CSS), así
-        // que ahí el panel se queda siempre visible como antes.
+        // Dos paneles plegables en celular: la lista para ELEGIR un
+        // sensor (la barra lateral, normal en escritorio) y el panel
+        // con la GRÁFICA del sensor elegido. Ambos arrancan ocultos
+        // (el modelo 3D usa toda la pantalla) y cada uno tiene su
+        // botón flotante abajo. Solo se deja uno abierto a la vez para
+        // no taparse entre ellos ni tapar el modelo por completo. En
+        // escritorio estos botones ni siquiera se muestran (ver CSS),
+        // así que ahí los dos paneles se quedan siempre visibles como
+        // antes.
+        const esMobile = () => window.matchMedia("(max-width:700px)").matches;
+
         const railToggle = document.getElementById("railToggle");
         const railToggleText = document.getElementById("railToggleText");
         const rightRail = document.getElementById("rightRail");
 
+        const sidebarToggle = document.getElementById("sidebarToggle");
+        const sidebarToggleText = document.getElementById("sidebarToggleText");
+        const sidebarPanel = document.getElementById("sidebarPanel");
+
         function setRailCollapsed(colapsado) {
             rightRail.classList.toggle("collapsed", colapsado);
             railToggle.classList.toggle("panel-open", !colapsado);
-            railToggleText.textContent = colapsado ? "Ver sensores" : "Ocultar sensores";
+            railToggleText.textContent = colapsado ? "Ver gráfica" : "Ocultar gráfica";
+            if (!colapsado && esMobile()) setSidebarOpen(false);
         }
 
-        if (window.matchMedia("(max-width:700px)").matches) {
+        function setSidebarOpen(abierto) {
+            sidebarPanel.classList.toggle("open", abierto);
+            sidebarToggle.classList.toggle("panel-open", abierto);
+            sidebarToggleText.textContent = abierto ? "Ocultar sensores" : "Elegir sensores";
+            if (abierto && esMobile()) setRailCollapsed(true);
+        }
+
+        if (esMobile()) {
             setRailCollapsed(true);
+            setSidebarOpen(false);
         }
 
         railToggle.addEventListener("click", () => {
             setRailCollapsed(!rightRail.classList.contains("collapsed"));
+        });
+
+        sidebarToggle.addEventListener("click", () => {
+            setSidebarOpen(!sidebarPanel.classList.contains("open"));
         });
 
 
