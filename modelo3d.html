@@ -543,6 +543,14 @@
                 pointer-events: auto;
             }
 
+        /* Boton para mostrar/ocultar el panel de sensores: solo existe
+           en celular (ver @media max-width:700px mas abajo). En
+           escritorio hay espacio de sobra y el panel siempre esta
+           visible, asi que aqui queda oculto por defecto. */
+        .rail-toggle {
+            display: none;
+        }
+
         .selection-card {
             position: relative;
             z-index: 20;
@@ -1499,11 +1507,52 @@
                    3D en celular. Ahora deja mucho mas espacio libre
                    arriba para el modelo. */
                 max-height: 30vh;
+                transition: transform .25s ease;
+            }
+
+            /* Se puede ocultar del todo con el botón "Ver sensores",
+               deslizándose hacia abajo, para dejar el modelo 3D
+               ocupando toda la pantalla. */
+            .right-rail.collapsed {
+                transform: translateY(calc(100% + 20px));
             }
 
             .chart-wrap {
                 height: 110px;
             }
+
+            .rail-toggle {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                position: fixed;
+                z-index: 19;
+                left: 50%;
+                bottom: 10px;
+                transform: translateX(-50%);
+                padding: 9px 16px;
+                border: 1px solid rgba(226,232,240,.95);
+                border-radius: 999px;
+                background: #fff;
+                box-shadow: 0 12px 28px rgba(15,23,42,.20);
+                font-size: 12px;
+                font-weight: 800;
+                color: #1f2937;
+            }
+
+                .rail-toggle svg {
+                    width: 14px;
+                    height: 14px;
+                    transition: transform .25s ease;
+                }
+
+                /* Cuando el panel esta abierto la flecha apunta hacia
+                   abajo (para "cerrar"); cuando esta colapsado apunta
+                   hacia arriba (para "abrir"). Se controla con JS
+                   agregando/quitando esta clase. */
+                .rail-toggle.panel-open svg {
+                    transform: rotate(180deg);
+                }
 
             /* En celular la barra de arriba ocupaba media pantalla:
                2 filas, cada grupo con su etiqueta encima y botones con
@@ -1820,7 +1869,12 @@
 
 
 
-    <aside class="right-rail">
+    <button class="rail-toggle" id="railToggle" type="button" aria-label="Mostrar u ocultar el panel de sensores">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 15 6-6 6 6" /></svg>
+        <span id="railToggleText">Ver sensores</span>
+    </button>
+
+    <aside class="right-rail" id="rightRail">
         <section class="selection-card">
             <div class="selection-eyebrow">
                 <span>Sensor / objeto seleccionado</span>
@@ -3077,8 +3131,22 @@
             modelBounds.getSize(modelSize);
 
             const maxDim = Math.max(modelSize.x, modelSize.y, modelSize.z);
-            const fov = camera.fov * Math.PI / 180;
-            let distance = maxDim / (2 * Math.tan(fov / 2));
+            const fovV = camera.fov * Math.PI / 180;
+            // En celular (pantalla angosta/vertical) el campo de vision
+            // HORIZONTAL es mas angosto que el vertical (depende del
+            // aspect ratio). Antes solo se calculaba la distancia segun
+            // el FOV vertical, que en desktop (pantalla ancha) sobra de
+            // sobra a los lados — pero en un celular deja la casa
+            // recortada/pegada a la cámara porque nunca se probó si
+            // cabía tambien a lo ancho. Se calcula la distancia para
+            // ambos FOV (vertical y horizontal) y se usa la mayor, así
+            // el modelo siempre cabe completo sin importar el aspecto
+            // de la pantalla.
+            const fovH = 2 * Math.atan(Math.tan(fovV / 2) * camera.aspect);
+            let distance = Math.max(
+                maxDim / (2 * Math.tan(fovV / 2)),
+                maxDim / (2 * Math.tan(fovH / 2))
+            );
             distance *= 1.45;
 
             // Antes la cámara quedaba a 45° exactos (offset igual en X
@@ -4734,6 +4802,29 @@
         btnRotate.addEventListener("click", () => {
             controls.autoRotate = !controls.autoRotate;
             btnRotate.classList.toggle("active", controls.autoRotate);
+        });
+
+        // Panel de sensores plegable en celular: por defecto arranca
+        // oculto (para que el modelo 3D use toda la pantalla) y un
+        // botón flotante lo saca/mete deslizándolo hacia abajo. En
+        // escritorio este botón ni siquiera se muestra (ver CSS), así
+        // que ahí el panel se queda siempre visible como antes.
+        const railToggle = document.getElementById("railToggle");
+        const railToggleText = document.getElementById("railToggleText");
+        const rightRail = document.getElementById("rightRail");
+
+        function setRailCollapsed(colapsado) {
+            rightRail.classList.toggle("collapsed", colapsado);
+            railToggle.classList.toggle("panel-open", !colapsado);
+            railToggleText.textContent = colapsado ? "Ver sensores" : "Ocultar sensores";
+        }
+
+        if (window.matchMedia("(max-width:700px)").matches) {
+            setRailCollapsed(true);
+        }
+
+        railToggle.addEventListener("click", () => {
+            setRailCollapsed(!rightRail.classList.contains("collapsed"));
         });
 
 
