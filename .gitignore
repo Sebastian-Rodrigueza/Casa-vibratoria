@@ -7,6 +7,9 @@ __pycache__/
 # no hace falta que este en GitHub (es publico). Se usa solo
 # una vez para migrar la info a la base de datos en la nube.
 backup_geodbandes.sql
+cloud_import.sql
+sample_ensayos.sql
+import_ensayos.bat
 
 # Otros archivos de proyectos aparte que no hacen falta en el sitio
 NubePuntos/conversion_log.txt

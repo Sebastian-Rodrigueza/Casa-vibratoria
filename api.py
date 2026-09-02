@@ -308,6 +308,11 @@ def labview_historico():
     except ValueError:
         limite = 500
 
+    # Tope de seguridad: sin importar lo que pida el navegador, nunca se
+    # devuelven mas de 100000 filas de un tiron (protege la memoria del
+    # servidor, sobre todo en el plan gratis de Render).
+    limite = max(1, min(limite, 100000))
+
     conn = conectar()
     cursor = conn.cursor(dictionary=True)
 
@@ -346,16 +351,33 @@ def labview_historico():
     cursor.close()
     conn.close()
 
-    # El campo "datos" viene como texto JSON desde MySQL, lo convertimos
-    # de vuelta a un diccionario de Python antes de devolverlo.
+    # OJO: antes esto hacia json.loads() sobre el texto de "datos" para
+    # convertirlo a diccionario de Python, y despues jsonify() lo volvia
+    # a convertir a texto JSON. En ensayos grandes (decenas de miles de
+    # filas, cada una con ~40 sensores) ese ida-y-vuelta multiplicaba
+    # muchisimo la memoria usada (cada numero pasa a ser un objeto de
+    # Python con su propio overhead), suficiente para tumbar el servidor
+    # gratis de Render (512 MB de RAM) con un solo ensayo grande.
+    #
+    # Como "datos" ya es JSON valido tal como sale de MySQL, lo insertamos
+    # tal cual (como texto crudo) directo en la respuesta, sin pasar por
+    # diccionarios de Python. Mismo resultado para quien lo consume, pero
+    # usando una fraccion de la memoria.
+    partes = []
     for fila in filas:
-        if isinstance(fila.get("datos"), str):
-            fila["datos"] = json.loads(fila["datos"])
-        # fecha_hora no es serializable directo a JSON, la convertimos a texto
-        if fila.get("fecha_hora") is not None:
-            fila["fecha_hora"] = fila["fecha_hora"].isoformat()
-
-    return jsonify(filas)
+        fecha_hora = fila["fecha_hora"].isoformat() if fila.get("fecha_hora") is not None else None
+        datos_crudo = fila.get("datos") or "null"
+        partes.append(
+            '{"id":%s,"fecha_hora":%s,"archivo":%s,"x_value":%s,"datos":%s}' % (
+                json.dumps(fila["id"]),
+                json.dumps(fecha_hora),
+                json.dumps(fila["archivo"]),
+                json.dumps(fila["x_value"]),
+                datos_crudo
+            )
+        )
+    cuerpo = "[" + ",".join(partes) + "]"
+    return app.response_class(response=cuerpo, mimetype="application/json")
 
 
 @app.route("/api/labview/archivos")
