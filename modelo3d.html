@@ -1474,6 +1474,21 @@
         }
 
         @media (max-width:700px) {
+            /* BUG GRAVE: mas arriba en el archivo hay reglas de
+               #viewer sin media query (o con @media max-width:1200px)
+               que le dejan un margen fijo de 400-480px por la derecha,
+               pensado para el panel de sensores en pantallas grandes.
+               En un celular (~390px de ancho) eso da un ancho
+               calculado NEGATIVO para el visor 3D: el canvas quedaba
+               aplastado a 0px de ancho contra el borde izquierdo, por
+               eso no se veia (ni se podia tocar) el modelo. Como esta
+               regla es la ultima en el archivo para pantallas
+               angostas, gana sobre todas las anteriores y deja el
+               visor ocupando toda la pantalla otra vez. */
+            #viewer {
+                inset: 0;
+            }
+
             .right-rail {
                 top: auto;
                 width: auto;
@@ -1496,6 +1511,14 @@
                una sola tira angosta y horizontal (se desliza con el
                dedo), como una barra de herramientas de app. */
             .topbar {
+                /* Mismo motivo que #viewer arriba: una regla mas
+                   arriba en el archivo deja "right" en 400-480px fijos
+                   pensando en el panel lateral de escritorio. Se
+                   reafirma aqui para que en celular quede pegado al
+                   borde (8px) y no genere una caja invalida. */
+                left: 8px;
+                right: 8px;
+                top: 8px;
                 min-height: 0;
                 padding: 8px 10px;
                 gap: 6px;
