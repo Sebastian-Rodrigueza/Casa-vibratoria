@@ -3849,23 +3849,34 @@
             crackGroup.visible = false;
 
             const diag = Math.max(modelSize.length(), 1);
+            // ANTES: depthTest:false + renderOrder altísimo hacían que las
+            // grietas se dibujaran SIEMPRE encima de todo, sin importar qué
+            // hubiera delante — por eso se veían como rayas flotando sobre
+            // la casa (incluso atravesando paredes que deberían taparlas)
+            // en vez de lucir pegadas a la superficie. Con depthTest normal
+            // el GPU las oculta correctamente cuando algo les tapa la vista,
+            // como cualquier otro objeto de la escena; el pequeño offset
+            // hacia afuera de cada muro (más abajo, al ubicar cada grieta)
+            // ya evita el parpadeo por solaparse justo con la pared.
             const crackMaterial = new THREE.LineBasicMaterial({
-                color: 0x4a2a2a,
+                color: 0x3b2420,
                 transparent: true,
-                opacity: 0.72,
-                depthTest: false,
-                depthWrite: false
+                opacity: 0.78
             });
 
             const makeCrack = (points, position, rotationY = 0, scale = 1) => {
+                // Antes las mismas 2 formas (crackA/crackB) se repetían
+                // idénticas en varias paredes — se notaba mucho que era el
+                // mismo "garabato" copiado y pegado. Un jitter chiquito y
+                // aleatorio por instancia hace que cada grieta se vea única.
+                const jitter = () => (Math.random() - 0.5) * 0.05;
                 const geometry = new THREE.BufferGeometry().setFromPoints(
-                    points.map(p => new THREE.Vector3(p[0], p[1], p[2]))
+                    points.map(p => new THREE.Vector3(p[0] + jitter(), p[1], p[2]))
                 );
                 const line = new THREE.Line(geometry, crackMaterial.clone());
                 line.position.copy(position);
                 line.rotation.y = rotationY;
                 line.scale.setScalar(scale);
-                line.renderOrder = 10000;
                 crackGroup.add(line);
                 return line;
             };
@@ -3880,46 +3891,63 @@
                 [-0.02, -0.29, 0], [0.07, -0.39, 0]
             ];
 
-            const sx = modelSize.x || diag * .35;
-            const sy = modelSize.y || diag * .35;
-            const sz = modelSize.z || diag * .35;
+            // BUG: esto usaba "modelSize"/"modelCenter", que son la caja
+            // delimitadora de TODO "model" (incluye la mesa vibratoria, la
+            // cimentación y los sensores/hilos que sobresalen bastante más
+            // allá de los muros de verdad). Verificado cargando el .glb
+            // aparte: esa caja completa mide 7.25 de ancho centrada en
+            // x=3.51, mientras que el grupo "G-Muros" (los muros de la
+            // casa, sin nada de eso) mide solo 4.58 centrado en x=2.39. Con
+            // la caja completa, la grieta calculada para la pared derecha
+            // (rightX = centro + mitad del ancho) quedaba flotando en el
+            // aire, lejos de cualquier pared real — cerca de por donde
+            // sobresale el sensor de hilo. Usar la caja del grupo de muros
+            // ubica las grietas donde de verdad hay una pared.
+            const wallsGroup = model.getObjectByName("G-Muros") || model;
+            const wallsBox = new THREE.Box3().setFromObject(wallsGroup);
+            const wallsSize = wallsBox.getSize(new THREE.Vector3());
+            const wallsCenter = wallsBox.getCenter(new THREE.Vector3());
 
-            const frontZ = modelCenter.z + sz * 0.50 + diag * 0.002;
-            const backZ = modelCenter.z - sz * 0.50 - diag * 0.002;
-            const leftX = modelCenter.x - sx * 0.50 - diag * 0.002;
-            const rightX = modelCenter.x + sx * 0.50 + diag * 0.002;
+            const sx = wallsSize.x || diag * .35;
+            const sy = wallsSize.y || diag * .35;
+            const sz = wallsSize.z || diag * .35;
+
+            const frontZ = wallsCenter.z + sz * 0.50 + diag * 0.002;
+            const backZ = wallsCenter.z - sz * 0.50 - diag * 0.002;
+            const leftX = wallsCenter.x - sx * 0.50 - diag * 0.002;
+            const rightX = wallsCenter.x + sx * 0.50 + diag * 0.002;
 
             makeCrack(
                 crackA,
-                new THREE.Vector3(modelCenter.x - sx * .18, modelCenter.y + sy * .28, frontZ),
+                new THREE.Vector3(wallsCenter.x - sx * .18, wallsCenter.y + sy * .28, frontZ),
                 0,
                 diag * .10
             );
 
             makeCrack(
                 crackB,
-                new THREE.Vector3(modelCenter.x + sx * .19, modelCenter.y + sy * .16, frontZ),
+                new THREE.Vector3(wallsCenter.x + sx * .19, wallsCenter.y + sy * .16, frontZ),
                 0,
                 diag * .09
             );
 
             makeCrack(
                 crackA,
-                new THREE.Vector3(rightX, modelCenter.y + sy * .20, modelCenter.z + sz * .12),
+                new THREE.Vector3(rightX, wallsCenter.y + sy * .20, wallsCenter.z + sz * .12),
                 Math.PI / 2,
                 diag * .09
             );
 
             makeCrack(
                 crackB,
-                new THREE.Vector3(leftX, modelCenter.y + sy * .10, modelCenter.z - sz * .10),
+                new THREE.Vector3(leftX, wallsCenter.y + sy * .10, wallsCenter.z - sz * .10),
                 -Math.PI / 2,
                 diag * .08
             );
 
             makeCrack(
                 crackB,
-                new THREE.Vector3(modelCenter.x + sx * .05, modelCenter.y + sy * .32, backZ),
+                new THREE.Vector3(wallsCenter.x + sx * .05, wallsCenter.y + sy * .32, backZ),
                 Math.PI,
                 diag * .08
             );
@@ -3969,6 +3997,7 @@
 
             model.position.copy(modelBasePosition);
             model.rotation.copy(modelBaseRotation);
+            model.scale.set(1, 1, 1);
 
             if (sensorMarker) sensorMarker.position.copy(sensorMarkerBasePosition);
             if (sensorMarkerHalo) sensorMarkerHalo.position.copy(sensorMarkerBasePosition);
@@ -3992,6 +4021,7 @@
             if (model) {
                 model.position.copy(modelBasePosition);
                 model.rotation.copy(modelBaseRotation);
+                model.scale.set(1, 1, 1);
             }
 
             if (sensorMarker) sensorMarker.position.copy(sensorMarkerBasePosition);
@@ -5243,11 +5273,29 @@
                         1,
                         (now - collapseStartedAt) / COLLAPSE_DURATION_MS
                     );
+                    // Aceleracion tipo gravedad: arranca lento, cae cada vez
+                    // más rápido (como un objeto que cae de verdad).
                     const eased = tCollapse * tCollapse;
 
-                    const fallX = diag * 0.055 * eased;
-                    const fallY = diag * 0.050 * eased;
-                    const fallZ = diag * 0.020 * eased;
+                    // ANTES: la casa entera giraba de golpe un ángulo fijo
+                    // enorme en un solo eje (~54°) — se veía como un bloque
+                    // rígido volcándose de lado, tipo librero empujado, no
+                    // como un edificio derrumbándose. Un terremoto real no
+                    // tumba la casa así: las plantas ceden y se "apilan"
+                    // hacia abajo (colapso tipo panqueque). Se reemplaza el
+                    // giro grande por: (1) aplastar la altura del modelo con
+                    // escala (el origen del modelo está justo en su base,
+                    // verificado, así que la base se queda pegada al piso y
+                    // solo baja el techo) y (2) un temblor caótico —no un
+                    // giro liso hacia un solo lado— pequeño en los 3 ejes,
+                    // que crece y luego se apaga (sin(eased·π)) simulando el
+                    // sacudón del derrumbe, en vez de una inclinación fija.
+                    const aplastamiento = 1 - eased * 0.42;
+                    const temblorColapso = Math.sin(eased * Math.PI);
+
+                    const fallX = diag * 0.012 * eased;
+                    const fallY = diag * 0.015 * eased;
+                    const fallZ = diag * 0.008 * eased;
 
                     model.position.set(
                         modelBasePosition.x + fallX,
@@ -5255,10 +5303,12 @@
                         modelBasePosition.z + fallZ
                     );
 
+                    model.scale.set(1, aplastamiento, 1);
+
                     model.rotation.set(
-                        modelBaseRotation.x + 0.13 * eased,
-                        modelBaseRotation.y + 0.05 * eased,
-                        modelBaseRotation.z - 0.95 * eased
+                        modelBaseRotation.x + Math.sin(time * 0.045) * 0.05 * temblorColapso,
+                        modelBaseRotation.y + Math.sin(time * 0.030 + 1) * 0.03 * temblorColapso,
+                        modelBaseRotation.z + Math.sin(time * 0.050 + 2) * 0.06 * temblorColapso
                     );
 
                     if (sensorMarker) {
