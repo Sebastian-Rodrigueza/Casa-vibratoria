@@ -67,6 +67,35 @@
             background: radial-gradient(circle at 65% 25%, rgba(255,255,255,.96), rgba(241,245,249,.74) 30%, rgba(226,232,240,.74) 100%);
         }
 
+        /* BUG (probablemente la causa real de la casa descuadrada en
+           tablet/iPad): el script dimensiona el <canvas> del visor con
+           "renderer.setSize(ancho, alto, false)" — el "false" le dice a
+           three.js que NO toque el estilo CSS del canvas, solo sus
+           atributos width/height (que además vienen multiplicados por
+           devicePixelRatio, para que se vea nítido en pantallas
+           Retina/HiDPI). Sin ninguna regla de CSS, un <canvas> sin
+           estilo se MUESTRA en pantalla al tamaño de esos mismos
+           atributos — es decir, en una pantalla con
+           devicePixelRatio=2 (practicamente todos los iPads y
+           celulares modernos) el canvas se veia el DOBLE de grande que
+           su contenedor #viewer, desbordado hacia la derecha/abajo sin
+           que nada lo recortara. Como la camara sí quedaba bien
+           centrada DENTRO de esa imagen de más, lo que se veía en la
+           pantalla real (la esquina superior izquierda de ese canvas
+           gigante) era la casa empujada hacia la esquina inferior
+           derecha, chiquita — justo el síntoma reportado. En una
+           pantalla normal (devicePixelRatio=1, como la mayoría de PCs)
+           el atributo coincide con el tamaño real y por eso ahí nunca
+           se notó. La solución correcta (y mucho más simple que tocar
+           el JS) es fijar por CSS que el canvas siempre ocupe el 100%
+           de su contenedor, sin importar la resolución interna que
+           three.js le haya puesto para que se vea nítido. */
+        #viewer canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
         .sidebar {
             position: fixed;
             z-index: 30;
@@ -3341,6 +3370,55 @@
             controls.maxDistance = maxDim * 6;
             controls.update();
 
+            // Verificación exacta de que la casa cabe completa en el
+            // encuadre. La fórmula de arriba calcula la distancia como
+            // si el modelo fuera una esfera del tamaño de su lado más
+            // largo ("maxDim"), pero la casa es una caja rectangular y
+            // la cámara la mira en diagonal (no de frente) — vista
+            // desde esa esquina, la silueta puede ser bastante más
+            // ancha que "maxDim" (hasta ~40% más). Eso dejaba la casa
+            // recortada en ciertos aspectos de pantalla (se notó en
+            // tablet) aunque en otros aspectos (como una ventana de PC
+            // normal) sobraba margen de sobra y no se notaba. En vez
+            // de afinar la fórmula a mano para cada caso, se proyectan
+            // las 8 esquinas de la caja del modelo a la pantalla con la
+            // cámara ya puesta y, si alguna se sale del cuadro, se aleja
+            // la cámara lo que haga falta (repitiendo unas pocas veces
+            // por si el ajuste no basta a la primera) hasta que las 8
+            // queden dentro — así funciona sin importar el aspecto de
+            // pantalla ni el ángulo de vista.
+            const MARGEN_ENCUADRE = .86;
+            const projView = new THREE.Matrix4();
+            const puntoProyectado = new THREE.Vector3();
+            const esquinasCaja = [0, 1].flatMap(bx => [0, 1].flatMap(by => [0, 1].map(bz => new THREE.Vector3(
+                bx ? modelBounds.max.x : modelBounds.min.x,
+                by ? modelBounds.max.y : modelBounds.min.y,
+                bz ? modelBounds.max.z : modelBounds.min.z
+            ))));
+
+            for (let intento = 0; intento < 6; intento++) {
+                camera.updateMatrixWorld(true);
+                projView.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+
+                let maxNdc = 0;
+                for (const esquina of esquinasCaja) {
+                    puntoProyectado.copy(esquina).applyMatrix4(projView);
+                    maxNdc = Math.max(maxNdc, Math.abs(puntoProyectado.x), Math.abs(puntoProyectado.y));
+                }
+
+                if (maxNdc <= MARGEN_ENCUADRE) break;
+
+                const factorAlejar = maxNdc / MARGEN_ENCUADRE;
+                camera.position.sub(modelCenter).multiplyScalar(factorAlejar).add(modelCenter);
+                // Si hizo falta alejar más de lo que maxDistance
+                // permitía, se sube el tope también — si no,
+                // controls.update() la volvería a acercar de golpe y
+                // se perdería la corrección que se acaba de hacer.
+                controls.maxDistance = Math.max(controls.maxDistance, camera.position.distanceTo(modelCenter) * 1.05);
+                camera.updateProjectionMatrix();
+                controls.update();
+            }
+
             // El piso/cuadrícula tenían un tamaño FIJO (radio 18 / 24
             // unidades) sin relación con el tamaño real de la casa
             // cargada. Al alejar la cámara hasta maxDistance, la casa
@@ -3348,7 +3426,7 @@
             // visible — se sentía como si "se perdiera" el modelo. Se
             // escala el piso/cuadrícula según el tamaño real del modelo
             // para que siempre cubran de sobra el zoom máximo permitido.
-            const escalaEntorno = Math.max(1, (maxDim * 4) / 18);
+            const escalaEntorno = Math.max(1, (maxDim * 4) / 18, (controls.maxDistance * 4) / 18);
             ground.scale.setScalar(escalaEntorno);
             grid.scale.setScalar(escalaEntorno);
 
@@ -3365,9 +3443,15 @@
             // lavada hacia el fondo. Ahora sí empieza justo en
             // maxDistance, así que dentro de todo el rango de zoom que
             // el usuario puede usar la casa nunca pierde su color.
+            //
+            // Usa controls.maxDistance (no maxDim*6 directo) porque la
+            // verificación de arriba a veces necesita subir ese tope
+            // más allá de maxDim*6 para que la casa quepa completa; si
+            // la niebla se quedara fija en maxDim*6 podría empezar a
+            // tapar la casa desde la posición inicial de la cámara.
             if (scene.fog) {
-                scene.fog.near = maxDim * 6;
-                scene.fog.far = maxDim * 20;
+                scene.fog.near = controls.maxDistance;
+                scene.fog.far = controls.maxDistance * (20 / 6);
             }
 
             ground.position.y = modelBounds.min.y - .035;
