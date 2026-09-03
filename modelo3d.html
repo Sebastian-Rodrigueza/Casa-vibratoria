@@ -1224,7 +1224,19 @@
             }
         }
 
-        @media (max-width: 1024px) {
+        /* OJO: no basta con "max-width:1024px". Un iPad en horizontal
+           (apaisado) reporta un ancho de pantalla de ~1180-1366px —
+           mas ancho que este limite — asi que con solo el ancho se
+           quedaba con el layout de escritorio (barra lateral + panel
+           fijos), que a ese ancho le deja al visor 3D un hueco angosto
+           y mal proporcionado (la casa queda recortada/mal encuadrada,
+           aunque el resto de los paneles se vean bien). Por eso esta
+           regla tambien entra por "es una pantalla tactil sin mouse"
+           (hover:none + pointer:coarse, lo que tienen tablets y
+           celulares, no laptops/PCs) sin importar que tan ancha este
+           en horizontal, con un tope de 1400px para no afectar
+           pantallas tactiles gigantes tipo kiosco/TV. */
+        @media (max-width: 1024px), (hover: none) and (pointer: coarse) and (max-width: 1400px) {
             :root {
                 --sidebar-w: 0px;
             }
@@ -1482,19 +1494,25 @@
             }
         }
 
-        @media (max-width:1024px) {
+        @media (max-width:1024px), (hover: none) and (pointer: coarse) and (max-width: 1400px) {
             /* BUG GRAVE: mas arriba en el archivo hay reglas de
                #viewer sin media query (o con @media max-width:1200px)
                que le dejan un margen fijo de 400-480px por la derecha,
                pensado para el panel de sensores en pantallas grandes.
                En celular (~390px de ancho) eso da un ancho calculado
-               NEGATIVO para el visor 3D, y en una tablet en vertical
-               (~768-834px, como un iPad) deja el visor reducido a una
-               tira de menos de 100px: en ambos casos el modelo no se
-               veia ni se podia tocar. Este bloque (celular Y tablet)
-               es el ultimo del archivo para estos anchos, asi que gana
-               sobre todas las anteriores y deja el visor ocupando toda
-               la pantalla otra vez. */
+               NEGATIVO para el visor 3D, y en una tablet (vertical
+               ~768-834px, u horizontal ~1180-1366px como un iPad) deja
+               el visor reducido a una tira angosta y mal proporcionada:
+               en los tres casos el modelo no se veia bien ni se podia
+               tocar. Este bloque (celular Y tablet, en cualquier
+               orientacion) es el ultimo del archivo para estos anchos,
+               asi que gana sobre todas las anteriores y deja el visor
+               ocupando toda la pantalla otra vez. La condicion
+               "hover:none + pointer:coarse" detecta pantallas tactiles
+               sin mouse (tablets/celulares) para que esto entre incluso
+               cuando el ancho en horizontal supera 1024px; tiene un
+               tope de 1400px para no afectar pantallas tactiles
+               gigantes tipo kiosco/TV. */
             #viewer {
                 inset: 0;
             }
@@ -1721,14 +1739,15 @@
             }
         }
 
-        /* Ajuste fino solo para tablet (iPad y similares, ~701-1024px):
-           usa el mismo modo "paneles deslizables" de celular de arriba
-           (por eso este bloque va DESPUES, para ganarle en la cascada
-           a las reglas pensadas para pantallas de telefono chicas),
-           pero con mas aire porque hay bastante mas pantalla real:
-           paneles y grafica mas altos, texto y botones a tamano normal
-           en vez del tamano reducido de celular. */
-        @media (min-width:701px) and (max-width:1024px) {
+        /* Ajuste fino solo para tablet (iPad y similares: ~701-1024px
+           en vertical, o pantalla tactil ancha en horizontal hasta
+           1400px): usa el mismo modo "paneles deslizables" de celular
+           de arriba (por eso este bloque va DESPUES, para ganarle en
+           la cascada a las reglas pensadas para telefono chico), pero
+           con mas aire porque hay bastante mas pantalla real: paneles
+           y grafica mas altos, texto y botones a tamano normal en vez
+           del tamano reducido de celular. */
+        @media (min-width:701px) and (max-width:1024px), (hover: none) and (pointer: coarse) and (min-width: 701px) and (max-width: 1400px) {
             .right-rail {
                 max-height: 42vh;
             }
@@ -4957,9 +4976,12 @@
             btnRotate.classList.toggle("active", controls.autoRotate);
         });
 
-        // Dos paneles plegables en celular Y tablet (mismo umbral que
-        // el CSS: 1024px, para cubrir un iPad en vertical): la lista
-        // para ELEGIR un sensor (la barra lateral, normal en
+        // Dos paneles plegables en celular Y tablet (misma condición
+        // que el CSS de arriba: ancho <=1024px, O pantalla táctil sin
+        // mouse -hover:none + pointer:coarse- de hasta 1400px, para
+        // cubrir también un iPad en horizontal, que es más ancho que
+        // 1024px pero sigue siendo una pantalla chica y táctil): la
+        // lista para ELEGIR un sensor (la barra lateral, normal en
         // escritorio) y el panel con la GRÁFICA del sensor elegido.
         // Ambos arrancan ocultos (el modelo 3D usa toda la pantalla) y
         // cada uno tiene su botón flotante abajo. Solo se deja uno
@@ -4967,7 +4989,9 @@
         // modelo por completo. En escritorio estos botones ni siquiera
         // se muestran (ver CSS), así que ahí los dos paneles se quedan
         // siempre visibles como antes.
-        const esMobile = () => window.matchMedia("(max-width:1024px)").matches;
+        const esMobile = () => window.matchMedia(
+            "(max-width:1024px), (hover:none) and (pointer:coarse) and (max-width:1400px)"
+        ).matches;
 
         const railToggle = document.getElementById("railToggle");
         const railToggleText = document.getElementById("railToggleText");
