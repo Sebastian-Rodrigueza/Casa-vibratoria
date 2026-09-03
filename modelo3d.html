@@ -544,8 +544,8 @@
             }
 
         /* Botones para mostrar/ocultar los paneles (lista de sensores
-           y grafica): solo existen en celular (ver @media
-           max-width:700px mas abajo). En escritorio hay espacio de
+           y grafica): solo existen en celular/tablet (ver @media
+           max-width:1024px mas abajo). En escritorio hay espacio de
            sobra y ambos paneles estan siempre visibles, asi que aqui
            quedan ocultos por defecto. */
         .mobile-panel-toggles {
@@ -1224,7 +1224,7 @@
             }
         }
 
-        @media (max-width: 700px) {
+        @media (max-width: 1024px) {
             :root {
                 --sidebar-w: 0px;
             }
@@ -1482,18 +1482,19 @@
             }
         }
 
-        @media (max-width:700px) {
+        @media (max-width:1024px) {
             /* BUG GRAVE: mas arriba en el archivo hay reglas de
                #viewer sin media query (o con @media max-width:1200px)
                que le dejan un margen fijo de 400-480px por la derecha,
                pensado para el panel de sensores en pantallas grandes.
-               En un celular (~390px de ancho) eso da un ancho
-               calculado NEGATIVO para el visor 3D: el canvas quedaba
-               aplastado a 0px de ancho contra el borde izquierdo, por
-               eso no se veia (ni se podia tocar) el modelo. Como esta
-               regla es la ultima en el archivo para pantallas
-               angostas, gana sobre todas las anteriores y deja el
-               visor ocupando toda la pantalla otra vez. */
+               En celular (~390px de ancho) eso da un ancho calculado
+               NEGATIVO para el visor 3D, y en una tablet en vertical
+               (~768-834px, como un iPad) deja el visor reducido a una
+               tira de menos de 100px: en ambos casos el modelo no se
+               veia ni se podia tocar. Este bloque (celular Y tablet)
+               es el ultimo del archivo para estos anchos, asi que gana
+               sobre todas las anteriores y deja el visor ocupando toda
+               la pantalla otra vez. */
             #viewer {
                 inset: 0;
             }
@@ -1717,6 +1718,54 @@
 
             .toolbar-select {
                 max-width: 92px;
+            }
+        }
+
+        /* Ajuste fino solo para tablet (iPad y similares, ~701-1024px):
+           usa el mismo modo "paneles deslizables" de celular de arriba
+           (por eso este bloque va DESPUES, para ganarle en la cascada
+           a las reglas pensadas para pantallas de telefono chicas),
+           pero con mas aire porque hay bastante mas pantalla real:
+           paneles y grafica mas altos, texto y botones a tamano normal
+           en vez del tamano reducido de celular. */
+        @media (min-width:701px) and (max-width:1024px) {
+            .right-rail {
+                max-height: 42vh;
+            }
+
+            .chart-wrap {
+                height: 190px;
+            }
+
+            .sidebar {
+                max-height: 55vh;
+            }
+
+            .topbar {
+                padding: 10px 14px;
+            }
+
+            .top-title strong {
+                font-size: 15px;
+            }
+
+            .tool-btn,
+            .back,
+            .toolbar-select {
+                min-height: 38px;
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+
+            .tool-btn span,
+            .back span {
+                display: inline;
+            }
+
+            .tool-btn svg,
+            .back svg {
+                width: 16px;
+                height: 16px;
             }
         }
 
@@ -4908,16 +4957,17 @@
             btnRotate.classList.toggle("active", controls.autoRotate);
         });
 
-        // Dos paneles plegables en celular: la lista para ELEGIR un
-        // sensor (la barra lateral, normal en escritorio) y el panel
-        // con la GRÁFICA del sensor elegido. Ambos arrancan ocultos
-        // (el modelo 3D usa toda la pantalla) y cada uno tiene su
-        // botón flotante abajo. Solo se deja uno abierto a la vez para
-        // no taparse entre ellos ni tapar el modelo por completo. En
-        // escritorio estos botones ni siquiera se muestran (ver CSS),
-        // así que ahí los dos paneles se quedan siempre visibles como
-        // antes.
-        const esMobile = () => window.matchMedia("(max-width:700px)").matches;
+        // Dos paneles plegables en celular Y tablet (mismo umbral que
+        // el CSS: 1024px, para cubrir un iPad en vertical): la lista
+        // para ELEGIR un sensor (la barra lateral, normal en
+        // escritorio) y el panel con la GRÁFICA del sensor elegido.
+        // Ambos arrancan ocultos (el modelo 3D usa toda la pantalla) y
+        // cada uno tiene su botón flotante abajo. Solo se deja uno
+        // abierto a la vez para no taparse entre ellos ni tapar el
+        // modelo por completo. En escritorio estos botones ni siquiera
+        // se muestran (ver CSS), así que ahí los dos paneles se quedan
+        // siempre visibles como antes.
+        const esMobile = () => window.matchMedia("(max-width:1024px)").matches;
 
         const railToggle = document.getElementById("railToggle");
         const railToggleText = document.getElementById("railToggleText");
