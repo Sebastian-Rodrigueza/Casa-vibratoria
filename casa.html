@@ -1803,6 +1803,21 @@
                 // próximo ciclo.
             }
 
+            // BUG GRAVE (causa real de que la API se cayera con varios
+            // usuarios conectados): esto volvía a pedir el histórico
+            // COMPLETO del ensayo (hasta 200 000 filas, ~27-57 MB) cada
+            // 3 segundos — SIN IMPORTAR si "en vivo" estaba prendido o
+            // no. O sea que cualquiera que dejara la página abierta
+            // viendo un ensayo YA TERMINADO (que no cambia más) seguía
+            // descargando el ensayo entero, una y otra vez, para
+            // siempre, mientras la pestaña siguiera abierta. Con varias
+            // personas conectadas a la vez eso satura el servidor (que
+            // solo atiende una petición a la vez) y toda la API deja de
+            // responder para todo el mundo. Un ensayo histórico ya
+            // cargado NO cambia — no hay nada que actualizar — así que
+            // esto ahora solo se ejecuta con "en vivo" realmente
+            // encendido.
+            if (!modoEnVivo) return;
             if (!archivoActual) return;
             try {
                 const resp = await fetch(`${API_BASE}/api/labview/historico?archivo=${encodeURIComponent(archivoActual)}&limite=200000`);
