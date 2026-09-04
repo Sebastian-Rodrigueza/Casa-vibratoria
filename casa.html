@@ -764,21 +764,86 @@
             transition: all .15s ease;
         }
 
-        .future-graphs-slot {
-            min-height: 0;
+        /* Gráfica de diferencia entre 2 sensores (deriva, desplazamiento
+           relativo, etc.) — ver id="future-graphs-slot" en el HTML. */
+        .diff-body[hidden] {
+            display: none;
         }
 
-            .future-graphs-slot:not([hidden]) {
-                min-height: 140px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
+        .diff-hint {
+            font-size: 12px;
+            line-height: 1.5;
+            color: var(--text-muted);
+            background: var(--bg-element);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            padding: var(--sp-3);
+            margin: 0 0 var(--sp-3);
+        }
+
+        .diff-controls {
+            display: flex;
+            align-items: flex-end;
+            gap: var(--sp-3);
+            margin-bottom: var(--sp-3);
+            flex-wrap: wrap;
+        }
+
+        .diff-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1 1 200px;
+        }
+
+            .diff-field label {
+                font-size: 11px;
                 color: var(--text-muted);
-                font-size: 12px;
-                background: rgba(255,255,255,.6);
-                border: 1px dashed var(--border-medium);
-                border-radius: 16px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: .06em;
             }
+
+            .diff-field select {
+                border: 1px solid var(--border-light);
+                padding: 6px var(--sp-3);
+                font-size: 13px;
+                background: var(--bg-element);
+                border-radius: var(--radius-sm);
+                font-weight: 600;
+                color: var(--text-dark);
+                cursor: pointer;
+                width: 100%;
+            }
+
+        .diff-operator {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--text-muted);
+            padding-bottom: 8px;
+        }
+
+        .diff-warning {
+            font-size: 12px;
+            font-weight: 600;
+            color: #92400e;
+            background: #fef3c7;
+            border: 1px solid #fde68a;
+            border-radius: 10px;
+            padding: 8px 12px;
+            margin-bottom: var(--sp-3);
+        }
+
+            .diff-warning[hidden] {
+                display: none;
+            }
+
+        .diff-zero-line {
+            stroke: var(--text-muted);
+            stroke-width: 1.5;
+            stroke-dasharray: 5 4;
+            opacity: .55;
+        }
 
             .indicator-item:hover {
                 background: #f1f5f9;
@@ -1295,10 +1360,48 @@
                     <div class="tabla-wrap" id="tabla-wrap"><table id="tabla-datos"></table></div>
                 </div>
             </div>
-            <!-- 3. ESPACIO RESERVADO PARA FUTURAS GRÁFICAS DERIVADAS
-                 (comparaciones entre sensores, relaciones X-Y, etc.).
-                 Vacío por ahora a propósito — no se inventan datos. -->
-            <div class="future-graphs-slot" id="future-graphs-slot" hidden></div>
+            <!-- 3. GRÁFICA DERIVADA: diferencia (resta) entre 2 sensores —
+                 ej. deriva entre pisos (2 LVDT horizontales a distinta
+                 altura) o movimiento relativo entre 2 hilos. Colapsada por
+                 defecto (mismo patrón que las tarjetas de Acelerómetros/
+                 LVDT/Hilos de arriba) para no saturar el dashboard: el
+                 ingeniero la abre solo si la necesita. -->
+            <div class="graph-card" id="future-graphs-slot">
+                <div class="indicator-card-head">
+                    <h3>Diferencia entre sensores</h3>
+                    <button class="link-tabla toggle-grupo" data-grupo="diff" type="button">Mostrar ▾</button>
+                </div>
+                <div class="diff-body" id="grp-diff" hidden>
+                    <p class="diff-hint">
+                        Sirve para ver un desplazamiento o aceleración
+                        <strong>relativa</strong> entre 2 puntos de la
+                        estructura — por ejemplo, la <strong>deriva entre
+                        piso 1 y piso 2</strong> restando 2 LVDT
+                        horizontales a esas alturas, o el movimiento
+                        relativo entre 2 sensores de hilo. Funciona mejor
+                        restando sensores del <strong>mismo tipo</strong>
+                        (misma unidad).
+                    </p>
+                    <div class="diff-controls">
+                        <div class="diff-field">
+                            <label for="diff-sel-a">Sensor A</label>
+                            <select id="diff-sel-a"><option value="">—</option></select>
+                        </div>
+                        <span class="diff-operator" aria-hidden="true">−</span>
+                        <div class="diff-field">
+                            <label for="diff-sel-b">Sensor B</label>
+                            <select id="diff-sel-b"><option value="">—</option></select>
+                        </div>
+                    </div>
+                    <div class="diff-warning" id="diff-warning" hidden></div>
+                    <div class="graph-viewport">
+                        <div class="graph-window-chip" id="diff-win">Sin ensayo</div>
+                        <div class="graph-maxmin" id="diff-mm">Max: <span>—</span><br>Min: <span>—</span></div>
+                        <svg id="diff-svg" viewBox="0 0 1000 220" preserveAspectRatio="none"></svg>
+                        <div class="graph-empty" id="diff-empty">Elige los 2 sensores a comparar (A − B).</div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
     <script>
@@ -1313,6 +1416,10 @@
         let filas = [];
         let nombresSensores = [];
         let canalesGraficas = ["", "", "", ""];
+        // Gráfica derivada: diferencia (A − B) entre 2 sensores elegidos
+        // aparte de las 4 principales — ver dibujarDiferencia().
+        let diffCanalA = "";
+        let diffCanalB = "";
         let indiceActual = 0;
         let reproduciendo = false;
         let timerId = null;
@@ -1984,6 +2091,60 @@
                     dibujar();
                 });
             });
+            llenarSelectoresDiferencia();
+        }
+        // Los 2 selectores de la gráfica de diferencia (A − B) — a
+        // diferencia de las 4 principales, arrancan VACÍOS a propósito:
+        // el ingeniero elige qué restar, no se sugiere nada por defecto,
+        // para no calcular una resta sin sentido físico sin que la haya
+        // pedido.
+        function llenarSelectoresDiferencia() {
+            const selA = el("diff-sel-a");
+            const selB = el("diff-sel-b");
+            if (!selA || !selB) return;
+
+            [[selA, diffCanalA], [selB, diffCanalB]].forEach(([sel, eleccionPrevia]) => {
+                sel.innerHTML = '<option value="">—</option>';
+                nombresSensores.forEach(nombre => {
+                    const opt = document.createElement("option");
+                    opt.value = nombre;
+                    opt.textContent = nombre.replace(" (Mean)", "");
+                    sel.appendChild(opt);
+                });
+                sel.value = eleccionPrevia && nombresSensores.includes(eleccionPrevia) ? eleccionPrevia : "";
+            });
+            diffCanalA = selA.value;
+            diffCanalB = selB.value;
+
+            selA.onchange = (e) => { diffCanalA = e.target.value; actualizarAvisoDiferencia(); dibujar(); };
+            selB.onchange = (e) => { diffCanalB = e.target.value; actualizarAvisoDiferencia(); dibujar(); };
+            actualizarAvisoDiferencia();
+        }
+        // Aviso de ingeniería (no bloquea, solo advierte): restar 2
+        // sensores de familias distintas (ej. un acelerómetro menos un
+        // LVDT) mezcla unidades distintas y normalmente no tiene sentido
+        // físico — a diferencia de restar 2 sensores del MISMO tipo a
+        // distinta altura o posición (ej. deriva entre pisos).
+        function actualizarAvisoDiferencia() {
+            const aviso = el("diff-warning");
+            if (!aviso) return;
+            if (!diffCanalA || !diffCanalB) {
+                aviso.hidden = true;
+                return;
+            }
+            if (diffCanalA === diffCanalB) {
+                aviso.hidden = false;
+                aviso.textContent = "⚠ Elegiste el mismo sensor en A y B — la resta siempre daría 0.";
+                return;
+            }
+            const familiaA = clasificarSensor(diffCanalA);
+            const familiaB = clasificarSensor(diffCanalB);
+            if (familiaA !== familiaB) {
+                aviso.hidden = false;
+                aviso.textContent = "⚠ Estás restando sensores de tipos distintos (unidades distintas) — el resultado puede no tener sentido físico. Se recomienda restar sensores del mismo tipo (ej. 2 LVDT horizontales).";
+            } else {
+                aviso.hidden = true;
+            }
         }
         function escala(valor, min, max, destinoMin, destinoMax) {
             if (max === min) return (destinoMin + destinoMax) / 2;
@@ -2318,6 +2479,204 @@
             el("barra-progreso").value = indiceActual;
             el("progress-time").textContent =
                 Number(filas[indiceActual].x_value).toFixed(2) + " s";
+
+            dibujarDiferencia();
+        }
+
+        // ============ GRÁFICA DERIVADA: DIFERENCIA ENTRE 2 SENSORES ============
+        // Versión simplificada del dibujado de arriba (mismo tratamiento de
+        // huecos de tiempo y compresión visual del eje X, sin zoom/arrastre
+        // — no hace falta para una sola gráfica de apoyo) aplicada a un
+        // valor CALCULADO (A − B) en vez de a un canal real de la API.
+        function dibujarDiferencia() {
+            const svg = el("diff-svg");
+            if (!svg) return;
+
+            const mm = el("diff-mm");
+            const vacio = el("diff-empty");
+            const winChip = el("diff-win");
+
+            if (!diffCanalA || !diffCanalB || filas.length === 0) {
+                vacio.style.display = "flex";
+                svg.innerHTML = "";
+                mm.innerHTML = "Max: <span>—</span><br>Min: <span>—</span>";
+                winChip.textContent = "Sin ensayo";
+                return;
+            }
+
+            const recorridas = filas.slice(0, indiceActual + 1);
+            let puntosTodos = recorridas
+                .map(f => ({
+                    x: Number(f.x_value),
+                    y: Number(f.datos[diffCanalA]) - Number(f.datos[diffCanalB])
+                }))
+                .filter(p => Number.isFinite(p.x) && Number.isFinite(p.y));
+
+            // Mismo recorte visual de "Evento sísmico" que las 4 gráficas
+            // principales, para poder comparar la misma ventana de tiempo.
+            if (modoVista === "sismico" && eventoDetectado) {
+                puntosTodos = puntosTodos.filter(p =>
+                    p.x >= eventoDetectado.ventanaIni && p.x <= eventoDetectado.ventanaFin
+                );
+            }
+
+            if (!puntosTodos.length) {
+                vacio.style.display = "flex";
+                svg.innerHTML = "";
+                mm.innerHTML = "Max: <span>—</span><br>Min: <span>—</span>";
+                return;
+            }
+
+            vacio.style.display = "none";
+
+            const terminoVentanaSismica = modoVista === "sismico" && eventoDetectado &&
+                Number(filas[indiceActual]?.x_value) >= eventoDetectado.ventanaFin;
+            const esFinal = indiceActual >= filas.length - 1 || terminoVentanaSismica;
+
+            const puntos = esFinal ? puntosTodos : puntosTodos.slice(-MUESTRAS_VENTANA);
+            if (!puntos.length) return;
+
+            const innerW = 1000;
+            const innerH = 220;
+            const padTop = 18;
+            const padBottom = 28;
+            const yBottom = innerH - padBottom;
+
+            const deltasValidos = [];
+            for (let j = 1; j < puntos.length; j++) {
+                const dt = puntos[j].x - puntos[j - 1].x;
+                if (Number.isFinite(dt) && dt > 0) deltasValidos.push(dt);
+            }
+            const deltasOrdenados = deltasValidos.slice().sort((a, b) => a - b);
+            const deltaMediano = deltasOrdenados.length
+                ? deltasOrdenados[Math.floor(deltasOrdenados.length / 2)]
+                : 1;
+            const MAX_GAP_VISUAL = Math.max(deltaMediano * 8, deltaMediano);
+
+            let xVisualAcumulado = 0;
+            const puntosVis = puntos.map((p, idx) => {
+                if (idx > 0) {
+                    const dtReal = p.x - puntos[idx - 1].x;
+                    const dtSeguro = Number.isFinite(dtReal) && dtReal > 0
+                        ? Math.min(dtReal, MAX_GAP_VISUAL)
+                        : deltaMediano;
+                    xVisualAcumulado += dtSeguro;
+                }
+                return { ...p, visualX: xVisualAcumulado };
+            });
+
+            const xMin = 0;
+            const xMax = Math.max(1, puntosVis.at(-1).visualX);
+
+            const ys = puntosVis.map(p => p.y);
+            // Se incluye el 0 en el rango del eje Y a propósito, aunque
+            // los datos no lleguen hasta ahí — así la línea de referencia
+            // en cero (ver más abajo) siempre queda visible dentro de la
+            // gráfica, no solo cuando la diferencia cambia de signo.
+            let minY = Math.min(...ys, 0);
+            let maxY = Math.max(...ys, 0);
+            if (minY === maxY) {
+                const pad = Math.max(Math.abs(minY) * .08, .01);
+                minY -= pad;
+                maxY += pad;
+            } else {
+                const rango = maxY - minY;
+                const pad = Math.max(rango * .12, Math.abs(maxY) * .002, .001);
+                minY -= pad;
+                maxY += pad;
+            }
+
+            const sx = x => escala(x, xMin, xMax, 0, innerW);
+            const sy = y => escala(y, minY, maxY, yBottom, padTop);
+
+            const gridY = [padTop, padTop + (yBottom - padTop) * .25, padTop + (yBottom - padTop) * .5,
+                padTop + (yBottom - padTop) * .75, yBottom]
+                .map(y => `<line class="linea-grilla" x1="0" y1="${y}" x2="${innerW}" y2="${y}" />`)
+                .join("");
+
+            const xTicks = Math.min(5, Math.max(1, puntosVis.length - 1));
+            let gridX = "";
+            let labelsX = "";
+            for (let t = 0; t <= xTicks; t++) {
+                const objetivoVisual = (xMax / xTicks) * t;
+                let idxTick = 0;
+                let mejorDist = Infinity;
+                for (let k = 0; k < puntosVis.length; k++) {
+                    const dist = Math.abs(puntosVis[k].visualX - objetivoVisual);
+                    if (dist < mejorDist) {
+                        mejorDist = dist;
+                        idxTick = k;
+                    }
+                }
+                const pTick = puntosVis[idxTick];
+                const px = sx(pTick.visualX);
+                gridX += `<line class="linea-grilla" x1="${px}" y1="${padTop}" x2="${px}" y2="${yBottom}" />`;
+                const tiempoTick = Number.isFinite(pTick?.x) ? `${pTick.x.toFixed(1)}s` : "";
+                labelsX += `<text class="graph-axis-label" x="${px}" y="${innerH - 7}"
+                                  text-anchor="${t === 0 ? "start" : t === xTicks ? "end" : "middle"}">${tiempoTick}</text>`;
+            }
+
+            // Morado, distinto de los 4 colores principales (COLORES_HEX),
+            // para que se identifique de un vistazo como "la calculada".
+            const colorDiff = "#a21caf";
+            const defs = `
+                <defs>
+                    <linearGradient id="grad-diff" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="${colorDiff}" stop-opacity=".20"/>
+                        <stop offset="100%" stop-color="${colorDiff}" stop-opacity="0"/>
+                    </linearGradient>
+                </defs>`;
+
+            const lineD = puntosVis.map((p, idx) =>
+                `${idx === 0 ? "M" : "L"}${sx(p.visualX).toFixed(1)},${sy(p.y).toFixed(1)}`
+            ).join(" ");
+
+            const area = puntosVis.length > 1
+                ? `<path d="${lineD} L${sx(puntosVis.at(-1).visualX).toFixed(1)},${yBottom} L${sx(puntosVis[0].visualX).toFixed(1)},${yBottom} Z"
+                         fill="url(#grad-diff)" stroke="none"/>`
+                : "";
+
+            // A diferencia de las 4 gráficas normales (que muestran un
+            // valor directo), acá SÍ importa marcar dónde está el cero:
+            // cruzarlo significa que la diferencia cambió de signo (ej.
+            // el piso de arriba pasó de estar adelante a estar atrás del
+            // de abajo).
+            const yCero = sy(0);
+            const lineaCero = (yCero >= padTop - 1 && yCero <= yBottom + 1)
+                ? `<line class="diff-zero-line" x1="0" y1="${yCero.toFixed(1)}" x2="${innerW}" y2="${yCero.toFixed(1)}" />`
+                : "";
+
+            const linea = `<path d="${lineD}" fill="none"
+                                  stroke="${colorDiff}"
+                                  stroke-width="3"
+                                  vector-effect="non-scaling-stroke"
+                                  stroke-linejoin="round"
+                                  stroke-linecap="round"/>`;
+
+            const ultimo = puntosVis.at(-1);
+            const puntoActual = ultimo
+                ? `<circle class="live-dot" cx="${sx(ultimo.visualX)}" cy="${sy(ultimo.y)}" r="5.2"
+                           fill="${colorDiff}" stroke="#fff" stroke-width="2.5" vector-effect="non-scaling-stroke"/>`
+                : "";
+
+            const maxReal = Math.max(...ys);
+            const minReal = Math.min(...ys);
+            mm.innerHTML = `Max: <span>${maxReal.toFixed(2)}</span><br>Min: <span>${minReal.toFixed(2)}</span>`;
+
+            winChip.textContent = esFinal
+                ? `Ensayo completo · ${puntosVis.length} muestras`
+                : `Últimas ${Math.min(MUESTRAS_VENTANA, puntosTodos.length)} muestras`;
+
+            svg.innerHTML = `
+                ${defs}
+                ${gridY}
+                ${gridX}
+                ${area}
+                ${lineaCero}
+                ${linea}
+                ${puntoActual}
+                ${labelsX}
+            `;
         }
 
         function renderTabla() {
