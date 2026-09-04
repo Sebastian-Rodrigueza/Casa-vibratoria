@@ -2691,43 +2691,23 @@
         addEventListener("resize", resize);
         resize();
 
-        function prettifyName(name, index, type) {
-            let n = (name || "").trim()
-                .replace(/^_?C-/i, "")
-                .replace(/\s*\(Loose Mesh\)\s*/gi, "")
-                .replace(/[._-]+/g, " ")
-                .replace(/\s+/g, " ")
-                .trim();
-
-            if (!n) n = type || "Sensor";
-
-            if (/aceler|acele/i.test(n)) n = n.replace(/aceleHor/gi, "Acelerómetro horizontal").replace(/aceleVer/gi, "Acelerómetro vertical");
-            if (/^Acelerometro$/i.test(n)) n = "Acelerómetro";
-            if (/diaglvdt/i.test(n)) n = n.replace(/diaglvdt/gi, "LVDT diagonal");
-            if (/vertlvdt/i.test(n)) n = n.replace(/vertlvdt/gi, "LVDT vertical");
-            if (/^lvdt$/i.test(n)) n = "LVDT";
-            if (/tubodiag/i.test(n)) n = n.replace(/tubodiag/gi, "LVDT diagonal");
-            if (/tubovert/i.test(n)) n = n.replace(/tubovert/gi, "LVDT vertical");
-
-            // BUG: el número original venía pegado a la palabra sin espacio
-            // (ej. "aceleVer002" → "Acelerómetro vertical002"). Más abajo,
-            // buildSensorEntries() intenta reconocer si el nombre YA trae
-            // un número (para no agregarle otro) buscando un número
-            // separado por espacio al final — como acá no había espacio,
-            // no lo reconocía y terminaba pegándole un segundo número
-            // ("Acelerómetro vertical002 01"). Se separa el número con un
-            // espacio y se normaliza a 2 dígitos para que quede un nombre
-            // corto y limpio ("Acelerómetro vertical 02").
-            const numeroPegado = n.match(/(\d+)$/);
-            if (numeroPegado) {
-                const base = n.slice(0, numeroPegado.index).trim();
-                const numero = String(parseInt(numeroPegado[1], 10)).padStart(2, "0");
-                n = `${base} ${numero}`;
-            }
-
-            const suffix = String(index + 1).padStart(2, "0");
-            if (!/\d/.test(n)) n += ` ${suffix}`;
-            return n;
+        // Código corto de 2 letras para el nombre de cada sensor en la
+        // lista (el número se agrega aparte, en buildSensorEntries, para
+        // que los 47 queden numerados de forma consistente). Mismo
+        // esquema de 2 letras que usa casa.html con los datos reales:
+        // LD/LH/LV para LVDT diagonal/horizontal/vertical, TH para hilos.
+        // OJO con los acelerómetros: la hoja de instrumentación real los
+        // divide en 3 familias (AA/AS/AW) según su posición exacta, algo
+        // que el modelo 3D no distingue — solo trae horizontal/vertical.
+        // Se usa AH/AV como código propio (no es el código oficial de la
+        // hoja, pero es consistente y sí distingue lo que el modelo sabe).
+        function shortCodePrefix(type, rawName = "") {
+            if (type === "Acelerómetro") return /hor/i.test(rawName) ? "AH" : "AV";
+            if (type === "LVDT diagonal") return "LD";
+            if (type === "LVDT horizontal") return "LH";
+            if (type === "LVDT vertical") return "LV";
+            if (type === "Sensor de hilo") return "TH";
+            return "SN";
         }
 
         function detectType(name) {
@@ -2784,6 +2764,7 @@
         function categoryFor(entry) {
             if (entry.type === "Acelerómetro") return "Acelerómetros";
             if (entry.type === "LVDT diagonal") return "LVDT diagonales";
+            if (entry.type === "LVDT horizontal") return "LVDT horizontales";
             if (entry.type === "LVDT vertical") return "LVDT verticales";
             if (entry.type === "Sensor de hilo") return "Sensores de hilo";
             if (entry.type === "LVDT") return "Otros LVDT";
@@ -2869,11 +2850,10 @@
                     entradas.push({
                         id: object.uuid,
                         object,
-                        rawName: `${info.grupo} · ${nombreObjeto}`,
+                        rawName: `${info.grupo} · ${nombreObjeto} — Muro ${info.muro}, Piso ${info.piso}`,
                         type,
-                        label: `${type} — Muro ${info.muro}, Piso ${info.piso}`,
-                        category: categoryFor({ type }),
-                        skipAutoSuffix: true
+                        label: shortCodePrefix(type),
+                        category: categoryFor({ type })
                     });
                 });
             });
@@ -2931,17 +2911,17 @@
             return obj;
         }
 
-        function crearEntradaVirtual(nombreInterno, x, y, z, type, label) {
+        function crearEntradaVirtual(nombreInterno, x, y, z, type, label, rawName, skipAutoSuffix = true) {
             const object = crearMarcadorVirtual(x, y, z, nombreInterno);
             return {
                 id: object.uuid,
                 object,
-                rawName: "Sin malla en el modelo 3D — sobre el plano real del muro",
+                rawName: rawName || "Sin malla en el modelo 3D — sobre el plano real del muro",
                 type,
                 label,
                 category: categoryFor({ type }),
                 esVirtual: true,
-                skipAutoSuffix: true
+                skipAutoSuffix
             };
         }
 
@@ -2964,8 +2944,10 @@
             ];
             extrasDiagVert.forEach((p, i) => {
                 entradas.push(crearEntradaVirtual(
-                    `aux-desp-${i + 1}`, p.x + 0.3, p.y, p.z, "LVDT",
-                    `${p.tipo} extra — Muro ${p.muro}, Piso ${p.piso}`
+                    `aux-desp-${i + 1}`, p.x + 0.3, p.y, p.z, p.tipo,
+                    shortCodePrefix(p.tipo),
+                    `${p.tipo} extra — Muro ${p.muro}, Piso ${p.piso}`,
+                    false
                 ));
             });
 
@@ -2983,8 +2965,10 @@
             ];
             horizontales.forEach((p, i) => {
                 entradas.push(crearEntradaVirtual(
-                    `aux-horiz-${i + 1}`, p.x, p.y, p.z, "LVDT",
-                    `LVDT horizontal — Muro ${p.muro}, ${p.nota}`
+                    `aux-horiz-${i + 1}`, p.x, p.y, p.z, "LVDT horizontal",
+                    shortCodePrefix("LVDT horizontal"),
+                    `LVDT horizontal — Muro ${p.muro}, ${p.nota}`,
+                    false
                 ));
             });
 
@@ -3020,7 +3004,8 @@
             hilos.forEach((p, i) => {
                 entradas.push(crearEntradaVirtual(
                     `aux-cable-${i + 1}`, p.x, p.y, MURO_WDWE_Z, "Sensor de hilo",
-                    `${p.th} — Sensor de hilo (esquina ${p.esquina}, ${p.nota})`
+                    p.th,
+                    `Sensor de hilo — esquina ${p.esquina}, ${p.nota}`
                 ));
             });
 
@@ -3036,14 +3021,14 @@
                 }
             });
 
-            sensorEntries = candidates.map((object, index) => {
+            sensorEntries = candidates.map(object => {
                 const type = detectType(object.name);
                 return {
                     id: object.uuid,
                     object,
                     rawName: object.name,
                     type,
-                    label: prettifyName(object.name, index, type),
+                    label: shortCodePrefix(type, object.name),
                     category: ""
                 };
             });
@@ -3051,18 +3036,25 @@
             sensorEntries.push(...buildEntradasGruposXLvdt());
             sensorEntries.push(...buildEntradasVirtuales());
 
+            // Numeración compartida por código corto (AH, AV, LD, LH, LV):
+            // todas las entradas de un mismo código quedan numeradas en
+            // orden 01, 02, 03... sin importar de cuál de las 3 fuentes
+            // salieron (malla real del modelo, conjuntos "X" o sensores
+            // virtuales) — así los 24 LVDT (8+8+8 repartidos entre esas
+            // fuentes) quedan con una sola numeración corrida por familia,
+            // igual que en la hoja de instrumentación real. Los hilos
+            // (TH01-06) ya traen su número puesto a mano — ver
+            // buildEntradasVirtuales — porque va ligado a una esquina y
+            // altura específicas, no a un simple orden de aparición.
             const counters = {};
             sensorEntries.forEach(entry => {
-                // Las entradas de GRUPOS_X_LVDT ya traen su etiqueta final
-                // (con piso y ubicación); no se les agrega el "01"/"02"
-                // automático que sí necesitan las demás para diferenciarse.
                 if (entry.skipAutoSuffix) {
                     entry.category = categoryFor(entry);
                     return;
                 }
-                const base = entry.label.replace(/\s+\d+$/, "").trim();
+                const base = entry.label;
                 counters[base] = (counters[base] || 0) + 1;
-                entry.label = `${base} ${String(counters[base]).padStart(2, "0")}`;
+                entry.label = `${base}${String(counters[base]).padStart(2, "0")}`;
                 entry.category = categoryFor(entry);
             });
 
