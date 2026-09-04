@@ -838,11 +838,21 @@
                 display: none;
             }
 
-        /* Un poco más compacta que las 4 gráficas principales (150px) —
-           esta es una gráfica de apoyo/análisis, no necesita el mismo
-           protagonismo visual. */
+        /* Ocupa todo el ancho de la página (no está en la cuadrícula 2x2
+           como las 4 principales) — a solo 120px de alto se veía muy
+           "estirada" horizontalmente. 170px da una proporción más normal
+           sin dejar de ser más baja que las principales (que igual son
+           más angostas, al ir 2 por fila). */
         #future-graphs-slot .graph-viewport {
-            height: 120px;
+            height: 170px;
+        }
+
+        /* Es la última tarjeta de la página — sin este espacio de sobra,
+           el botón flotante del chat (fijo abajo a la derecha) le tapaba
+           la esquina y el scroll no dejaba bajar lo suficiente para
+           verla completa. */
+        #future-graphs-slot {
+            margin-bottom: 90px;
         }
 
         .diff-zero-line {
@@ -1404,7 +1414,7 @@
                     <div class="graph-viewport">
                         <div class="graph-window-chip" id="diff-win">Sin ensayo</div>
                         <div class="graph-maxmin" id="diff-mm">Max: <span>—</span><br>Min: <span>—</span></div>
-                        <svg id="diff-svg" viewBox="0 0 1000 120" preserveAspectRatio="none"></svg>
+                        <svg id="diff-svg" viewBox="0 0 1000 170" preserveAspectRatio="none"></svg>
                         <div class="graph-empty" id="diff-empty">Elige los 2 sensores a comparar (A − B).</div>
                     </div>
                 </div>
@@ -2550,9 +2560,9 @@
             const puntos = puntosTodos;
 
             const innerW = 1000;
-            const innerH = 120;
-            const padTop = 12;
-            const padBottom = 22;
+            const innerH = 170;
+            const padTop = 16;
+            const padBottom = 26;
             const yBottom = innerH - padBottom;
 
             const deltasValidos = [];
