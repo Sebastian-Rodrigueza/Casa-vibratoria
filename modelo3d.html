@@ -2993,21 +2993,32 @@
             // como ningún hilo tenía un número en su label, los 6 sacaban
             // el mismo puntaje contra cualquier canal THxx y cuál quedaba
             // pegado a cuál era prácticamente al azar.
-            // OJO con el orden vertical: en la esquina izquierda (W1) sube
-            // TH01→TH02→TH03 de abajo hacia arriba, pero en la esquina
-            // derecha (W4/W5) es al revés — TH04 arriba y va bajando hasta
-            // TH06 abajo (zigzag: sube por una esquina, baja por la otra).
+            // CORRECCIÓN DE MURO: lo de arriba (las 6 sobre el muro WD/WE,
+            // Z=-6) dejaba los hilos en el muro TRASERO de la casa, fuera
+            // de vista en la cámara por defecto. Midiendo la posición real
+            // del objeto "C-mesa" (la mesa vibratoria) en el .glb, su
+            // estructura sobresale del lado del muro W4/W5 (X llega hasta
+            // ~7.1, bastante más allá del muro en X≈4.68) — ahí es donde
+            // arranca el mecanismo de la mesa, no en la parte trasera. Se
+            // reubican los 6 hilos en ESE muro (X = MURO_W45_X fijo),
+            // repartidos entre sus dos esquinas (donde se junta con la
+            // fachada frontal WA en Z≈0, y donde se junta con el muro
+            // trasero WD/WE en Z≈-6) en vez de en el muro WD/WE completo.
+            //
+            // OJO: cuál extremo es TH01-03 y cuál es TH04-06 es mi mejor
+            // intento con esta info — pídeme una captura para confirmar
+            // si quedó al revés otra vez.
             const hilos = [
-                { th: "TH01", x: MURO_W1_X, y: Y_CIMENTACION, esquina: "W1 / WD", nota: "cimentación" },
-                { th: "TH02", x: MURO_W1_X, y: (Y_PISO1_TOP + Y_PISO2_CENTRO) / 2, esquina: "W1 / WD-WE", nota: "piso 1 – piso 2" },
-                { th: "TH03", x: MURO_W1_X, y: Y_PISO2_CENTRO, esquina: "W1 / WE", nota: "piso 2" },
-                { th: "TH04", x: MURO_W45_X, y: Y_PISO2_CENTRO, esquina: "W5 / WE", nota: "piso 2" },
-                { th: "TH05", x: MURO_W45_X, y: (Y_PISO1_TOP + Y_PISO2_CENTRO) / 2, esquina: "W4-W5 / WD-WE", nota: "piso 1 – piso 2" },
-                { th: "TH06", x: MURO_W45_X, y: Y_CIMENTACION, esquina: "W4 / WD", nota: "cimentación" },
+                { th: "TH01", x: MURO_W45_X, z: MURO_WDWE_Z + 0.3, y: Y_CIMENTACION, esquina: "W4-W5 / WD", nota: "cimentación" },
+                { th: "TH02", x: MURO_W45_X, z: MURO_WDWE_Z + 0.3, y: (Y_PISO1_TOP + Y_PISO2_CENTRO) / 2, esquina: "W4-W5 / WD-WE", nota: "piso 1 – piso 2" },
+                { th: "TH03", x: MURO_W45_X, z: MURO_WDWE_Z + 0.3, y: Y_PISO2_CENTRO, esquina: "W4-W5 / WE", nota: "piso 2" },
+                { th: "TH04", x: MURO_W45_X, z: MURO_WA_Z - 0.3, y: Y_CIMENTACION, esquina: "W4-W5 / WA", nota: "cimentación" },
+                { th: "TH05", x: MURO_W45_X, z: MURO_WA_Z - 0.3, y: (Y_PISO1_TOP + Y_PISO2_CENTRO) / 2, esquina: "W4-W5 / WA", nota: "piso 1 – piso 2" },
+                { th: "TH06", x: MURO_W45_X, z: MURO_WA_Z - 0.3, y: Y_PISO2_CENTRO, esquina: "W4-W5 / WA", nota: "piso 2" },
             ];
             hilos.forEach((p, i) => {
                 entradas.push(crearEntradaVirtual(
-                    `aux-cable-${i + 1}`, p.x, p.y, MURO_WDWE_Z, "Sensor de hilo",
+                    `aux-cable-${i + 1}`, p.x, p.y, p.z, "Sensor de hilo",
                     p.th,
                     `Sensor de hilo — esquina ${p.esquina}, ${p.nota}`
                 ));
