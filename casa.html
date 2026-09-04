@@ -838,6 +838,13 @@
                 display: none;
             }
 
+        /* Un poco más compacta que las 4 gráficas principales (150px) —
+           esta es una gráfica de apoyo/análisis, no necesita el mismo
+           protagonismo visual. */
+        #future-graphs-slot .graph-viewport {
+            height: 120px;
+        }
+
         .diff-zero-line {
             stroke: var(--text-muted);
             stroke-width: 1.5;
@@ -1397,7 +1404,7 @@
                     <div class="graph-viewport">
                         <div class="graph-window-chip" id="diff-win">Sin ensayo</div>
                         <div class="graph-maxmin" id="diff-mm">Max: <span>—</span><br>Min: <span>—</span></div>
-                        <svg id="diff-svg" viewBox="0 0 1000 220" preserveAspectRatio="none"></svg>
+                        <svg id="diff-svg" viewBox="0 0 1000 120" preserveAspectRatio="none"></svg>
                         <div class="graph-empty" id="diff-empty">Elige los 2 sensores a comparar (A − B).</div>
                     </div>
                 </div>
@@ -2504,8 +2511,16 @@
                 return;
             }
 
-            const recorridas = filas.slice(0, indiceActual + 1);
-            let puntosTodos = recorridas
+            // BUG: antes se usaba "filas.slice(0, indiceActual+1)" (igual
+            // que las 4 gráficas principales), o sea que hasta no darle
+            // play y que avanzara el cursor de reproducción, solo había 1
+            // muestra — una gráfica casi vacía. Esta es una gráfica de
+            // APOYO/análisis, no de seguimiento en vivo cuadro a cuadro:
+            // debe verse completa apenas se eligen los 2 sensores, así que
+            // usa TODO el ensayo cargado (o toda la ventana del evento
+            // sísmico, filtrada más abajo) sin importar en qué punto vaya
+            // la reproducción.
+            let puntosTodos = filas
                 .map(f => ({
                     x: Number(f.x_value),
                     y: Number(f.datos[diffCanalA]) - Number(f.datos[diffCanalB])
@@ -2529,17 +2544,15 @@
 
             vacio.style.display = "none";
 
-            const terminoVentanaSismica = modoVista === "sismico" && eventoDetectado &&
-                Number(filas[indiceActual]?.x_value) >= eventoDetectado.ventanaFin;
-            const esFinal = indiceActual >= filas.length - 1 || terminoVentanaSismica;
-
-            const puntos = esFinal ? puntosTodos : puntosTodos.slice(-MUESTRAS_VENTANA);
-            if (!puntos.length) return;
+            // Siempre se dibujan TODAS las muestras disponibles (ver nota
+            // de arriba) — no hay ventana móvil de "últimas N muestras"
+            // como en las 4 gráficas principales.
+            const puntos = puntosTodos;
 
             const innerW = 1000;
-            const innerH = 220;
-            const padTop = 18;
-            const padBottom = 28;
+            const innerH = 120;
+            const padTop = 12;
+            const padBottom = 22;
             const yBottom = innerH - padBottom;
 
             const deltasValidos = [];
@@ -2667,9 +2680,9 @@
             const minReal = Math.min(...ys);
             mm.innerHTML = `Max: <span>${maxReal.toFixed(2)}</span><br>Min: <span>${minReal.toFixed(2)}</span>`;
 
-            winChip.textContent = esFinal
-                ? `Ensayo completo · ${puntosVis.length} muestras`
-                : `Últimas ${Math.min(MUESTRAS_VENTANA, puntosTodos.length)} muestras`;
+            winChip.textContent = modoVista === "sismico" && eventoDetectado
+                ? `Evento sísmico completo · ${puntosVis.length} muestras`
+                : `Ensayo completo · ${puntosVis.length} muestras`;
 
             svg.innerHTML = `
                 ${defs}
