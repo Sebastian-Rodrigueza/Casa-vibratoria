@@ -2569,12 +2569,16 @@
             const xMax = Math.max(1, puntosVis.at(-1).visualX);
 
             const ys = puntosVis.map(p => p.y);
-            // Se incluye el 0 en el rango del eje Y a propósito, aunque
-            // los datos no lleguen hasta ahí — así la línea de referencia
-            // en cero (ver más abajo) siempre queda visible dentro de la
-            // gráfica, no solo cuando la diferencia cambia de signo.
-            let minY = Math.min(...ys, 0);
-            let maxY = Math.max(...ys, 0);
+            // BUG: antes se forzaba a incluir el 0 en el rango del eje Y
+            // aunque los datos estuvieran lejos de ahí (ej. una resta
+            // constante en -1.53) — eso dejaba casi toda la gráfica vacía
+            // (del valor real hasta el cero) y la señal aplastada contra
+            // el borde, en vez de aprovechar todo el alto disponible. El
+            // rango ahora se ajusta SOLO a los datos reales (igual que en
+            // las 4 gráficas principales); la línea de cero (más abajo)
+            // solo se dibuja si de verdad cae dentro de ese rango.
+            let minY = Math.min(...ys);
+            let maxY = Math.max(...ys);
             if (minY === maxY) {
                 const pad = Math.max(Math.abs(minY) * .08, .01);
                 minY -= pad;
