@@ -838,21 +838,26 @@
                 display: none;
             }
 
-        /* Ocupa todo el ancho de la página (no está en la cuadrícula 2x2
-           como las 4 principales) — a solo 120px de alto se veía muy
-           "estirada" horizontalmente. 170px da una proporción más normal
-           sin dejar de ser más baja que las principales (que igual son
-           más angostas, al ir 2 por fila). */
-        #future-graphs-slot .graph-viewport {
-            height: 170px;
+        /* Mismo tamaño que las 4 gráficas principales (150px de alto,
+           heredado de .graph-viewport sin sobreescribir nada acá) y
+           centrada en la página en vez de estirarse a todo el ancho —
+           en pantallas grandes ocupa el mismo ancho que una tarjeta de
+           la cuadrícula 2x2 de arriba (50%), centrada; en pantallas
+           angostas (mismo punto de quiebre que esa cuadrícula) pasa a
+           ancho completo, igual que las demás en ese tamaño.
+           También tiene un margen abajo de sobra: al ser la última
+           tarjeta de la página, sin eso el botón flotante del chat
+           (fijo abajo a la derecha) le tapaba la esquina y el scroll no
+           dejaba bajar lo suficiente para verla completa. */
+        #future-graphs-slot {
+            max-width: calc(50% - var(--sp-6) / 2);
+            margin: 0 auto 90px;
         }
 
-        /* Es la última tarjeta de la página — sin este espacio de sobra,
-           el botón flotante del chat (fijo abajo a la derecha) le tapaba
-           la esquina y el scroll no dejaba bajar lo suficiente para
-           verla completa. */
-        #future-graphs-slot {
-            margin-bottom: 90px;
+        @media (max-width: 1200px) {
+            #future-graphs-slot {
+                max-width: 100%;
+            }
         }
 
         .diff-zero-line {
@@ -1414,7 +1419,7 @@
                     <div class="graph-viewport">
                         <div class="graph-window-chip" id="diff-win">Sin ensayo</div>
                         <div class="graph-maxmin" id="diff-mm">Max: <span>—</span><br>Min: <span>—</span></div>
-                        <svg id="diff-svg" viewBox="0 0 1000 170" preserveAspectRatio="none"></svg>
+                        <svg id="diff-svg" viewBox="0 0 1000 150" preserveAspectRatio="none"></svg>
                         <div class="graph-empty" id="diff-empty">Elige los 2 sensores a comparar (A − B).</div>
                     </div>
                 </div>
@@ -2560,9 +2565,9 @@
             const puntos = puntosTodos;
 
             const innerW = 1000;
-            const innerH = 170;
-            const padTop = 16;
-            const padBottom = 26;
+            const innerH = 150;
+            const padTop = 14;
+            const padBottom = 24;
             const yBottom = innerH - padBottom;
 
             const deltasValidos = [];
