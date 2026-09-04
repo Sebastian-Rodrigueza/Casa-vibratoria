@@ -2993,13 +2993,17 @@
             // como ningún hilo tenía un número en su label, los 6 sacaban
             // el mismo puntaje contra cualquier canal THxx y cuál quedaba
             // pegado a cuál era prácticamente al azar.
+            // OJO con el orden vertical: en la esquina izquierda (W1) sube
+            // TH01→TH02→TH03 de abajo hacia arriba, pero en la esquina
+            // derecha (W4/W5) es al revés — TH04 arriba y va bajando hasta
+            // TH06 abajo (zigzag: sube por una esquina, baja por la otra).
             const hilos = [
                 { th: "TH01", x: MURO_W1_X, y: Y_CIMENTACION, esquina: "W1 / WD", nota: "cimentación" },
                 { th: "TH02", x: MURO_W1_X, y: (Y_PISO1_TOP + Y_PISO2_CENTRO) / 2, esquina: "W1 / WD-WE", nota: "piso 1 – piso 2" },
                 { th: "TH03", x: MURO_W1_X, y: Y_PISO2_CENTRO, esquina: "W1 / WE", nota: "piso 2" },
-                { th: "TH04", x: MURO_W45_X, y: Y_CIMENTACION, esquina: "W4 / WD", nota: "cimentación" },
+                { th: "TH04", x: MURO_W45_X, y: Y_PISO2_CENTRO, esquina: "W5 / WE", nota: "piso 2" },
                 { th: "TH05", x: MURO_W45_X, y: (Y_PISO1_TOP + Y_PISO2_CENTRO) / 2, esquina: "W4-W5 / WD-WE", nota: "piso 1 – piso 2" },
-                { th: "TH06", x: MURO_W45_X, y: Y_PISO2_CENTRO, esquina: "W5 / WE", nota: "piso 2" },
+                { th: "TH06", x: MURO_W45_X, y: Y_CIMENTACION, esquina: "W4 / WD", nota: "cimentación" },
             ];
             hilos.forEach((p, i) => {
                 entradas.push(crearEntradaVirtual(
