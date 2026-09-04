@@ -2709,6 +2709,22 @@
             if (/tubodiag/i.test(n)) n = n.replace(/tubodiag/gi, "LVDT diagonal");
             if (/tubovert/i.test(n)) n = n.replace(/tubovert/gi, "LVDT vertical");
 
+            // BUG: el número original venía pegado a la palabra sin espacio
+            // (ej. "aceleVer002" → "Acelerómetro vertical002"). Más abajo,
+            // buildSensorEntries() intenta reconocer si el nombre YA trae
+            // un número (para no agregarle otro) buscando un número
+            // separado por espacio al final — como acá no había espacio,
+            // no lo reconocía y terminaba pegándole un segundo número
+            // ("Acelerómetro vertical002 01"). Se separa el número con un
+            // espacio y se normaliza a 2 dígitos para que quede un nombre
+            // corto y limpio ("Acelerómetro vertical 02").
+            const numeroPegado = n.match(/(\d+)$/);
+            if (numeroPegado) {
+                const base = n.slice(0, numeroPegado.index).trim();
+                const numero = String(parseInt(numeroPegado[1], 10)).padStart(2, "0");
+                n = `${base} ${numero}`;
+            }
+
             const suffix = String(index + 1).padStart(2, "0");
             if (!/\d/.test(n)) n += ` ${suffix}`;
             return n;
@@ -2747,6 +2763,22 @@
                 return "Mide desplazamientos mediante un sistema de hilo o cable. Es útil para registrar movimientos relativos cuando se requiere cubrir una distancia mayor que con un LVDT.";
             }
             return "Sensor de instrumentación utilizado para registrar una variable física durante el ensayo estructural.";
+        }
+
+        // Versión de una sola línea de descriptionForType(), para el
+        // subtítulo de cada sensor en la lista lateral — ahí antes salía
+        // el nombre técnico de la malla 3D (ej. "C-aceleVer002"), que no
+        // le dice nada a quien no conoce el archivo por dentro.
+        function shortDescriptionForType(type) {
+            const t = String(type || "").toLowerCase();
+
+            if (t.includes("aceler")) return "Mide vibración y aceleración de la estructura";
+            if (t.includes("lvdt diagonal")) return "Mide desplazamiento diagonal (cortante)";
+            if (t.includes("lvdt vertical")) return "Mide desplazamiento vertical";
+            if (t.includes("lvdt horizontal") || (t.includes("lvdt") && t.includes("horizontal"))) return "Mide desplazamiento horizontal (deriva)";
+            if (t.includes("lvdt")) return "Mide desplazamiento lineal entre dos puntos";
+            if (t.includes("hilo")) return "Mide desplazamiento con un sistema de hilo o cable";
+            return "Sensor de instrumentación estructural";
         }
 
         function categoryFor(entry) {
@@ -3084,7 +3116,7 @@
                     strong.textContent = entry.label;
 
                     const small = document.createElement("small");
-                    small.textContent = entry.rawName;
+                    small.textContent = shortDescriptionForType(entry.type);
 
                     copy.appendChild(strong);
                     copy.appendChild(small);
