@@ -2956,25 +2956,39 @@
                 ));
             });
 
-            // 6 hilos (TH01-06): todos sobre el muro WD/WE (posterior). El
-            // Excel describe TH02/TH05 como un hilo que va de la altura de
-            // piso 1 (WD) a piso 2 (WE) en ese MISMO muro (WD y WE son la
-            // misma pared física, solo que a distinta altura) — se ubica
-            // en el punto medio de ese tramo. Las dos columnas de X (1.0 y
-            // 1.5) separan el set TH01-03 del set duplicado TH04-06 para
-            // que no queden exactamente encimados.
+            // 6 hilos (TH01-06): van en las 2 ESQUINAS del muro posterior
+            // (WD/WE), 3 alturas en cada una — así los ubica la hoja de
+            // instrumentación (foto: TH01-03 en una esquina, TH04-06 en la
+            // otra, subiendo desde la cimentación hasta piso 2).
+            //
+            // ANTES quedaban los 6 muy juntos hacia la mitad del muro
+            // (X=1.0 y 1.5 nada más, separados por medio metro), lejos de
+            // cualquier esquina real. Se reubican en las esquinas de
+            // verdad: donde el muro posterior se encuentra con cada muro
+            // lateral (mismas X que ya usan los LVDT de esos muros,
+            // MURO_W1_X y MURO_W45_X).
+            //
+            // Además cada uno ahora lleva su nombre real (TH01…TH06) AL
+            // INICIO del label, no solo una descripción genérica. Esto
+            // también arregla el emparejamiento automático con los
+            // canales reales de la API: ese emparejamiento usa el número
+            // que encuentre en el nombre (numericSuffix) para hacer
+            // coincidir "TH0N" del modelo con "TH0N" de la API — antes,
+            // como ningún hilo tenía un número en su label, los 6 sacaban
+            // el mismo puntaje contra cualquier canal THxx y cuál quedaba
+            // pegado a cuál era prácticamente al azar.
             const hilos = [
-                { x: 1.0, y: Y_CIMENTACION, muro: "WD cimentación" },
-                { x: 1.0, y: (Y_PISO1_TOP + Y_PISO2_CENTRO) / 2, muro: "WD piso 1 – WE piso 2" },
-                { x: 1.0, y: Y_PISO2_CENTRO, muro: "WE" },
-                { x: 1.5, y: Y_CIMENTACION, muro: "WD cimentación" },
-                { x: 1.5, y: (Y_PISO1_TOP + Y_PISO2_CENTRO) / 2, muro: "WD piso 1 – WE piso 2" },
-                { x: 1.5, y: Y_PISO2_CENTRO, muro: "WE" },
+                { th: "TH01", x: MURO_W1_X, y: Y_CIMENTACION, esquina: "W1 / WD", nota: "cimentación" },
+                { th: "TH02", x: MURO_W1_X, y: (Y_PISO1_TOP + Y_PISO2_CENTRO) / 2, esquina: "W1 / WD-WE", nota: "piso 1 – piso 2" },
+                { th: "TH03", x: MURO_W1_X, y: Y_PISO2_CENTRO, esquina: "W1 / WE", nota: "piso 2" },
+                { th: "TH04", x: MURO_W45_X, y: Y_CIMENTACION, esquina: "W4 / WD", nota: "cimentación" },
+                { th: "TH05", x: MURO_W45_X, y: (Y_PISO1_TOP + Y_PISO2_CENTRO) / 2, esquina: "W4-W5 / WD-WE", nota: "piso 1 – piso 2" },
+                { th: "TH06", x: MURO_W45_X, y: Y_PISO2_CENTRO, esquina: "W5 / WE", nota: "piso 2" },
             ];
             hilos.forEach((p, i) => {
                 entradas.push(crearEntradaVirtual(
                     `aux-cable-${i + 1}`, p.x, p.y, MURO_WDWE_Z, "Sensor de hilo",
-                    `Sensor de hilo — ${p.muro}`
+                    `${p.th} — Sensor de hilo (esquina ${p.esquina}, ${p.nota})`
                 ));
             });
 
