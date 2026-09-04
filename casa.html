@@ -838,20 +838,19 @@
                 display: none;
             }
 
-        /* Mismo tamaño que las 4 gráficas principales (150px de alto,
-           heredado de .graph-viewport sin sobreescribir nada acá) y
-           centrada en la página en vez de estirarse a todo el ancho —
-           en pantallas grandes ocupa el mismo ancho que una tarjeta de
-           la cuadrícula 2x2 de arriba (50%), centrada; en pantallas
-           angostas (mismo punto de quiebre que esa cuadrícula) pasa a
-           ancho completo, igual que las demás en ese tamaño.
-           También tiene un margen abajo de sobra: al ser la última
-           tarjeta de la página, sin eso el botón flotante del chat
-           (fijo abajo a la derecha) le tapaba la esquina y el scroll no
-           dejaba bajar lo suficiente para verla completa. */
+        /* Mismo alto que las 4 gráficas principales (150px, heredado de
+           .graph-viewport sin sobreescribir nada acá), centrada en la
+           página y un poco más ancha que una sola tarjeta de la
+           cuadrícula 2x2 de arriba (75%, no 100% — sigue sin ser tan
+           protagonista como esas 4). En pantallas angostas (mismo punto
+           de quiebre que esa cuadrícula) pasa a ancho completo.
+           Margen abajo de sobra: al ser la última tarjeta de la página,
+           sin eso el botón flotante del chat (fijo abajo a la derecha)
+           le tapaba la esquina y el scroll no dejaba bajar lo suficiente
+           para verla completa. */
         #future-graphs-slot {
-            max-width: calc(50% - var(--sp-6) / 2);
-            margin: 0 auto 90px;
+            max-width: 75%;
+            margin: 0 auto 160px;
         }
 
         @media (max-width: 1200px) {
@@ -1419,7 +1418,8 @@
                     <div class="graph-viewport">
                         <div class="graph-window-chip" id="diff-win">Sin ensayo</div>
                         <div class="graph-maxmin" id="diff-mm">Max: <span>—</span><br>Min: <span>—</span></div>
-                        <svg id="diff-svg" viewBox="0 0 1000 150" preserveAspectRatio="none"></svg>
+                        <svg id="diff-svg" viewBox="0 0 1000 150" preserveAspectRatio="none"
+                             title="Rueda del mouse: zoom · Arrastrar: mover · Doble clic: restablecer"></svg>
                         <div class="graph-empty" id="diff-empty">Elige los 2 sensores a comparar (A − B).</div>
                     </div>
                 </div>
@@ -1442,6 +1442,13 @@
         // aparte de las 4 principales — ver dibujarDiferencia().
         let diffCanalA = "";
         let diffCanalB = "";
+        // Zoom/arrastre de la gráfica de diferencia — mismo mecanismo que
+        // zoomVentanas/arrastreZoom de las 4 principales (rueda: zoom,
+        // arrastrar: mover, doble clic: restablecer), pero aparte para no
+        // tocar el sistema existente (que indexa por 0-3).
+        let diffZoom = { activo: false, xIni: 0, xFin: 0 };
+        let diffUltimosPuntos = null;
+        let diffArrastre = { activo: false, xInicioArrastre: null, ventanaInicial: null };
         let indiceActual = 0;
         let reproduciendo = false;
         let timerId = null;
@@ -2559,10 +2566,17 @@
 
             vacio.style.display = "none";
 
-            // Siempre se dibujan TODAS las muestras disponibles (ver nota
-            // de arriba) — no hay ventana móvil de "últimas N muestras"
-            // como en las 4 gráficas principales.
-            const puntos = puntosTodos;
+            // Siempre parte de TODAS las muestras disponibles (ver nota de
+            // arriba) — no hay ventana móvil de "últimas N muestras" como
+            // en las 4 gráficas principales — pero si hay un zoom activo
+            // (rueda del mouse) se recorta a esa ventana de tiempo.
+            let puntos;
+            if (diffZoom.activo) {
+                puntos = puntosTodos.filter(p => p.x >= diffZoom.xIni && p.x <= diffZoom.xFin);
+                if (puntos.length < 2) puntos = puntosTodos.slice(-2);
+            } else {
+                puntos = puntosTodos;
+            }
 
             const innerW = 1000;
             const innerH = 150;
@@ -2695,9 +2709,17 @@
             const minReal = Math.min(...ys);
             mm.innerHTML = `Max: <span>${maxReal.toFixed(2)}</span><br>Min: <span>${minReal.toFixed(2)}</span>`;
 
-            winChip.textContent = modoVista === "sismico" && eventoDetectado
-                ? `Evento sísmico completo · ${puntosVis.length} muestras`
-                : `Ensayo completo · ${puntosVis.length} muestras`;
+            winChip.textContent = diffZoom.activo
+                ? `Zoom · ${puntosVis.length} muestras · rueda: zoom, arrastrar: mover, doble clic: restablecer`
+                : modoVista === "sismico" && eventoDetectado
+                    ? `Evento sísmico completo · ${puntosVis.length} muestras`
+                    : `Ensayo completo · ${puntosVis.length} muestras`;
+
+            // Se guardan (con su tiempo real, no solo la posición visual)
+            // para que el zoom con la rueda del mouse pueda traducir dónde
+            // quedó el cursor a un instante del ensayo — igual que
+            // ultimosPuntosRenderizados en las 4 gráficas principales.
+            diffUltimosPuntos = puntosVis;
 
             svg.innerHTML = `
                 ${defs}
@@ -2709,6 +2731,103 @@
                 ${puntoActual}
                 ${labelsX}
             `;
+        }
+
+        // ============ ZOOM / ARRASTRE DE LA GRÁFICA DE DIFERENCIA ============
+        // Mismo mecanismo que manejarZoomRueda/iniciarArrastreZoom de las 4
+        // gráficas principales (rueda: acercar/alejar, arrastrar: mover,
+        // doble clic: restablecer), reimplementado aparte porque aquellas
+        // funciones indexan por posición (0-3) en arreglos de tamaño fijo
+        // y esta es una sola gráfica suelta, no parte de ese arreglo.
+        function tiempoEnFraccionDiff(fraccion) {
+            const puntos = diffUltimosPuntos;
+            if (!puntos || !puntos.length) return null;
+            const idx = Math.max(0, Math.min(puntos.length - 1, Math.round(fraccion * (puntos.length - 1))));
+            return puntos[idx].x;
+        }
+        function manejarZoomRuedaDiff(evento) {
+            evento.preventDefault();
+            const puntos = diffUltimosPuntos;
+            if (!puntos || puntos.length < 2) return;
+
+            const svg = el("diff-svg");
+            const rect = svg.getBoundingClientRect();
+            const fraccionCursor = Math.max(0, Math.min(1, (evento.clientX - rect.left) / rect.width));
+            const tiempoCursor = tiempoEnFraccionDiff(fraccionCursor);
+            if (tiempoCursor === null) return;
+
+            const xMinTotal = puntos[0].x;
+            const xMaxTotal = puntos.at(-1).x;
+            const anchoTotal = xMaxTotal - xMinTotal;
+            if (anchoTotal <= 0) return;
+
+            const xIniActual = diffZoom.activo ? diffZoom.xIni : xMinTotal;
+            const xFinActual = diffZoom.activo ? diffZoom.xFin : xMaxTotal;
+            const anchoActual = xFinActual - xIniActual;
+
+            // Rueda hacia arriba = acercar; rueda hacia abajo = alejar.
+            const factor = evento.deltaY < 0 ? 0.8 : 1.25;
+            const anchoMinimo = Math.max(anchoTotal * 0.001, 0.0005);
+            let nuevoAncho = Math.max(anchoMinimo, Math.min(anchoTotal, anchoActual * factor));
+
+            let nuevoIni = tiempoCursor - (tiempoCursor - xIniActual) * (nuevoAncho / anchoActual);
+            let nuevoFin = nuevoIni + nuevoAncho;
+
+            if (nuevoIni < xMinTotal) { nuevoIni = xMinTotal; nuevoFin = nuevoIni + nuevoAncho; }
+            if (nuevoFin > xMaxTotal) { nuevoFin = xMaxTotal; nuevoIni = nuevoFin - nuevoAncho; }
+
+            if (nuevoAncho >= anchoTotal * 0.995) {
+                diffZoom = { activo: false, xIni: 0, xFin: 0 };
+            } else {
+                diffZoom = { activo: true, xIni: nuevoIni, xFin: nuevoFin };
+            }
+            dibujarDiferencia();
+        }
+        function iniciarArrastreZoomDiff(evento) {
+            if (!diffZoom.activo) return;
+            evento.preventDefault();
+            diffArrastre = {
+                activo: true,
+                xInicioArrastre: evento.clientX,
+                ventanaInicial: { ...diffZoom },
+            };
+        }
+        function moverArrastreZoomDiff(evento) {
+            if (!diffArrastre.activo) return;
+            const { xInicioArrastre, ventanaInicial } = diffArrastre;
+            const puntos = diffUltimosPuntos;
+            if (!puntos || !puntos.length) return;
+
+            const svg = el("diff-svg");
+            const rect = svg.getBoundingClientRect();
+            const ancho = ventanaInicial.xFin - ventanaInicial.xIni;
+            const deltaPixeles = evento.clientX - xInicioArrastre;
+            const deltaTiempo = -(deltaPixeles / rect.width) * ancho;
+
+            const xMinTotal = puntos[0].x;
+            const xMaxTotal = puntos.at(-1).x;
+
+            let nuevoIni = ventanaInicial.xIni + deltaTiempo;
+            let nuevoFin = ventanaInicial.xFin + deltaTiempo;
+
+            if (nuevoIni < xMinTotal) { nuevoIni = xMinTotal; nuevoFin = nuevoIni + ancho; }
+            if (nuevoFin > xMaxTotal) { nuevoFin = xMaxTotal; nuevoIni = nuevoFin - ancho; }
+
+            diffZoom = { activo: true, xIni: nuevoIni, xFin: nuevoFin };
+            dibujarDiferencia();
+        }
+        function terminarArrastreZoomDiff() {
+            diffArrastre = { activo: false, xInicioArrastre: null, ventanaInicial: null };
+        }
+        function configurarZoomDiferencia() {
+            const svg = el("diff-svg");
+            if (!svg) return;
+            svg.addEventListener("wheel", manejarZoomRuedaDiff, { passive: false });
+            svg.addEventListener("mousedown", iniciarArrastreZoomDiff);
+            svg.addEventListener("dblclick", () => {
+                diffZoom = { activo: false, xIni: 0, xFin: 0 };
+                dibujarDiferencia();
+            });
         }
 
         function renderTabla() {
@@ -2961,6 +3080,9 @@
         // momentáneamente del área de la gráfica mientras se mueve.
         document.addEventListener("mousemove", moverArrastreZoom);
         document.addEventListener("mouseup", terminarArrastreZoom);
+        document.addEventListener("mousemove", moverArrastreZoomDiff);
+        document.addEventListener("mouseup", terminarArrastreZoomDiff);
+        configurarZoomDiferencia();
 
         // Estado inicial de la demo: gráficas armadas y vacías, lista de
         // ensayos cargada, pero SIN dibujar ni reproducir nada hasta que
