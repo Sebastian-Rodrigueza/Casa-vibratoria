@@ -22,3 +22,14 @@ Webscraping/
 # Proyecto aparte de nube de puntos (9+ GB, ningun html del sitio
 # lo usa) - GitHub no admite archivos de ese tamano de todos modos
 NubePuntos/
+
+# Datos crudos originales de la cuenca del rio Sinu (744MB: shapefiles,
+# DEM en .tif, geodatabase). RioSinu.html usa las versiones livianas ya
+# convertidas en rio_sinu_data/ (esas si van al repo); esta carpeta cruda
+# se queda solo local, nunca se sube.
+Sinu (2)/
+
+# GeoTIFF pesados (>100MB, el limite duro de GitHub por archivo).
+# Se quedan locales hasta que se decida donde hospedarlos de verdad
+# (Vercel u otro storage) - Mapa.html los carga por URL cuando existen.
+capas_pesadas/

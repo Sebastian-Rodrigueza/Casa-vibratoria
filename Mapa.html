@@ -1617,6 +1617,11 @@
                      border-color: var(--yellow-dark);
                  }
 
+                 .gdb-btn-activo {
+                     background: var(--yellow);
+                     border-color: var(--yellow-dark);
+                 }
+
                  .gdb-btn svg {
                      width: 16px;
                      height: 16px;
@@ -2235,15 +2240,15 @@
                     </svg>
                     <span class="upload-dropzone-title">Arrastra archivos aquí o haz clic para seleccionar</span>
                     <span class="upload-dropzone-hint">
-                        El visor carga GeoJSON, JSON de ArcGIS, KML, GPX, CSV, Shapefile, GeoPackage (.gpkg)
-                        y File Geodatabase (.gdb). Para .gdb utiliza los botones inferiores y el conversor
-                        local incluido. PDF e imágenes quedan como documentos de referencia.
+                        El visor carga GeoJSON, JSON de ArcGIS, KML, GPX, CSV, Shapefile, GeoTIFF (.tif/.tiff),
+                        GeoPackage (.gpkg) y File Geodatabase (.gdb). Para .gdb utiliza los botones inferiores
+                        y el conversor local incluido. PDF e imágenes quedan como documentos de referencia.
                     </span>
                     <input id="uploadInput"
                            type="file"
                            multiple
                            hidden
-                           accept=".geojson,.json,.kml,.gpx,.csv,.zip,.shp,.dbf,.shx,.prj,.cpg,.gpkg,.pdf,.png,.jpg,.jpeg">
+                           accept=".geojson,.json,.kml,.gpx,.csv,.zip,.shp,.dbf,.shx,.prj,.cpg,.gpkg,.tif,.tiff,.pdf,.png,.jpg,.jpeg">
                 </label>
 
                 <div class="gdb-tools">
@@ -2283,8 +2288,21 @@
                 <ul class="upload-list" id="uploadList"></ul>
 
                 <p class="upload-note">
-                    GeoJSON, KML, GPX, CSV y Shapefile se procesan en el navegador.
+                    GeoJSON, KML, GPX, CSV, Shapefile y GeoTIFF se procesan en el navegador.
                     Las carpetas File Geodatabase (.gdb) se convierten mediante el servidor local incluido.
+                </p>
+
+                <div class="gdb-tools">
+                    <button class="gdb-btn" type="button" id="btnCapaLandsat">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path d="M4 4h16v16H4Z" /><path d="m4 15 4-4 4 4 4-6 4 4" />
+                        </svg>
+                        Landsat 1985 (COG)
+                    </button>
+                </div>
+                <p class="gdb-server-state" id="landsatEstado">
+                    Capa de referencia (333MB) — se carga por URL, no por
+                    arrastre; necesita que el sitio esté servido (no doble clic).
                 </p>
             </div>
         </section>
@@ -2363,6 +2381,9 @@
     <script src="https://cdn.jsdelivr.net/npm/shpjs@6.1.0/dist/shp.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+    <!-- Requieren que L (Leaflet) ya exista, por eso van despues -->
+    <script src="https://cdn.jsdelivr.net/npm/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/georaster-layer-for-leaflet@3/dist/georaster-layer-for-leaflet.min.js"></script>
 
     <script>
         (() => {
@@ -5251,7 +5272,7 @@
                 const extension = file.name.split(".").pop().toLowerCase();
                 const spatialExtensions = new Set([
                     "geojson", "json", "kml", "gpx", "csv", "zip",
-                    "shp", "dbf", "shx", "prj", "cpg", "gpkg"
+                    "shp", "dbf", "shx", "prj", "cpg", "gpkg", "tif", "tiff"
                 ]);
                 const isSpatial = spatialExtensions.has(extension);
 
@@ -5310,6 +5331,11 @@
                     li.querySelector(".upload-item-remove")
                 );
 
+                if (extension === "tif" || extension === "tiff") {
+                    addRasterLayer(id, file, li, loadingTag);
+                    return;
+                }
+
                 readSpatialFile(file)
                     .then((result) => {
                         loadingTag.remove();
@@ -5332,6 +5358,151 @@
                     });
             }
 
+            /* ==================================================
+               GEOTIFF (.tif / .tiff) — 100% EN EL NAVEGADOR
+               --------------------------------------------------
+               Se lee el archivo real (georaster hace el parseo con
+               geotiff.js por dentro), sin convertirlo a imagen ni
+               perder valores. Como el usuario lo selecciona con el
+               input de archivo (no es un fetch a una URL), no hace
+               falta servidor: File.arrayBuffer() funciona igual
+               abriendo el HTML con doble clic.
+               ================================================== */
+
+            function colorRampGenerico(valor, min, max) {
+                if (valor === null || valor === undefined || Number.isNaN(valor)) return null;
+                const t = Math.max(0, Math.min(1, (valor - min) / ((max - min) || 1)));
+                // Rampa oscuro -> amarillo Uniandes -> claro, generica para
+                // cualquier variable (elevacion, temperatura, indice, etc).
+                const paradas = [
+                    [0, [30, 50, 90]], [.5, [245, 196, 0]], [1, [255, 250, 235]]
+                ];
+                let i = 0;
+                while (i < paradas.length - 2 && t > paradas[i + 1][0]) i++;
+                const [t0, c0] = paradas[i], [t1, c1] = paradas[i + 1];
+                const f = (t - t0) / ((t1 - t0) || 1);
+                const r = Math.round(c0[0] + (c1[0] - c0[0]) * f);
+                const g = Math.round(c0[1] + (c1[1] - c0[1]) * f);
+                const b = Math.round(c0[2] + (c1[2] - c0[2]) * f);
+                return `rgba(${r},${g},${b},.8)`;
+            }
+
+            async function addRasterLayer(id, file, li, loadingTag) {
+                try {
+                    if (typeof parseGeoraster !== "function" || typeof GeoRasterLayer !== "function") {
+                        throw new Error("no se pudieron cargar las librerías de GeoTIFF (revisa tu conexión a internet).");
+                    }
+
+                    const buffer = await file.arrayBuffer();
+                    const georaster = await parseGeoraster(buffer);
+                    const numBandas = georaster.numberOfRasterBands;
+
+                    const layer = new GeoRasterLayer({
+                        georaster,
+                        pane: "uploadedDataPane",
+                        resolution: 128,
+                        pixelValuesToColorFn: numBandas >= 3
+                            ? undefined // 3+ bandas: se pinta como RGB tal cual (ortofoto, imagen satelital)
+                            : (valores) => colorRampGenerico(valores[0], georaster.mins[0], georaster.maxs[0])
+                    });
+
+                    layer.addTo(map);
+
+                    const bounds = layer.getBounds();
+
+                    if (!bounds.isValid || !bounds.isValid()) {
+                        map.removeLayer(layer);
+                        throw new Error("el GeoTIFF no tiene una extensión geográfica válida.");
+                    }
+
+                    loadingTag.remove();
+                    uploadedLayers.set(id, layer);
+                    layersControl.addOverlay(layer, file.name);
+
+                    const tag = document.createElement("span");
+                    tag.className = "upload-item-tag";
+                    tag.textContent = numBandas >= 3
+                        ? `Ráster RGB · ${georaster.width}×${georaster.height}px`
+                        : `Ráster 1 banda · rango ${georaster.mins[0].toFixed(1)} a ${georaster.maxs[0].toFixed(1)}`;
+                    li.insertBefore(tag, li.querySelector(".upload-item-remove"));
+
+                    setTimeout(() => {
+                        map.invalidateSize(true);
+                        map.fitBounds(bounds, { padding: [45, 45], animate: false });
+                    }, 120);
+
+                    showToast(`${file.name}: GeoTIFF cargado con sus valores originales.`);
+
+                } catch (error) {
+                    loadingTag.textContent = "Error de capa";
+                    loadingTag.classList.remove("upload-item-loading");
+                    loadingTag.classList.add("upload-item-error");
+
+                    console.error("Error al cargar GeoTIFF:", error);
+                    showToast(`${file.name}: ${error.message || "no fue posible leer el GeoTIFF."}`);
+                }
+            }
+
+            /* ==================================================
+               CAPAS DE REFERENCIA (GeoTIFF por URL, no por arrastre)
+               --------------------------------------------------
+               Para archivos pesados que vienen con el sitio (no los
+               sube cada usuario). Se cargan con parseGeoraster(url):
+               si el .tif es un COG y el sitio esta servido por http(s)
+               (Vercel, GitHub Pages...), el navegador solo pide los
+               pedazos/resolucion que necesita en cada zoom, en vez de
+               bajar el archivo completo. Abriendo el HTML con doble
+               clic (file://) esto no funciona -- fetch() de un archivo
+               local esta bloqueado por Chrome sin importar el tamano.
+               ================================================== */
+
+            let capaLandsat = null;
+
+            async function alternarCapaLandsat() {
+                const boton = document.getElementById("btnCapaLandsat");
+                const estado = document.getElementById("landsatEstado");
+                const textoOriginal = estado.textContent;
+
+                if (capaLandsat) {
+                    map.removeLayer(capaLandsat);
+                    layersControl.removeLayer(capaLandsat);
+                    capaLandsat = null;
+                    boton.classList.remove("gdb-btn-activo");
+                    estado.textContent = textoOriginal;
+                    return;
+                }
+
+                boton.disabled = true;
+                estado.textContent = "Cargando Landsat 1985 (puede tardar unos segundos)…";
+
+                try {
+                    const georaster = await parseGeoraster("capas_pesadas/img_1985_Landsat_cog.tif");
+                    capaLandsat = new GeoRasterLayer({
+                        georaster,
+                        pane: "uploadedDataPane",
+                        resolution: 128
+                        // 6 bandas -> se pinta como RGB tal cual, sin rampa de color
+                    });
+                    capaLandsat.addTo(map);
+                    layersControl.addOverlay(capaLandsat, "Landsat 1985 (COG)");
+
+                    map.invalidateSize(true);
+                    map.fitBounds(capaLandsat.getBounds(), { padding: [45, 45] });
+
+                    boton.classList.add("gdb-btn-activo");
+                    estado.textContent = "Landsat 1985 cargado.";
+                    showToast("Landsat 1985 (COG): capa de referencia cargada.");
+                } catch (error) {
+                    console.error("Error al cargar la capa de referencia Landsat:", error);
+                    estado.textContent =
+                        "No se pudo cargar (revisa que el sitio esté servido por http, no abierto con doble clic). " +
+                        textoOriginal;
+                } finally {
+                    boton.disabled = false;
+                }
+            }
+
+            document.getElementById("btnCapaLandsat").addEventListener("click", alternarCapaLandsat);
 
             /* ==================================================
                FILE GEODATABASE (.GDB)

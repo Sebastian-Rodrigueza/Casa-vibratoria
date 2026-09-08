@@ -43,14 +43,14 @@
         });
     });
 
-    // La tarjeta de Geodata Bogotá completa también es seleccionable
+    // La tarjeta de Río Sinú completa también es seleccionable
     // (clic en cualquier parte de la tarjeta, o Enter con el teclado).
     if (cardBogota) {
-        cardBogota.addEventListener("click", () => accionTemporal("Geodata Bogotá"));
+        cardBogota.addEventListener("click", () => accionTemporal("Río Sinú"));
 
         cardBogota.addEventListener("keydown", (evento) => {
             if (evento.key === "Enter") {
-                accionTemporal("Geodata Bogotá");
+                accionTemporal("Río Sinú");
             }
         });
     }

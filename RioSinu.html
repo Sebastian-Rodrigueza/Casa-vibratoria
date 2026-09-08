@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Geodata Río Sinú | Universidad de los Andes</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --white: #ffffff;
+        --cream: #fffdf6;
+        --beige: #fdf7e9;
+        --yellow: #f5c400;
+        --yellow-dark: #d7aa00;
+        --charcoal: #26292d;
+        --text: #34383d;
+        --muted: #70757b;
+        --line: #e5e5de;
+        --shadow: 0 18px 46px rgba(35,37,40,.16);
+        --radius: 16px;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        font-family: "Inter", sans-serif;
+        color: var(--text);
+        background: var(--beige);
+    }
+
+    /* ---------- Barra superior ---------- */
+    header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 10px 24px;
+        background: var(--yellow);
+        color: var(--charcoal);
+        position: relative;
+        z-index: 1000;
+        box-shadow: var(--shadow);
+    }
+    header a.volver {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--charcoal);
+        text-decoration: none;
+        font-weight: 700;
+        font-size: .95rem;
+        opacity: .8;
+        transition: opacity .15s;
+    }
+    header a.volver:hover { opacity: 1; }
+    header a.volver svg { width: 18px; height: 18px; }
+    header .titulo {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    header .titulo strong {
+        font-size: 1.05rem;
+        letter-spacing: .01em;
+        color: var(--charcoal);
+    }
+    header .titulo span {
+        font-size: .78rem;
+        color: var(--charcoal);
+        opacity: .75;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+    }
+    header .logo-uniandes {
+        width: 110px;
+        display: flex;
+        justify-content: flex-end;
+    }
+    header .logo-uniandes .chip {
+        display: flex;
+        align-items: center;
+        background: var(--white);
+        border-radius: 10px;
+        padding: 5px 10px;
+        box-shadow: 0 4px 10px rgba(0,0,0,.1);
+    }
+    header .logo-uniandes img {
+        height: 26px;
+        width: auto;
+        display: block;
+    }
+
+    /* ---------- Layout principal ---------- */
+    .layout {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        height: calc(100vh - 58px);
+    }
+    @media (max-width: 900px) {
+        html, body { overflow: auto; }
+        .layout { grid-template-columns: 1fr; height: auto; }
+        .mapa-wrap, #mapa { height: 62vh; }
+    }
+
+    /* ---------- Panel lateral ---------- */
+    .panel {
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        padding: 18px 16px 32px;
+        background: var(--cream);
+        border-right: 1px solid var(--line);
+    }
+    .panel h2 {
+        font-size: .78rem;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        color: var(--muted);
+        margin: 18px 0 8px;
+    }
+    .panel h2:first-child { margin-top: 0; }
+    .capa-item {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 6px 8px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: .88rem;
+        line-height: 1.25;
+    }
+    .capa-item:hover { background: var(--beige); }
+    .capa-item input { accent-color: var(--yellow-dark); width: 15px; height: 15px; flex-shrink: 0; }
+    .swatch {
+        width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
+        border: 1px solid rgba(0,0,0,.25);
+    }
+    .capa-item .nombre { flex: 1; }
+    .capa-item .conteo { color: var(--muted); font-size: .75rem; }
+
+    .ficha {
+        margin-top: 8px;
+        padding: 12px;
+        background: var(--white);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        font-size: .82rem;
+        color: var(--muted);
+        line-height: 1.5;
+    }
+    .ficha code {
+        background: var(--beige);
+        border-radius: 5px;
+        padding: 1px 5px;
+        font-size: .78rem;
+        color: var(--charcoal);
+    }
+
+    /* ---------- Mapa ---------- */
+    .mapa-wrap { position: relative; width: 100%; height: 100%; }
+    #mapa { width: 100%; height: 100%; background: #0a0e14; }
+    .leaflet-popup-content { font-family: "Inter", sans-serif; font-size: .85rem; }
+    .leaflet-popup-content b { color: var(--charcoal); }
+
+    /* ---------- Barrido de radar (decorativo) ---------- */
+    .mapa-scan {
+        position: absolute;
+        inset: 0;
+        z-index: 350; /* encima de los tiles del mapa, debajo de las capas de datos */
+        pointer-events: none;
+        mix-blend-mode: screen;
+        background: conic-gradient(from 0deg,
+            rgba(245, 196, 0, 0) 0deg,
+            rgba(245, 196, 0, .16) 14deg,
+            rgba(245, 196, 0, 0) 34deg,
+            rgba(245, 196, 0, 0) 360deg);
+        animation: girar-radar 6s linear infinite;
+    }
+    @keyframes girar-radar {
+        to { transform: rotate(360deg); }
+    }
+
+    /* ---------- HUD de datos en vivo ---------- */
+    .hud {
+        position: absolute;
+        left: 16px;
+        bottom: 16px;
+        z-index: 460;
+        min-width: 216px;
+        padding: 12px 14px 10px;
+        background: rgba(10, 14, 20, .82);
+        border: 1px solid rgba(245, 196, 0, .35);
+        border-radius: 12px;
+        backdrop-filter: blur(6px);
+        box-shadow: 0 12px 30px rgba(0,0,0,.35);
+        font-family: "SFMono-Regular", "Consolas", "Menlo", monospace;
+        color: #d7ddea;
+        pointer-events: none;
+    }
+    .hud-cabeza {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: .68rem;
+        letter-spacing: .12em;
+        font-weight: 700;
+        color: var(--yellow);
+        margin-bottom: 8px;
+    }
+    .hud-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #3ddc84;
+        box-shadow: 0 0 0 0 rgba(61,220,132,.6);
+        animation: pulso-hud 1.8s ease-out infinite;
+    }
+    @keyframes pulso-hud {
+        0% { box-shadow: 0 0 0 0 rgba(61,220,132,.55); }
+        70% { box-shadow: 0 0 0 7px rgba(61,220,132,0); }
+        100% { box-shadow: 0 0 0 0 rgba(61,220,132,0); }
+    }
+    .hud-linea {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        font-size: .72rem;
+        line-height: 1.75;
+        color: #9aa4b8;
+        white-space: nowrap;
+    }
+    .hud-linea b {
+        color: #eef1f6;
+        font-weight: 600;
+    }
+    .hud-pie {
+        margin-top: 8px;
+        padding-top: 7px;
+        border-top: 1px dashed rgba(255,255,255,.14);
+        font-size: .62rem;
+        color: #6b7488;
+        letter-spacing: .02em;
+    }
+    @media (max-width: 900px) {
+        .hud { left: 10px; bottom: 10px; min-width: 180px; }
+    }
+
+</style>
+</head>
+<body>
+
+<header>
+    <a class="volver" href="Index.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Portal
+    </a>
+    <div class="titulo">
+        <strong>Geodata Río Sinú</strong>
+        <span>Cuenca hidrográfica · Córdoba</span>
+    </div>
+    <div class="logo-uniandes">
+        <span class="chip">
+            <img src="Imagenes/logo-uniandes.png" alt="Universidad de los Andes">
+        </span>
+    </div>
+</header>
+
+<div class="layout">
+    <div class="panel">
+
+        <h2>Terreno</h2>
+        <label class="capa-item">
+            <input type="checkbox" id="chk-dem" data-capa="dem">
+            <span class="swatch" style="background:linear-gradient(90deg,#0e4d32 20%,#a9c96e 50%,#c98c4a 75%,#efe6d8 100%);"></span>
+            <span class="nombre">DEM real (.tif)</span>
+        </label>
+        <div class="ficha" id="dem-aviso">
+            Lee el <code>.tif</code> real, puede tardar unos segundos en
+            cargar.
+        </div>
+
+        <h2>Cuenca</h2>
+        <label class="capa-item">
+            <input type="checkbox" data-capa="cuenca" checked>
+            <span class="swatch" style="background:transparent;border-color:#e08b1c;border-width:2px;"></span>
+            <span class="nombre">Límite de la cuenca</span>
+        </label>
+        <label class="capa-item">
+            <input type="checkbox" data-capa="subcuencas">
+            <span class="swatch" style="background:transparent;border-color:#4a7fa5;"></span>
+            <span class="nombre">Subcuencas</span>
+            <span class="conteo" id="cnt-subcuencas"></span>
+        </label>
+
+        <h2>Áreas protegidas</h2>
+        <label class="capa-item">
+            <input type="checkbox" data-capa="parquePNN">
+            <span class="swatch" style="background:#2f8f4e;"></span>
+            <span class="nombre">Parque Nal. Paramillo</span>
+        </label>
+        <label class="capa-item">
+            <input type="checkbox" data-capa="sinapPNN">
+            <span class="swatch" style="background:#5cb377;"></span>
+            <span class="nombre">Otros SINAP (recorte)</span>
+            <span class="conteo" id="cnt-sinap"></span>
+        </label>
+        <label class="capa-item">
+            <input type="checkbox" data-capa="reservasCiviles">
+            <span class="swatch" style="background:#8bd19e;"></span>
+            <span class="nombre">Reservas soc. civil</span>
+            <span class="conteo" id="cnt-reservas"></span>
+        </label>
+        <label class="capa-item">
+            <input type="checkbox" data-capa="dmi">
+            <span class="swatch" style="background:#b7e0a8;"></span>
+            <span class="nombre">Distrito manejo integrado</span>
+        </label>
+        <label class="capa-item">
+            <input type="checkbox" data-capa="conservacionSuelo">
+            <span class="swatch" style="background:#d8edb0;"></span>
+            <span class="nombre">Conservación de suelo</span>
+        </label>
+
+        <h2>Agua</h2>
+        <label class="capa-item">
+            <input type="checkbox" data-capa="clasificacionAgua" checked>
+            <span class="swatch" style="background:linear-gradient(90deg,#1c6fb0 50%,#2f8f4e 50%);"></span>
+            <span class="nombre">Clasificación lótico / léntico</span>
+            <span class="conteo" id="cnt-agua"></span>
+        </label>
+        <label class="capa-item">
+            <input type="checkbox" data-capa="embalses">
+            <span class="swatch" style="background:#1c6fb0;"></span>
+            <span class="nombre">Embalses</span>
+        </label>
+        <label class="capa-item">
+            <input type="checkbox" data-capa="lagunas">
+            <span class="swatch" style="background:#2fa3b0;"></span>
+            <span class="nombre">Lagunas / ciénagas</span>
+            <span class="conteo" id="cnt-lagunas"></span>
+        </label>
+
+        <h2>Infraestructura</h2>
+        <label class="capa-item">
+            <input type="checkbox" data-capa="poblaciones">
+            <span class="swatch" style="background:#b48a3f;"></span>
+            <span class="nombre">Cabeceras / poblaciones</span>
+            <span class="conteo" id="cnt-poblaciones"></span>
+        </label>
+        <label class="capa-item">
+            <input type="checkbox" data-capa="vias">
+            <span class="swatch" style="background:#8a8a86;"></span>
+            <span class="nombre">Vías principales</span>
+        </label>
+        <label class="capa-item">
+            <input type="checkbox" data-capa="puentes">
+            <span class="swatch" style="background:#6b6b68;"></span>
+            <span class="nombre">Puentes</span>
+        </label>
+        <label class="capa-item">
+            <input type="checkbox" data-capa="plantasTratamiento">
+            <span class="swatch" style="background:#2fb0a3;"></span>
+            <span class="nombre">Plantas de tratamiento</span>
+        </label>
+        <label class="capa-item">
+            <input type="checkbox" data-capa="rellenoSanitario">
+            <span class="swatch" style="background:#a4432f;"></span>
+            <span class="nombre">Rellenos sanitarios</span>
+        </label>
+
+        <h2>Suelo</h2>
+        <label class="capa-item">
+            <input type="checkbox" data-capa="claseSuelo">
+            <span class="swatch" style="background:linear-gradient(90deg,#e2c66a 33%,#c98c4a 33% 66%,#8f6b46 66%);"></span>
+            <span class="nombre">Clase agrológica del suelo</span>
+            <span class="conteo" id="cnt-suelo"></span>
+        </label>
+
+        <div class="ficha">
+            Datos propios de la cuenca del río Sinú (delimitación, áreas
+            protegidas, infraestructura y clasificación satelital de
+            cuerpos de agua). Haz clic en cualquier elemento del mapa
+            para ver su ficha.
+        </div>
+
+    </div>
+
+    <div class="mapa-wrap">
+        <div id="mapa"></div>
+        <div class="mapa-scan" aria-hidden="true"></div>
+
+        <div class="hud" id="hud">
+            <div class="hud-cabeza">
+                <span class="hud-dot"></span>
+                SISTEMA ACTIVO
+            </div>
+            <div class="hud-linea"><span>Cuenca</span><b id="hud-area">—</b></div>
+            <div class="hud-linea"><span>Subcuencas</span><b id="hud-subcuencas">—</b></div>
+            <div class="hud-linea"><span>Cuerpos de agua</span><b id="hud-agua">—</b></div>
+            <div class="hud-linea"><span>Áreas protegidas</span><b id="hud-protegidas">—</b></div>
+            <div class="hud-linea"><span>Infraestructura</span><b id="hud-infra">—</b></div>
+            <div class="hud-pie" id="hud-hora">datos cargados —</div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<!-- Leen el .tif real (valores de elevacion originales, nada convertido)
+     directo en el navegador. Necesitan que la pagina se abra con un
+     servidor local (no doble clic), ver el aviso junto al checkbox del DEM. -->
+<script src="https://cdn.jsdelivr.net/npm/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/georaster-layer-for-leaflet@3/dist/georaster-layer-for-leaflet.min.js"></script>
+
+<!-- Datos geograficos propios (convertidos de shapefile a GeoJSON y
+     envueltos en variables JS para que funcionen abriendo este HTML
+     directo con doble clic, sin servidor). -->
+<script src="rio_sinu_data/cuenca.js"></script>
+<script src="rio_sinu_data/subcuencas.js"></script>
+<script src="rio_sinu_data/parque_paramillo.js"></script>
+<script src="rio_sinu_data/sinap_pnn_recorte.js"></script>
+<script src="rio_sinu_data/reservas_civiles.js"></script>
+<script src="rio_sinu_data/distrito_manejo_integrado.js"></script>
+<script src="rio_sinu_data/conservacion_suelo.js"></script>
+<script src="rio_sinu_data/clasificacion_agua.js"></script>
+<script src="rio_sinu_data/infra_embalses.js"></script>
+<script src="rio_sinu_data/infra_lagunas.js"></script>
+<script src="rio_sinu_data/infra_poblaciones.js"></script>
+<script src="rio_sinu_data/infra_vias.js"></script>
+<script src="rio_sinu_data/infra_puentes.js"></script>
+<script src="rio_sinu_data/infra_plantas_tratamiento.js"></script>
+<script src="rio_sinu_data/infra_relleno_sanitario.js"></script>
+<script src="rio_sinu_data/clase_suelo_recorte.js"></script>
+
+<script>
+(() => {
+    "use strict";
+
+    // Canvas en vez de SVG: con miles de puntos/poligonos (clasificacion de
+    // agua, clase de suelo) el renderer SVG por defecto de Leaflet vuelve a
+    // calcular cada vertice en cada zoom/pan y el mapa se traba. Canvas
+    // dibuja todo de una sola vez por frame, mucho mas fluido.
+    const mapa = L.map("mapa", { zoomControl: true, renderer: L.canvas({ padding: 0.5 }) });
+
+    // Dos mapas base para elegir: el oscuro (mas "tecnologico", sin nombres
+    // de calles/ciudades para que se vea limpio) como opcion por defecto, y
+    // el OpenStreetMap de siempre por si se prefiere ver calles/ciudades.
+    // Un control arriba a la derecha deja cambiar entre los dos.
+    // CartoDB ahora pide API key hasta para el basemap gratis (por eso salía
+    // "API KEY REQUIRED" en mosaico) -- Esri Dark Gray Canvas es equivalente
+    // (fondo oscuro, minimalista) y sigue siendo gratis sin registrarse.
+    const capaOscura = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
+        attribution: "Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors, GIS User Community",
+        maxNativeZoom: 16,
+        maxZoom: 19
+    });
+    const capaOSM = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors",
+        maxZoom: 19
+    });
+
+    capaOscura.addTo(mapa);
+    L.control.layers(
+        { "Oscuro": capaOscura, "OpenStreetMap": capaOSM },
+        null,
+        { position: "topright", collapsed: true }
+    ).addTo(mapa);
+
+    // ---------- Helpers ----------
+    function popupGenerico(feature, layer, campos) {
+        const p = feature.properties || {};
+        let html = "";
+        campos.forEach(([clave, etiqueta]) => {
+            if (p[clave] !== undefined && p[clave] !== null && p[clave] !== "") {
+                html += `<b>${etiqueta}:</b> ${p[clave]}<br>`;
+            }
+        });
+        if (html) layer.bindPopup(html);
+    }
+
+    const COLOR_SUELO = { 1: "#e2c66a", 2: "#c98c4a", 4: "#8f6b46" };
+
+    // ---------- Capas ----------
+    // Cada capa es una FABRICA (funcion), no el layer ya construido. Leaflet
+    // gasta trabajo real (proyectar cada vertice) al crear un L.geoJSON, asi
+    // que si armaramos las 16 capas de una vez al cargar la pagina -aunque
+    // esten apagadas- eso es lo que trababa el mapa. Ahora cada capa solo
+    // se construye la primera vez que el usuario la prende, y de ahi en
+    // adelante queda en cache (FABRICAS_CONSTRUIDAS).
+    const FABRICAS = {
+        cuenca: () => L.geoJSON(DATA_CUENCA, {
+            style: { color: "#e08b1c", weight: 3, fill: false }
+        }),
+        subcuencas: () => L.geoJSON(DATA_SUBCUENCAS, {
+            style: { color: "#4a7fa5", weight: 1, fill: false, opacity: .7 },
+            onEachFeature: (f, l) => popupGenerico(f, l, [
+                ["NOM_NSS", "Subcuenca"], ["AREA_ha_", "Área (ha)"], ["T_CORRIEN", "Corriente principal"]
+            ])
+        }),
+        parquePNN: () => L.geoJSON(DATA_PARQUE_PARAMILLO, {
+            style: { color: "#2f8f4e", weight: 2, fillColor: "#2f8f4e", fillOpacity: .18 },
+            onEachFeature: (f, l) => popupGenerico(f, l, [["NOMBRE", "Área protegida"], ["AREA_RES", "Área (ha)"]])
+        }),
+        sinapPNN: () => L.geoJSON(DATA_SINAP_PNN, {
+            style: { color: "#5cb377", weight: 2, fillColor: "#5cb377", fillOpacity: .18 },
+            onEachFeature: (f, l) => popupGenerico(f, l, [["NOM", "Área protegida"], ["PN_CAT", "Categoría"]])
+        }),
+        reservasCiviles: () => L.geoJSON(DATA_RESERVAS_CIVILES, {
+            style: { color: "#4a9e63", weight: 2, fillColor: "#8bd19e", fillOpacity: .3 },
+            onEachFeature: (f, l) => popupGenerico(f, l, [["NOM_RNSC", "Reserva"], ["AREA_ha", "Área (ha)"]])
+        }),
+        dmi: () => L.geoJSON(DATA_DMI, {
+            style: { color: "#7cb35f", weight: 2, fillColor: "#b7e0a8", fillOpacity: .25 },
+            onEachFeature: (f, l) => popupGenerico(f, l, [["NOMBRE", "Distrito"], ["AREA_RES", "Área (ha)"]])
+        }),
+        conservacionSuelo: () => L.geoJSON(DATA_CONSERVACION_SUELO, {
+            style: { color: "#a9c96e", weight: 2, fillColor: "#d8edb0", fillOpacity: .3 },
+            onEachFeature: (f, l) => popupGenerico(f, l, [["NOMBRE", "Distrito"], ["AREA_RES", "Área (ha)"]])
+        }),
+        clasificacionAgua: () => L.geoJSON(DATA_CLASIFICACION_AGUA, {
+            style: (f) => ({
+                color: f.properties.tipo === "lotico" ? "#1c6fb0" : "#2f8f4e",
+                weight: 1,
+                fillColor: f.properties.tipo === "lotico" ? "#1c6fb0" : "#2f8f4e",
+                fillOpacity: .55
+            }),
+            onEachFeature: (f, l) => popupGenerico(f, l, [
+                ["tipo", "Tipo"], ["area_ha", "Área (ha)"], ["perm", "Permanencia"]
+            ])
+        }),
+        embalses: () => L.geoJSON(DATA_EMBALSES, {
+            style: { color: "#155a8a", weight: 1, fillColor: "#1c6fb0", fillOpacity: .5 },
+            onEachFeature: (f, l) => popupGenerico(f, l, [["NOMBRE_GEO", "Embalse"], ["PROYECTO", "Proyecto"]])
+        }),
+        lagunas: () => L.geoJSON(DATA_LAGUNAS, {
+            style: { color: "#1e8089", weight: 1, fillColor: "#2fa3b0", fillOpacity: .5 },
+            onEachFeature: (f, l) => popupGenerico(f, l, [["NOMBRE_GEO", "Laguna/ciénaga"]])
+        }),
+        poblaciones: () => L.geoJSON(DATA_POBLACIONES, {
+            style: { color: "#8a6a2f", weight: 1, fillColor: "#b48a3f", fillOpacity: .35 },
+            onEachFeature: (f, l) => popupGenerico(f, l, [["zu_cnmbre", "Cabecera"], ["zu_naltd", "Altitud (m)"]])
+        }),
+        vias: () => L.geoJSON(DATA_VIAS, {
+            style: { color: "#8a8a86", weight: 2, opacity: .8 },
+            onEachFeature: (f, l) => popupGenerico(f, l, [["nombreruta", "Vía"], ["categoria", "Categoría"], ["superficie", "Superficie"]])
+        }),
+        puentes: () => L.geoJSON(DATA_PUENTES, {
+            pointToLayer: (f, latlng) => L.circleMarker(latlng, { radius: 5, color: "#6b6b68", fillColor: "#6b6b68", fillOpacity: .9, weight: 1 }),
+            onEachFeature: (f, l) => popupGenerico(f, l, [["nombre", "Puente"], ["via", "Vía"], ["material", "Material"]])
+        }),
+        plantasTratamiento: () => L.geoJSON(DATA_PLANTAS_TRATAMIENTO, {
+            pointToLayer: (f, latlng) => L.circleMarker(latlng, { radius: 6, color: "#1c7f74", fillColor: "#2fb0a3", fillOpacity: .9, weight: 1 }),
+            onEachFeature: (f, l) => popupGenerico(f, l, [["EMPRESA", "Empresa"], ["MpNombre", "Municipio"]])
+        }),
+        rellenoSanitario: () => L.geoJSON(DATA_RELLENO_SANITARIO, {
+            style: { color: "#7a2f1f", weight: 1, fillColor: "#a4432f", fillOpacity: .5 },
+            pointToLayer: (f, latlng) => L.circleMarker(latlng, { radius: 6, color: "#7a2f1f", fillColor: "#a4432f", fillOpacity: .9, weight: 1 }),
+            onEachFeature: (f, l) => popupGenerico(f, l, [["NOMBRE_SIT", "Sitio"], ["MUNICIPIO", "Municipio"], ["TONELADA_D", "Toneladas/día"]])
+        }),
+        claseSuelo: () => L.geoJSON(DATA_CLASE_SUELO, {
+            style: (f) => ({
+                color: "rgba(0,0,0,.15)",
+                weight: .5,
+                fillColor: COLOR_SUELO[f.properties.CLASESUE] || "#cccccc",
+                fillOpacity: .45
+            }),
+            onEachFeature: (f, l) => popupGenerico(f, l, [["NOMBRE", "Clase de suelo"], ["AREA_ha", "Área (ha)"]])
+        })
+    };
+
+    const CAPAS_CONSTRUIDAS = {};
+    function obtenerCapa(clave) {
+        if (!CAPAS_CONSTRUIDAS[clave]) {
+            CAPAS_CONSTRUIDAS[clave] = FABRICAS[clave]();
+        }
+        return CAPAS_CONSTRUIDAS[clave];
+    }
+
+    document.querySelectorAll("[data-capa]").forEach((chk) => {
+        if (!FABRICAS[chk.dataset.capa]) return;
+        const activar = () => obtenerCapa(chk.dataset.capa).addTo(mapa);
+        if (chk.checked) activar();
+        chk.addEventListener("change", () => {
+            if (chk.checked) activar();
+            else mapa.removeLayer(obtenerCapa(chk.dataset.capa));
+        });
+    });
+
+    // ---------- Capa DEM real (.tif), sin convertir ----------
+    // No entra en FABRICAS porque es asincrona (hay que descargar y decodificar
+    // el archivo real con georaster/geotiff.js) y solo funciona si la pagina
+    // se abre desde un servidor local: fetch() de un archivo local abierto
+    // por doble clic (file://) esta bloqueado por Chrome, sin importar el
+    // tipo de archivo -- por eso el aviso en el panel.
+    const RUTA_DEM = ["Sinu (2)", "Sinu", "delimitacion_cuenca", "DEM", "ALOSPALSAR_12,5M", "DEM_ALOS_MACROCUENCA.tif"]
+        .map(encodeURIComponent).join("/");
+
+    function colorElevacion(valor) {
+        if (valor === null || valor === undefined || valor <= -100) return null;
+        const paradas = [
+            [0, [14, 77, 50]], [200, [78, 130, 70]], [600, [169, 201, 110]],
+            [1200, [201, 140, 74]], [2000, [187, 166, 140]], [3200, [255, 255, 255]]
+        ];
+        let i = 0;
+        while (i < paradas.length - 2 && valor > paradas[i + 1][0]) i++;
+        const [v0, c0] = paradas[i], [v1, c1] = paradas[i + 1];
+        const t = Math.max(0, Math.min(1, (valor - v0) / (v1 - v0)));
+        const r = Math.round(c0[0] + (c1[0] - c0[0]) * t);
+        const g = Math.round(c0[1] + (c1[1] - c0[1]) * t);
+        const b = Math.round(c0[2] + (c1[2] - c0[2]) * t);
+        return `rgba(${r},${g},${b},.78)`;
+    }
+
+    let capaDEM = null;
+    let cargandoDEM = false;
+    const chkDem = document.getElementById("chk-dem");
+    const avisoDem = document.getElementById("dem-aviso");
+    const avisoDemOriginal = avisoDem.innerHTML;
+
+    chkDem.addEventListener("change", async () => {
+        if (!chkDem.checked) {
+            if (capaDEM) mapa.removeLayer(capaDEM);
+            return;
+        }
+        if (capaDEM) { capaDEM.addTo(mapa); return; }
+        if (cargandoDEM) return;
+        cargandoDEM = true;
+        avisoDem.innerHTML = "Descargando y leyendo el .tif real (~140 MB, puede tardar unos segundos)...";
+        try {
+            const resp = await fetch(RUTA_DEM);
+            if (!resp.ok) throw new Error("HTTP " + resp.status);
+            const buffer = await resp.arrayBuffer();
+            const georaster = await parseGeoraster(buffer);
+            capaDEM = new GeoRasterLayer({
+                georaster,
+                resolution: 128,
+                pixelValuesToColorFn: (valores) => colorElevacion(valores[0])
+            });
+            capaDEM.addTo(mapa);
+            avisoDem.innerHTML = "Cargado: son los valores de elevación reales del .tif (sin convertir), leídos directo en el navegador.";
+        } catch (err) {
+            console.error("No se pudo cargar el DEM real:", err);
+            avisoDem.innerHTML = "No se pudo cargar el .tif real (revisa que estés usando el servidor local, no doble clic). " + avisoDemOriginal;
+            chkDem.checked = false;
+        } finally {
+            cargandoDEM = false;
+        }
+    });
+
+    // Conteos de features en el panel (contexto rápido sin abrir el mapa,
+    // usa los datos crudos ya cargados, no necesita construir la capa)
+    const conteos = {
+        "cnt-subcuencas": DATA_SUBCUENCAS.features.length,
+        "cnt-sinap": DATA_SINAP_PNN.features.length,
+        "cnt-reservas": DATA_RESERVAS_CIVILES.features.length,
+        "cnt-agua": DATA_CLASIFICACION_AGUA.features.length,
+        "cnt-lagunas": DATA_LAGUNAS.features.length,
+        "cnt-poblaciones": DATA_POBLACIONES.features.length,
+        "cnt-suelo": DATA_CLASE_SUELO.features.length
+    };
+    Object.entries(conteos).forEach(([id, n]) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = n;
+    });
+
+    // Encuadre inicial: límite de la cuenca (la única capa que se construye
+    // siempre, porque el mapa la necesita para saber a dónde apuntar)
+    mapa.fitBounds(obtenerCapa("cuenca").getBounds(), { padding: [20, 20] });
+
+    // ---------- HUD de datos en vivo ----------
+    // Todo lo que muestra sale de los datos ya cargados (nada inventado):
+    // area real de la cuenca, conteos reales de cada capa, % lotico/lentico
+    // calculado sumando el area_ha de cada poligono clasificado.
+    (function llenarHud() {
+        const areaCuencaM2 = DATA_CUENCA.features[0]?.properties?.Shape_Area || 0;
+        const areaKm2 = areaCuencaM2 / 1_000_000;
+        document.getElementById("hud-area").textContent =
+            areaKm2 ? `${areaKm2.toLocaleString("es-CO", { maximumFractionDigits: 0 })} km²` : "—";
+
+        document.getElementById("hud-subcuencas").textContent = DATA_SUBCUENCAS.features.length;
+
+        let areaLotico = 0, areaLentico = 0;
+        DATA_CLASIFICACION_AGUA.features.forEach((f) => {
+            const a = f.properties.area_ha || 0;
+            if (f.properties.tipo === "lotico") areaLotico += a; else areaLentico += a;
+        });
+        const totalAgua = areaLotico + areaLentico;
+        const pctLotico = totalAgua ? Math.round((areaLotico / totalAgua) * 100) : 0;
+        document.getElementById("hud-agua").textContent =
+            `${DATA_CLASIFICACION_AGUA.features.length} · ${pctLotico}% lótico`;
+
+        const totalProtegidas =
+            DATA_PARQUE_PARAMILLO.features.length +
+            DATA_SINAP_PNN.features.length +
+            DATA_RESERVAS_CIVILES.features.length +
+            DATA_DMI.features.length +
+            DATA_CONSERVACION_SUELO.features.length;
+        document.getElementById("hud-protegidas").textContent = `${totalProtegidas} zonas`;
+
+        const totalInfra =
+            DATA_EMBALSES.features.length +
+            DATA_LAGUNAS.features.length +
+            DATA_POBLACIONES.features.length +
+            DATA_VIAS.features.length +
+            DATA_PUENTES.features.length +
+            DATA_PLANTAS_TRATAMIENTO.features.length +
+            DATA_RELLENO_SANITARIO.features.length;
+        document.getElementById("hud-infra").textContent = `${totalInfra} elementos`;
+
+        const hora = new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+        document.getElementById("hud-hora").textContent = `datos cargados · ${hora}`;
+    })();
+
+})();
+</script>
+
+</body>
+</html>
