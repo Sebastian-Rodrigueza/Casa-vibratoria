@@ -1,0 +1,30 @@
+# No hace falta que Vercel suba ni considere esto para el sitio estatico
+# (RioSinu.html, Mapa.html, Index.html, casa.html, etc.)
+
+# Backend de la casa vibratoria: vive en Render, no en Vercel
+api.py
+api_sensores_LAB.py
+requirements.txt
+Procfile
+servidor_mapa_gdb.py
+INICIAR_MAPA_GDB.bat
+requirements_gdb.txt
+
+# Datos crudos originales del rio Sinu (744MB) - RioSinu.html usa las
+# versiones livianas de rio_sinu_data/, esto no hace falta desplegarlo
+Sinu (2)/
+
+# Proyectos aparte que no usa ningun html del sitio
+NubePuntos/
+Webscraping/
+DB Geo andes/
+agente1/
+
+# Basura de entorno/editor
+.vs/
+__pycache__/
+*.pyc
+
+# Copias de la base de datos (eran solo para migrar una vez)
+*.sql
+import_ensayos.bat
