@@ -147,6 +147,31 @@
         border-style: solid;
     }
     .subir-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .subir-btn.activo-perfil {
+        background: var(--yellow);
+        border-color: var(--yellow-dark);
+        border-style: solid;
+    }
+    .perfil-card {
+        margin-top: 8px;
+        padding: 10px 12px 8px;
+        background: var(--white);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+    }
+    #perfilSvg { width: 100%; height: auto; display: block; }
+    #perfilSvg .eje-perfil { stroke: var(--line); stroke-width: 1; }
+    #perfilSvg .linea-perfil { fill: none; stroke: #1c6fb0; stroke-width: 2; }
+    #perfilSvg .relleno-perfil { fill: #1c6fb0; opacity: .14; }
+    #perfilSvg .etiqueta-perfil-x, #perfilSvg .etiqueta-perfil-y {
+        font-size: 8px; fill: var(--muted); font-family: "Inter", sans-serif;
+    }
+    .perfil-resumen {
+        margin: 6px 0 0;
+        font-size: .74rem;
+        color: var(--muted);
+        line-height: 1.4;
+    }
     .capa-item {
         display: flex;
         align-items: center;
@@ -318,6 +343,22 @@
         <div class="ficha" id="dem-aviso">
             Lee un <code>.tif</code> real (valores reales, resolución
             reducida para la web). Puede tardar unos segundos en cargar.
+        </div>
+
+        <h2>Perfil de elevación</h2>
+        <button type="button" class="subir-btn" id="btnPerfil">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M3 17 9 9l4 4 8-9" /><circle cx="9" cy="9" r="1.4" fill="currentColor" stroke="none" /><circle cx="21" cy="4" r="1.4" fill="currentColor" stroke="none" />
+            </svg>
+            Marcar 2 puntos en el mapa
+        </button>
+        <div class="ficha" id="perfilAviso">
+            Actívalo y haz clic en 2 puntos del mapa para ver el corte
+            real del terreno entre ellos (usa el DEM).
+        </div>
+        <div class="perfil-card" id="perfilContenedor" hidden>
+            <svg id="perfilSvg" viewBox="0 0 258 130" preserveAspectRatio="none"></svg>
+            <p class="perfil-resumen" id="perfilResumen"></p>
         </div>
 
         <h2>Cuenca</h2>
@@ -654,8 +695,24 @@
         return `rgba(${r},${g},${b},.78)`;
     }
 
+    // Cachea la promesa: si el DEM ya se esta descargando (o ya cargo),
+    // tanto el checkbox como el perfil de elevacion reusan el mismo dato
+    // en vez de bajarlo dos veces.
+    let promesaGeorasterDEM = null;
+    function obtenerGeorasterDEM() {
+        if (!promesaGeorasterDEM) {
+            promesaGeorasterDEM = fetch(RUTA_DEM)
+                .then((resp) => {
+                    if (!resp.ok) throw new Error("HTTP " + resp.status);
+                    return resp.arrayBuffer();
+                })
+                .then((buffer) => parseGeoraster(buffer))
+                .catch((err) => { promesaGeorasterDEM = null; throw err; });
+        }
+        return promesaGeorasterDEM;
+    }
+
     let capaDEM = null;
-    let cargandoDEM = false;
     const chkDem = document.getElementById("chk-dem");
     const avisoDem = document.getElementById("dem-aviso");
     const avisoDemOriginal = avisoDem.innerHTML;
@@ -666,14 +723,9 @@
             return;
         }
         if (capaDEM) { capaDEM.addTo(mapa); return; }
-        if (cargandoDEM) return;
-        cargandoDEM = true;
-        avisoDem.innerHTML = "Descargando y leyendo el .tif real (~140 MB, puede tardar unos segundos)...";
+        avisoDem.innerHTML = "Descargando y leyendo el .tif real (~45 MB, puede tardar unos segundos)...";
         try {
-            const resp = await fetch(RUTA_DEM);
-            if (!resp.ok) throw new Error("HTTP " + resp.status);
-            const buffer = await resp.arrayBuffer();
-            const georaster = await parseGeoraster(buffer);
+            const georaster = await obtenerGeorasterDEM();
             capaDEM = new GeoRasterLayer({
                 georaster,
                 resolution: 128,
@@ -683,10 +735,143 @@
             avisoDem.innerHTML = "DEM cargado.";
         } catch (err) {
             console.error("No se pudo cargar el DEM real:", err);
-            avisoDem.innerHTML = "No se pudo cargar el .tif real (revisa que estés usando el servidor local, no doble clic). " + avisoDemOriginal;
+            avisoDem.innerHTML = "No se pudo cargar el .tif real. " + avisoDemOriginal;
             chkDem.checked = false;
-        } finally {
-            cargandoDEM = false;
+        }
+    });
+
+    // ---------- Perfil de elevación real (clic en 2 puntos) ----------
+    function distanciaHaversineMetros(a, b) {
+        const R = 6371000;
+        const toRad = (d) => (d * Math.PI) / 180;
+        const dLat = toRad(b.lat - a.lat);
+        const dLng = toRad(b.lng - a.lng);
+        const lat1 = toRad(a.lat), lat2 = toRad(b.lat);
+        const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+        return 2 * R * Math.asin(Math.sqrt(h));
+    }
+
+    function elevacionEnPunto(georaster, lat, lng) {
+        const col = Math.floor((lng - georaster.xmin) / georaster.pixelWidth);
+        const row = Math.floor((georaster.ymax - lat) / georaster.pixelHeight);
+        if (row < 0 || row >= georaster.height || col < 0 || col >= georaster.width) return null;
+        const val = georaster.values[0][row][col];
+        if (val === undefined || val === georaster.noDataValue || val <= -100) return null;
+        return val;
+    }
+
+    const btnPerfil = document.getElementById("btnPerfil");
+    const perfilAviso = document.getElementById("perfilAviso");
+    const perfilAvisoOriginal = perfilAviso.textContent;
+    const perfilContenedor = document.getElementById("perfilContenedor");
+    const perfilSvg = document.getElementById("perfilSvg");
+    const perfilResumen = document.getElementById("perfilResumen");
+
+    let modoPerfilActivo = false;
+    let puntosPerfil = [];
+    let marcadoresPerfil = [];
+    let lineaPerfil = null;
+
+    function limpiarPerfil() {
+        marcadoresPerfil.forEach((m) => mapa.removeLayer(m));
+        marcadoresPerfil = [];
+        if (lineaPerfil) { mapa.removeLayer(lineaPerfil); lineaPerfil = null; }
+        puntosPerfil = [];
+        perfilContenedor.hidden = true;
+        perfilAviso.textContent = perfilAvisoOriginal;
+    }
+
+    function dibujarPerfilSvg(puntos, distanciaTotal) {
+        const validos = puntos.filter((p) => p.elev !== null);
+        if (!validos.length) {
+            perfilContenedor.hidden = true;
+            perfilAviso.textContent = "Esa línea no tiene datos de elevación válidos.";
+            return;
+        }
+
+        const W = 258, H = 130, padL = 32, padR = 8, padT = 10, padB = 18;
+        const innerW = W - padL - padR, innerH = H - padT - padB;
+        const elevs = validos.map((p) => p.elev);
+        let minE = Math.min(...elevs), maxE = Math.max(...elevs);
+        const margen = (maxE - minE) * 0.15 || 10;
+        minE -= margen; maxE += margen;
+
+        const x = (d) => padL + (d / distanciaTotal) * innerW;
+        const y = (e) => padT + innerH - ((e - minE) / (maxE - minE)) * innerH;
+
+        const pathPuntos = validos.map((p) => `${x(p.dist)},${y(p.elev)}`).join(" ");
+        const primerX = x(validos[0].dist), ultimoX = x(validos[validos.length - 1].dist);
+
+        let svgHtml = `<line class="eje-perfil" x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + innerH}"/>`;
+        svgHtml += `<line class="eje-perfil" x1="${padL}" y1="${padT + innerH}" x2="${padL + innerW}" y2="${padT + innerH}"/>`;
+        svgHtml += `<polygon class="relleno-perfil" points="${primerX},${padT + innerH} ${pathPuntos} ${ultimoX},${padT + innerH}"/>`;
+        svgHtml += `<polyline class="linea-perfil" points="${pathPuntos}"/>`;
+        svgHtml += `<text class="etiqueta-perfil-y" x="${padL - 4}" y="${y(maxE) + 3}">${Math.round(maxE)}m</text>`;
+        svgHtml += `<text class="etiqueta-perfil-y" x="${padL - 4}" y="${y(minE) + 3}">${Math.round(minE)}m</text>`;
+        svgHtml += `<text class="etiqueta-perfil-x" x="${padL}" y="${H - 3}">0 km</text>`;
+        svgHtml += `<text class="etiqueta-perfil-x" x="${padL + innerW}" y="${H - 3}" text-anchor="end">${(distanciaTotal / 1000).toFixed(1)} km</text>`;
+
+        perfilSvg.innerHTML = svgHtml;
+        perfilContenedor.hidden = false;
+
+        const ganancia = Math.round(Math.max(...elevs) - Math.min(...elevs));
+        perfilResumen.textContent =
+            `Distancia: ${(distanciaTotal / 1000).toFixed(2)} km · ` +
+            `Elevación: ${Math.round(Math.min(...elevs))}–${Math.round(Math.max(...elevs))}m · ` +
+            `Desnivel: ${ganancia}m`;
+    }
+
+    async function calcularYDibujarPerfil(a, b) {
+        perfilAviso.textContent = "Calculando perfil (usa el DEM, puede tardar si aún no se ha cargado)…";
+        try {
+            const georaster = await obtenerGeorasterDEM();
+            const N = 150;
+            const distanciaTotal = distanciaHaversineMetros(a, b);
+            const puntos = [];
+            for (let i = 0; i <= N; i++) {
+                const t = i / N;
+                const lat = a.lat + (b.lat - a.lat) * t;
+                const lng = a.lng + (b.lng - a.lng) * t;
+                puntos.push({ dist: distanciaTotal * t, elev: elevacionEnPunto(georaster, lat, lng) });
+            }
+            perfilAviso.textContent = "";
+            dibujarPerfilSvg(puntos, distanciaTotal);
+        } catch (err) {
+            console.error("No se pudo calcular el perfil:", err);
+            perfilAviso.textContent = "No se pudo calcular el perfil. " + perfilAvisoOriginal;
+        }
+    }
+
+    btnPerfil.addEventListener("click", () => {
+        modoPerfilActivo = !modoPerfilActivo;
+        limpiarPerfil();
+        if (modoPerfilActivo) {
+            btnPerfil.classList.add("activo-perfil");
+            perfilAviso.textContent = "Haz clic en el primer punto del mapa…";
+            mapa.getContainer().style.cursor = "crosshair";
+        } else {
+            btnPerfil.classList.remove("activo-perfil");
+            mapa.getContainer().style.cursor = "";
+        }
+    });
+
+    mapa.on("click", (e) => {
+        if (!modoPerfilActivo) return;
+
+        const marcador = L.circleMarker(e.latlng, {
+            radius: 5, color: "#f5c400", fillColor: "#f5c400", fillOpacity: 1, weight: 2
+        }).addTo(mapa);
+        marcadoresPerfil.push(marcador);
+        puntosPerfil.push(e.latlng);
+
+        if (puntosPerfil.length === 1) {
+            perfilAviso.textContent = "Haz clic en el segundo punto…";
+        } else if (puntosPerfil.length === 2) {
+            lineaPerfil = L.polyline(puntosPerfil, { color: "#f5c400", weight: 2, dashArray: "6,4" }).addTo(mapa);
+            calcularYDibujarPerfil(puntosPerfil[0], puntosPerfil[1]);
+            modoPerfilActivo = false;
+            btnPerfil.classList.remove("activo-perfil");
+            mapa.getContainer().style.cursor = "";
         }
     });
 
