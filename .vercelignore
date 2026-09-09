@@ -14,6 +14,14 @@ requirements_gdb.txt
 # versiones livianas de rio_sinu_data/, esto no hace falta desplegarlo
 Sinu (2)/
 
+# GeoTIFF reales (DEM + Landsat): Vercel (plan gratis) tambien bloquea
+# archivos de mas de 100MB, igual que GitHub -- asi que esto NO se puede
+# subir por ahora tal cual. Se queda fuera para no tumbar el deploy
+# completo. Los checkboxes de "tif real" en RioSinu.html/Mapa.html van
+# a seguir fallando en el sitio en vivo hasta que se resuelva esto
+# (bajar resolucion para quedar bajo 100MB, o usar otro storage).
+capas_pesadas/
+
 # Proyectos aparte que no usa ningun html del sitio
 # (ojo: agente1/ SI se usa -- Index.html carga agente1/agente.js y
 # agente1/agente-panel.css para el widget "Asistente ICDE", no tocar)

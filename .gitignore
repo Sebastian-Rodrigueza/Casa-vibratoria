@@ -33,3 +33,6 @@ Sinu (2)/
 # Se quedan locales hasta que se decida donde hospedarlos de verdad
 # (Vercel u otro storage) - Mapa.html los carga por URL cuando existen.
 capas_pesadas/
+
+.vercel
+.env*

@@ -2297,11 +2297,12 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                             <path d="M4 4h16v16H4Z" /><path d="m4 15 4-4 4 4 4-6 4 4" />
                         </svg>
-                        Landsat 1985 (COG)
+                        Landsat 1985 (resolución web)
                     </button>
                 </div>
                 <p class="gdb-server-state" id="landsatEstado">
-                    Capa de referencia (333MB) — se carga por URL, no por
+                    Capa de referencia (88MB, resolución reducida para
+                    caber en el hosting gratis) — se carga por URL, no por
                     arrastre; necesita que el sitio esté servido (no doble clic).
                 </p>
             </div>
@@ -5476,7 +5477,7 @@
                 estado.textContent = "Cargando Landsat 1985 (puede tardar unos segundos)…";
 
                 try {
-                    const georaster = await parseGeoraster("capas_pesadas/img_1985_Landsat_cog.tif");
+                    const georaster = await parseGeoraster("capas_web/img_1985_Landsat_web.tif");
                     capaLandsat = new GeoRasterLayer({
                         georaster,
                         pane: "uploadedDataPane",
@@ -5484,14 +5485,14 @@
                         // 6 bandas -> se pinta como RGB tal cual, sin rampa de color
                     });
                     capaLandsat.addTo(map);
-                    layersControl.addOverlay(capaLandsat, "Landsat 1985 (COG)");
+                    layersControl.addOverlay(capaLandsat, "Landsat 1985 (resolución web)");
 
                     map.invalidateSize(true);
                     map.fitBounds(capaLandsat.getBounds(), { padding: [45, 45] });
 
                     boton.classList.add("gdb-btn-activo");
                     estado.textContent = "Landsat 1985 cargado.";
-                    showToast("Landsat 1985 (COG): capa de referencia cargada.");
+                    showToast("Landsat 1985: capa de referencia cargada.");
                 } catch (error) {
                     console.error("Error al cargar la capa de referencia Landsat:", error);
                     estado.textContent =

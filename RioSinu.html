@@ -279,11 +279,11 @@
         <label class="capa-item">
             <input type="checkbox" id="chk-dem" data-capa="dem">
             <span class="swatch" style="background:linear-gradient(90deg,#0e4d32 20%,#a9c96e 50%,#c98c4a 75%,#efe6d8 100%);"></span>
-            <span class="nombre">DEM real (.tif)</span>
+            <span class="nombre">DEM (.tif, resolución web)</span>
         </label>
         <div class="ficha" id="dem-aviso">
-            Lee el <code>.tif</code> real, puede tardar unos segundos en
-            cargar.
+            Lee un <code>.tif</code> real (valores reales, resolución
+            reducida para la web). Puede tardar unos segundos en cargar.
         </div>
 
         <h2>Cuenca</h2>
@@ -599,7 +599,10 @@
     // un archivo abierto por doble clic (file://) esta bloqueado por Chrome.
     // El archivo vive en capas_pesadas/ (fuera de git por su tamano, se sube
     // aparte con "vercel" CLI directo desde el disco).
-    const RUTA_DEM = "capas_pesadas/DEM_ALOS_MACROCUENCA.tif";
+    // Version "web" a mitad de resolucion (remuestreada por promedio, no
+    // inventada) para quedar bajo el limite de 100MB de GitHub/Vercel.
+    // El archivo de resolucion completa se comparte aparte para QGIS/ArcGIS.
+    const RUTA_DEM = "capas_web/DEM_web.tif";
 
     function colorElevacion(valor) {
         if (valor === null || valor === undefined || valor <= -100) return null;
