@@ -301,7 +301,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                 <path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" />
             </svg>
-            Subir .tif (máx. 100MB)
+            Subir .tif (máx. 205MB)
         </label>
         <input type="file" id="inputTiffUsuario" accept=".tif,.tiff" hidden>
         <div class="ficha" id="tiffUsuarioEstado">
@@ -680,7 +680,7 @@
                 pixelValuesToColorFn: (valores) => colorElevacion(valores[0])
             });
             capaDEM.addTo(mapa);
-            avisoDem.innerHTML = "Cargado: son los valores de elevación reales del .tif (sin convertir), leídos directo en el navegador.";
+            avisoDem.innerHTML = "DEM cargado.";
         } catch (err) {
             console.error("No se pudo cargar el DEM real:", err);
             avisoDem.innerHTML = "No se pudo cargar el .tif real (revisa que estés usando el servidor local, no doble clic). " + avisoDemOriginal;
@@ -694,7 +694,7 @@
     // Se procesa 100% en el navegador (File.arrayBuffer, sin subirlo a
     // ningun servidor) -- por eso aqui SI funciona con doble clic, a
     // diferencia del DEM/Landsat de arriba que se leen por URL.
-    const LIMITE_SUBIDA_MB = 100;
+    const LIMITE_SUBIDA_MB = 205;
 
     function colorRampGenericoRio(valor, min, max) {
         if (valor === null || valor === undefined || Number.isNaN(valor)) return null;
