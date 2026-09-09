@@ -3774,14 +3774,14 @@
             const toast = document.getElementById("toast");
             let toastTimer;
 
-            function showToast(message) {
+            function showToast(message, duracionMs = 2200) {
                 toast.textContent = message;
                 toast.classList.add("show");
 
                 clearTimeout(toastTimer);
                 toastTimer = setTimeout(() => {
                     toast.classList.remove("show");
-                }, 2200);
+                }, duracionMs);
             }
 
             function resetSouthAmerica() {
@@ -5266,7 +5266,17 @@
                 return null;
             }
 
+            const LIMITE_SUBIDA_MB = 100;
+
             function addUploadedFile(file) {
+                if (file.size > LIMITE_SUBIDA_MB * 1024 * 1024) {
+                    showToast(
+                        `${file.name}: pesa ${(file.size / 1024 / 1024).toFixed(0)}MB, supera el límite de ${LIMITE_SUBIDA_MB}MB. Comprime o reduce resolución antes de subirlo.`,
+                        5000
+                    );
+                    return;
+                }
+
                 removeUploadEmptyState();
 
                 const id = `upload-${++uploadCounter}`;
@@ -5440,7 +5450,18 @@
                     loadingTag.classList.add("upload-item-error");
 
                     console.error("Error al cargar GeoTIFF:", error);
-                    showToast(`${file.name}: ${error.message || "no fue posible leer el GeoTIFF."}`);
+
+                    // El navegador (geotiff.js) no sabe descomprimir ZSTD (identificador
+                    // 50000) ni algunos otros codecs nuevos -- es una limitacion de la
+                    // libreria, no de este sitio. Mensaje claro con la solucion real.
+                    const esCompresionNoSoportada =
+                        /compression method identifier: 50000|compression method identifier: 5?0001/i.test(error.message || "");
+
+                    const mensaje = esCompresionNoSoportada
+                        ? "este GeoTIFF usa compresión ZSTD, que el navegador no puede leer. Vuelve a exportarlo con compresión LZW o Deflate (en QGIS: clic derecho en la capa → Exportar → Guardar como... → Opciones de creación → COMPRESS=LZW)."
+                        : (error.message || "no fue posible leer el GeoTIFF.");
+
+                    showToast(`${file.name}: ${mensaje}`, esCompresionNoSoportada ? 9000 : undefined);
                 }
             }
 
