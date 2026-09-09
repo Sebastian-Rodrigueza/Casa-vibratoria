@@ -595,11 +595,11 @@
     // ---------- Capa DEM real (.tif), sin convertir ----------
     // No entra en FABRICAS porque es asincrona (hay que descargar y decodificar
     // el archivo real con georaster/geotiff.js) y solo funciona si la pagina
-    // se abre desde un servidor local: fetch() de un archivo local abierto
-    // por doble clic (file://) esta bloqueado por Chrome, sin importar el
-    // tipo de archivo -- por eso el aviso en el panel.
-    const RUTA_DEM = ["Sinu (2)", "Sinu", "delimitacion_cuenca", "DEM", "ALOSPALSAR_12,5M", "DEM_ALOS_MACROCUENCA.tif"]
-        .map(encodeURIComponent).join("/");
+    // se abre desde un servidor real (Vercel) o servidor local: fetch() de
+    // un archivo abierto por doble clic (file://) esta bloqueado por Chrome.
+    // El archivo vive en capas_pesadas/ (fuera de git por su tamano, se sube
+    // aparte con "vercel" CLI directo desde el disco).
+    const RUTA_DEM = "capas_pesadas/DEM_ALOS_MACROCUENCA.tif";
 
     function colorElevacion(valor) {
         if (valor === null || valor === undefined || valor <= -100) return null;
