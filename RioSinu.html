@@ -602,7 +602,7 @@
     // Version "web" a mitad de resolucion (remuestreada por promedio, no
     // inventada) para quedar bajo el limite de 100MB de GitHub/Vercel.
     // El archivo de resolucion completa se comparte aparte para QGIS/ArcGIS.
-    const RUTA_DEM = "capas_web/DEM_web.tif";
+    const RUTA_DEM = "capas_web/DEM_web.tif?v=2";
 
     function colorElevacion(valor) {
         if (valor === null || valor === undefined || valor <= -100) return null;
