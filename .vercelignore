@@ -15,10 +15,11 @@ requirements_gdb.txt
 Sinu (2)/
 
 # Proyectos aparte que no usa ningun html del sitio
+# (ojo: agente1/ SI se usa -- Index.html carga agente1/agente.js y
+# agente1/agente-panel.css para el widget "Asistente ICDE", no tocar)
 NubePuntos/
 Webscraping/
 DB Geo andes/
-agente1/
 
 # Basura de entorno/editor
 .vs/
