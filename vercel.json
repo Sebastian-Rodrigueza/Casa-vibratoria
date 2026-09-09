@@ -1,5 +1,8 @@
 {
     "framework": null,
     "buildCommand": null,
-    "installCommand": null
+    "installCommand": null,
+    "rewrites": [
+        { "source": "/", "destination": "/Index.html" }
+    ]
 }
