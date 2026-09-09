@@ -5477,7 +5477,11 @@
                 estado.textContent = "Cargando Landsat 1985 (puede tardar unos segundos)…";
 
                 try {
-                    const georaster = await parseGeoraster("capas_web/img_1985_Landsat_web.tif");
+                    // URL absoluta: georaster/geotiff.js hace las peticiones desde
+                    // un Web Worker, y ahi una ruta relativa no se puede resolver
+                    // contra la pagina (por eso fallaba con "Failed to parse URL").
+                    const urlLandsat = new URL("capas_web/img_1985_Landsat_web.tif", window.location.href).href;
+                    const georaster = await parseGeoraster(urlLandsat);
                     capaLandsat = new GeoRasterLayer({
                         georaster,
                         pane: "uploadedDataPane",
