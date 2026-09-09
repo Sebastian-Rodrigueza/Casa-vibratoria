@@ -172,6 +172,58 @@
         color: var(--muted);
         line-height: 1.4;
     }
+
+    /* ---------- Vista 3D del terreno ---------- */
+    .vista3d-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 5000;
+        background: #05070b;
+    }
+    .vista3d-overlay canvas { display: block; width: 100%; height: 100%; }
+    .vista3d-cerrar {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        z-index: 2;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(255,255,255,.92);
+        color: var(--charcoal);
+        font-size: 1.3rem;
+        line-height: 1;
+        cursor: pointer;
+        box-shadow: var(--shadow);
+    }
+    .vista3d-hint {
+        position: absolute;
+        bottom: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 2;
+        background: rgba(10,14,20,.75);
+        color: #d7ddea;
+        font-size: .78rem;
+        padding: 7px 14px;
+        border-radius: 999px;
+        pointer-events: none;
+    }
+    .vista3d-cargando {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #d7ddea;
+        font-family: "Inter", sans-serif;
+        font-size: .9rem;
+        text-align: center;
+        padding: 0 20px;
+    }
+    .vista3d-cargando[hidden] { display: none; }
     .capa-item {
         display: flex;
         align-items: center;
@@ -344,6 +396,12 @@
             Lee un <code>.tif</code> real (valores reales, resolución
             reducida para la web). Puede tardar unos segundos en cargar.
         </div>
+        <button type="button" class="subir-btn" id="btnVer3D" style="margin-top:8px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M12 2 3 7v10l9 5 9-5V7Z" /><path d="M3 7l9 5 9-5M12 12v10" />
+            </svg>
+            Ver terreno en 3D
+        </button>
 
         <h2>Perfil de elevación</h2>
         <button type="button" class="subir-btn" id="btnPerfil">
@@ -486,7 +544,16 @@
     </div>
 </div>
 
+<div class="vista3d-overlay" id="vista3dOverlay" hidden>
+    <button class="vista3d-cerrar" id="btnCerrar3D" type="button" aria-label="Cerrar vista 3D">×</button>
+    <div class="vista3d-hint">Arrastra para rotar · rueda del mouse para zoom</div>
+    <div class="vista3d-cargando" id="vista3dCargando">Construyendo el terreno 3D a partir del DEM real…</div>
+    <canvas id="vista3dCanvas"></canvas>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <!-- Leen el .tif real (valores de elevacion originales, nada convertido)
      directo en el navegador. Necesitan que la pagina se abra con un
      servidor local (no doble clic), ver el aviso junto al checkbox del DEM. -->
@@ -679,8 +746,8 @@
     // El archivo de resolucion completa se comparte aparte para QGIS/ArcGIS.
     const RUTA_DEM = "capas_web/DEM_web.tif?v=2";
 
-    function colorElevacion(valor) {
-        if (valor === null || valor === undefined || valor <= -100) return null;
+    function colorElevacionRGB(valor) {
+        if (valor === null || valor === undefined || valor <= -100) return [40, 44, 50];
         const paradas = [
             [0, [14, 77, 50]], [200, [78, 130, 70]], [600, [169, 201, 110]],
             [1200, [201, 140, 74]], [2000, [187, 166, 140]], [3200, [255, 255, 255]]
@@ -689,9 +756,16 @@
         while (i < paradas.length - 2 && valor > paradas[i + 1][0]) i++;
         const [v0, c0] = paradas[i], [v1, c1] = paradas[i + 1];
         const t = Math.max(0, Math.min(1, (valor - v0) / (v1 - v0)));
-        const r = Math.round(c0[0] + (c1[0] - c0[0]) * t);
-        const g = Math.round(c0[1] + (c1[1] - c0[1]) * t);
-        const b = Math.round(c0[2] + (c1[2] - c0[2]) * t);
+        return [
+            Math.round(c0[0] + (c1[0] - c0[0]) * t),
+            Math.round(c0[1] + (c1[1] - c0[1]) * t),
+            Math.round(c0[2] + (c1[2] - c0[2]) * t)
+        ];
+    }
+
+    function colorElevacion(valor) {
+        if (valor === null || valor === undefined || valor <= -100) return null;
+        const [r, g, b] = colorElevacionRGB(valor);
         return `rgba(${r},${g},${b},.78)`;
     }
 
@@ -1019,6 +1093,142 @@
         const hora = new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
         document.getElementById("hud-hora").textContent = `datos cargados · ${hora}`;
     })();
+
+    // ---------- Vista 3D del terreno (Three.js, malla real desde el DEM) ----------
+    // Se arma una sola vez (la primera vez que se abre) y se reutiliza: es
+    // una malla real hecha con los valores de elevacion del DEM (no una
+    // imagen ni una simulacion), muestreada a una cuadricula manejable
+    // para que el navegador la pueda girar en tiempo real.
+    const overlay3D = document.getElementById("vista3dOverlay");
+    const canvas3D = document.getElementById("vista3dCanvas");
+    const cargando3D = document.getElementById("vista3dCargando");
+    const btnVer3D = document.getElementById("btnVer3D");
+    const btnCerrar3D = document.getElementById("btnCerrar3D");
+
+    let escena3D = null, camara3D = null, renderer3D = null, controles3D = null;
+    let animacion3DId = null;
+
+    function construirMalla3D(georaster) {
+        const COLS = 170, FILAS = 230;
+        const anchoGrados = georaster.xmax - georaster.xmin;
+        const altoGrados = georaster.ymax - georaster.ymin;
+        const latMedia = (georaster.ymin + georaster.ymax) / 2;
+        const metrosPorGradoLon = 111320 * Math.cos((latMedia * Math.PI) / 180);
+        const metrosPorGradoLat = 110540;
+        const anchoMetros = anchoGrados * metrosPorGradoLon;
+        const altoMetros = altoGrados * metrosPorGradoLat;
+
+        const ESCENA_ANCHO = 12;
+        const escala = ESCENA_ANCHO / anchoMetros;
+        const escenaAlto = altoMetros * escala;
+        const EXAGERACION = 2.2;
+
+        const geometria = new THREE.PlaneGeometry(ESCENA_ANCHO, escenaAlto, COLS - 1, FILAS - 1);
+        const posiciones = geometria.attributes.position;
+        const colores = new Float32Array(posiciones.count * 3);
+
+        for (let f = 0; f < FILAS; f++) {
+            for (let c = 0; c < COLS; c++) {
+                const lng = georaster.xmin + (c / (COLS - 1)) * anchoGrados;
+                const lat = georaster.ymax - (f / (FILAS - 1)) * altoGrados;
+                const elevReal = elevacionEnPunto(georaster, lat, lng);
+                const elev = elevReal === null ? 0 : elevReal;
+                const idx = f * COLS + c;
+
+                posiciones.setZ(idx, elev * escala * EXAGERACION);
+
+                const [r, g, b] = colorElevacionRGB(elevReal);
+                colores[idx * 3] = r / 255;
+                colores[idx * 3 + 1] = g / 255;
+                colores[idx * 3 + 2] = b / 255;
+            }
+        }
+        posiciones.needsUpdate = true;
+        geometria.setAttribute("color", new THREE.BufferAttribute(colores, 3));
+        geometria.computeVertexNormals();
+
+        const material = new THREE.MeshStandardMaterial({
+            vertexColors: true, side: THREE.DoubleSide, roughness: .92, metalness: 0
+        });
+        const malla = new THREE.Mesh(geometria, material);
+        malla.rotation.x = -Math.PI / 2;
+        return { malla, escenaAlto };
+    }
+
+    function iniciarEscena3D(georaster) {
+        escena3D = new THREE.Scene();
+        escena3D.background = new THREE.Color(0x05070b);
+        escena3D.fog = new THREE.Fog(0x05070b, 12, 40);
+
+        const { malla, escenaAlto } = construirMalla3D(georaster);
+        escena3D.add(malla);
+
+        const luzAmbiente = new THREE.AmbientLight(0xffffff, .55);
+        escena3D.add(luzAmbiente);
+        const luzSol = new THREE.DirectionalLight(0xfff3d0, 1.1);
+        luzSol.position.set(8, 12, 6);
+        escena3D.add(luzSol);
+
+        const aspecto = canvas3D.clientWidth / canvas3D.clientHeight;
+        camara3D = new THREE.PerspectiveCamera(45, aspecto, .1, 100);
+        const distancia = Math.max(12, escenaAlto) * 1.1;
+        camara3D.position.set(0, distancia * .65, distancia * .9);
+
+        renderer3D = new THREE.WebGLRenderer({ canvas: canvas3D, antialias: true });
+        renderer3D.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer3D.setSize(canvas3D.clientWidth, canvas3D.clientHeight, false);
+
+        controles3D = new THREE.OrbitControls(camara3D, renderer3D.domElement);
+        controles3D.target.set(0, 0, 0);
+        controles3D.enableDamping = true;
+        controles3D.dampingFactor = .08;
+        controles3D.minDistance = 3;
+        controles3D.maxDistance = distancia * 3;
+        controles3D.update();
+    }
+
+    function animar3D() {
+        animacion3DId = requestAnimationFrame(animar3D);
+        controles3D.update();
+        renderer3D.render(escena3D, camara3D);
+    }
+
+    function redimensionar3D() {
+        if (!renderer3D || overlay3D.hidden) return;
+        const w = canvas3D.clientWidth, h = canvas3D.clientHeight;
+        camara3D.aspect = w / h;
+        camara3D.updateProjectionMatrix();
+        renderer3D.setSize(w, h, false);
+    }
+    window.addEventListener("resize", redimensionar3D);
+
+    async function abrirVista3D() {
+        overlay3D.hidden = false;
+        try {
+            if (!escena3D) {
+                cargando3D.hidden = false;
+                const georaster = await obtenerGeorasterDEM();
+                iniciarEscena3D(georaster);
+                cargando3D.hidden = true;
+            }
+            redimensionar3D();
+            if (!animacion3DId) animar3D();
+        } catch (err) {
+            console.error("No se pudo construir la vista 3D:", err);
+            cargando3D.textContent = "No se pudo cargar el DEM para la vista 3D.";
+        }
+    }
+
+    function cerrarVista3D() {
+        overlay3D.hidden = true;
+        if (animacion3DId) {
+            cancelAnimationFrame(animacion3DId);
+            animacion3DId = null;
+        }
+    }
+
+    btnVer3D.addEventListener("click", abrirVista3D);
+    btnCerrar3D.addEventListener("click", cerrarVista3D);
 
 })();
 </script>
