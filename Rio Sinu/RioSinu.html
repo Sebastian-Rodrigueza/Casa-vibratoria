@@ -12,15 +12,17 @@
 <style>
     :root {
         --white: #ffffff;
-        --cream: #fffdf6;
-        --beige: #fdf7e9;
+        --ink: #1a1f29;
+        --bg-panel: #ffffff;
+        --bg-card: #f7f7f3;
+        --bg-card-hover: #fff3ad;
         --yellow: #f5c400;
         --yellow-dark: #d7aa00;
-        --charcoal: #26292d;
+        --gold-text: #927200;
         --text: #34383d;
         --muted: #70757b;
         --line: #e5e5de;
-        --shadow: 0 18px 46px rgba(35,37,40,.16);
+        --shadow: 0 18px 46px rgba(35,37,40,.12);
         --radius: 16px;
     }
     * { box-sizing: border-box; }
@@ -30,7 +32,7 @@
         overflow: hidden;
         font-family: "Inter", sans-serif;
         color: var(--text);
-        background: var(--beige);
+        background: var(--white);
     }
 
     /* ---------- Barra superior ---------- */
@@ -39,9 +41,10 @@
         align-items: center;
         justify-content: space-between;
         gap: 16px;
-        padding: 10px 24px;
-        background: var(--yellow);
-        color: var(--charcoal);
+        padding: 16px 28px;
+        background: var(--bg-panel);
+        color: var(--text);
+        border-bottom: 1px solid var(--line);
         position: relative;
         z-index: 1000;
         box-shadow: var(--shadow);
@@ -50,14 +53,14 @@
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        color: var(--charcoal);
+        color: var(--text);
         text-decoration: none;
         font-weight: 700;
         font-size: .95rem;
         opacity: .8;
-        transition: opacity .15s;
+        transition: color .15s, opacity .15s;
     }
-    header a.volver:hover { opacity: 1; }
+    header a.volver:hover { opacity: 1; color: var(--gold-text); }
     header a.volver svg { width: 18px; height: 18px; }
     header .titulo {
         display: flex;
@@ -66,20 +69,19 @@
         text-align: center;
     }
     header .titulo strong {
-        font-size: 1.05rem;
+        font-size: 1.25rem;
         letter-spacing: .01em;
-        color: var(--charcoal);
+        color: var(--ink);
     }
     header .titulo span {
-        font-size: .78rem;
-        color: var(--charcoal);
-        opacity: .75;
-        font-weight: 600;
+        font-size: .84rem;
+        color: var(--gold-text);
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: .08em;
+        letter-spacing: .1em;
     }
     header .logo-uniandes {
-        width: 110px;
+        width: 130px;
         display: flex;
         justify-content: flex-end;
     }
@@ -87,12 +89,13 @@
         display: flex;
         align-items: center;
         background: var(--white);
+        border: 1px solid var(--line);
         border-radius: 10px;
         padding: 5px 10px;
-        box-shadow: 0 4px 10px rgba(0,0,0,.1);
+        box-shadow: 0 4px 10px rgba(35,37,40,.06);
     }
     header .logo-uniandes img {
-        height: 26px;
+        height: 34px;
         width: auto;
         display: block;
     }
@@ -101,7 +104,7 @@
     .layout {
         display: grid;
         grid-template-columns: 300px 1fr;
-        height: calc(100vh - 58px);
+        height: calc(100vh - 76px);
     }
     @media (max-width: 900px) {
         html, body { overflow: auto; }
@@ -115,29 +118,130 @@
         overscroll-behavior: contain;
         -webkit-overflow-scrolling: touch;
         padding: 18px 16px 32px;
-        background: var(--cream);
+        background: var(--bg-panel);
         border-right: 1px solid var(--line);
     }
-    .panel h2 {
-        font-size: .78rem;
+    .panel::-webkit-scrollbar { width: 8px; }
+    .panel::-webkit-scrollbar-track { background: transparent; }
+    .panel::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+    .panel::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+    .seccion {
+        border-top: 1px solid var(--line);
+        margin-top: 6px;
+        padding-top: 2px;
+    }
+    .seccion:first-of-type { border-top: none; margin-top: 0; }
+    .seccion summary {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: .74rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .12em;
+        color: var(--gold-text);
+        margin: 12px 0 8px;
+        padding: 4px 2px;
+        cursor: pointer;
+        list-style: none;
+        user-select: none;
+    }
+    .seccion summary::-webkit-details-marker { display: none; }
+    .seccion summary::before {
+        content: "";
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--yellow);
+        box-shadow: 0 0 6px var(--yellow);
+        flex-shrink: 0;
+    }
+    .seccion summary::after {
+        content: "⌄";
+        margin-left: auto;
+        color: var(--muted);
+        font-size: .9rem;
+        transition: transform .15s;
+    }
+    .seccion[open] summary::after { transform: rotate(180deg); }
+    .seccion .contenido-seccion { padding-bottom: 6px; }
+    .historial-medicion {
+        margin-top: 10px;
+        padding: 10px 12px;
+        background: var(--bg-card);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+    }
+    .historial-medicion[hidden] { display: none; }
+    .historial-cabeza {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 6px;
+    }
+    .historial-cabeza span {
+        font-size: .66rem;
+        font-weight: 700;
         text-transform: uppercase;
         letter-spacing: .08em;
         color: var(--muted);
-        margin: 18px 0 8px;
     }
-    .panel h2:first-child { margin-top: 0; }
+    .historial-cabeza button {
+        border: none;
+        background: transparent;
+        color: var(--gold-text);
+        font-size: .72rem;
+        font-weight: 700;
+        cursor: pointer;
+        padding: 2px 4px;
+    }
+    .historial-cabeza button:hover { text-decoration: underline; }
+    .fila-medicion {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 0;
+        border-top: 1px dashed var(--line);
+        font-size: .78rem;
+    }
+    .fila-medicion:first-of-type { border-top: none; padding-top: 0; }
+    .fila-tipo {
+        flex-shrink: 0;
+        padding: 2px 7px;
+        background: var(--yellow);
+        color: var(--ink);
+        border-radius: 999px;
+        font-size: .64rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+    .fila-texto { flex: 1; color: var(--text); line-height: 1.35; }
+    .fila-quitar {
+        flex-shrink: 0;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 1px solid var(--line);
+        background: var(--white);
+        color: var(--muted);
+        font-size: .85rem;
+        line-height: 1;
+        cursor: pointer;
+        padding: 0;
+    }
+    .fila-quitar:hover { background: var(--line); color: var(--text); }
     .subir-btn {
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 8px;
         padding: 10px;
-        background: var(--beige);
-        border: 1px dashed var(--line-strong, var(--line));
+        background: var(--bg-card);
+        border: 1px dashed var(--line);
         border-radius: 10px;
         font-size: .82rem;
         font-weight: 600;
-        color: var(--charcoal);
+        color: var(--text);
         cursor: pointer;
         transition: all .15s;
     }
@@ -145,24 +249,27 @@
         background: var(--yellow);
         border-color: var(--yellow-dark);
         border-style: solid;
+        color: var(--ink);
     }
     .subir-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
-    .subir-btn.activo-perfil {
+    .subir-btn.activo-perfil,
+    .subir-btn.activo-medicion {
         background: var(--yellow);
         border-color: var(--yellow-dark);
         border-style: solid;
+        color: var(--ink);
     }
     .perfil-card {
         margin-top: 8px;
         padding: 10px 12px 8px;
-        background: var(--white);
+        background: var(--bg-card);
         border: 1px solid var(--line);
         border-radius: var(--radius);
     }
     #perfilSvg { width: 100%; height: auto; display: block; }
     #perfilSvg .eje-perfil { stroke: var(--line); stroke-width: 1; }
-    #perfilSvg .linea-perfil { fill: none; stroke: #1c6fb0; stroke-width: 2; }
-    #perfilSvg .relleno-perfil { fill: #1c6fb0; opacity: .14; }
+    #perfilSvg .linea-perfil { fill: none; stroke: #f5c400; stroke-width: 2; }
+    #perfilSvg .relleno-perfil { fill: #f5c400; opacity: .18; }
     #perfilSvg .etiqueta-perfil-x, #perfilSvg .etiqueta-perfil-y {
         font-size: 8px; fill: var(--muted); font-family: "Inter", sans-serif;
     }
@@ -172,7 +279,6 @@
         color: var(--muted);
         line-height: 1.4;
     }
-
     /* ---------- Vista 3D del terreno ---------- */
     .vista3d-overlay {
         position: fixed;
@@ -191,7 +297,7 @@
         border-radius: 50%;
         border: none;
         background: rgba(255,255,255,.92);
-        color: var(--charcoal);
+        color: var(--ink);
         font-size: 1.3rem;
         line-height: 1;
         cursor: pointer;
@@ -234,19 +340,19 @@
         font-size: .88rem;
         line-height: 1.25;
     }
-    .capa-item:hover { background: var(--beige); }
-    .capa-item input { accent-color: var(--yellow-dark); width: 15px; height: 15px; flex-shrink: 0; }
+    .capa-item:hover { background: var(--bg-card-hover); }
+    .capa-item input { accent-color: var(--yellow); width: 15px; height: 15px; flex-shrink: 0; }
     .swatch {
         width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
-        border: 1px solid rgba(0,0,0,.25);
+        border: 1px solid rgba(35,37,40,.18);
     }
-    .capa-item .nombre { flex: 1; }
+    .capa-item .nombre { flex: 1; color: var(--text); }
     .capa-item .conteo { color: var(--muted); font-size: .75rem; }
 
     .ficha {
         margin-top: 8px;
         padding: 12px;
-        background: var(--white);
+        background: var(--bg-card);
         border: 1px solid var(--line);
         border-radius: var(--radius);
         font-size: .82rem;
@@ -254,18 +360,18 @@
         line-height: 1.5;
     }
     .ficha code {
-        background: var(--beige);
+        background: var(--line);
         border-radius: 5px;
         padding: 1px 5px;
         font-size: .78rem;
-        color: var(--charcoal);
+        color: var(--text);
     }
 
     /* ---------- Mapa ---------- */
     .mapa-wrap { position: relative; width: 100%; height: 100%; }
     #mapa { width: 100%; height: 100%; background: #0a0e14; }
     .leaflet-popup-content { font-family: "Inter", sans-serif; font-size: .85rem; }
-    .leaflet-popup-content b { color: var(--charcoal); }
+    .leaflet-popup-content b { color: var(--ink); }
 
     /* ---------- Barrido de radar (decorativo) ---------- */
     .mapa-scan {
@@ -357,7 +463,7 @@
 <header>
     <a class="volver" href="Index.html">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-        Portal
+        Río Sinú
     </a>
     <div class="titulo">
         <strong>Geodata Río Sinú</strong>
@@ -365,7 +471,7 @@
     </div>
     <div class="logo-uniandes">
         <span class="chip">
-            <img src="Imagenes/logo-uniandes.png" alt="Universidad de los Andes">
+            <img src="../Imagenes/logo-uniandes.png" alt="Universidad de los Andes">
         </span>
     </div>
 </header>
@@ -373,150 +479,222 @@
 <div class="layout">
     <div class="panel">
 
-        <h2>Tu GeoTIFF</h2>
-        <label class="subir-btn" for="inputTiffUsuario">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                <path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" />
-            </svg>
-            Subir .tif (máx. 205MB)
-        </label>
-        <input type="file" id="inputTiffUsuario" accept=".tif,.tiff" hidden>
-        <div class="ficha" id="tiffUsuarioEstado">
-            Se procesa en tu navegador, no se sube a ningún servidor.
-            Debe usar compresión LZW o Deflate (ZSTD no es compatible).
-        </div>
 
-        <h2>Terreno</h2>
-        <label class="capa-item">
-            <input type="checkbox" id="chk-dem" data-capa="dem">
-            <span class="swatch" style="background:linear-gradient(90deg,#0e4d32 20%,#a9c96e 50%,#c98c4a 75%,#efe6d8 100%);"></span>
-            <span class="nombre">DEM (.tif, resolución web)</span>
-        </label>
-        <div class="ficha" id="dem-aviso">
-            Lee un <code>.tif</code> real (valores reales, resolución
-            reducida para la web). Puede tardar unos segundos en cargar.
-        </div>
-        <button type="button" class="subir-btn" id="btnVer3D" style="margin-top:8px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                <path d="M12 2 3 7v10l9 5 9-5V7Z" /><path d="M3 7l9 5 9-5M12 12v10" />
-            </svg>
-            Ver terreno en 3D
-        </button>
+        <details class="seccion">
+            <summary>Tu GeoTIFF</summary>
+            <div class="contenido-seccion">
+                <label class="subir-btn" for="inputTiffUsuario">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" />
+                    </svg>
+                    Subir .tif (máx. 205MB)
+                </label>
+                <input type="file" id="inputTiffUsuario" accept=".tif,.tiff" hidden>
+                <div class="ficha" id="tiffUsuarioEstado">
+                    Se procesa en tu navegador, no se sube a ningún servidor.
+                    Debe usar compresión LZW o Deflate (ZSTD no es compatible).
+                </div>
+            </div>
+        </details>
 
-        <h2>Perfil de elevación</h2>
-        <button type="button" class="subir-btn" id="btnPerfil">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                <path d="M3 17 9 9l4 4 8-9" /><circle cx="9" cy="9" r="1.4" fill="currentColor" stroke="none" /><circle cx="21" cy="4" r="1.4" fill="currentColor" stroke="none" />
-            </svg>
-            Marcar 2 puntos en el mapa
-        </button>
-        <div class="ficha" id="perfilAviso">
-            Actívalo y haz clic en 2 puntos del mapa para ver el corte
-            real del terreno entre ellos (usa el DEM).
-        </div>
-        <div class="perfil-card" id="perfilContenedor" hidden>
-            <svg id="perfilSvg" viewBox="0 0 258 130" preserveAspectRatio="none"></svg>
-            <p class="perfil-resumen" id="perfilResumen"></p>
-        </div>
+        <details class="seccion">
+            <summary>Terreno</summary>
+            <div class="contenido-seccion">
+                <label class="capa-item">
+                    <input type="checkbox" id="chk-dem" data-capa="dem">
+                    <span class="swatch" style="background:linear-gradient(90deg,#0e4d32 20%,#a9c96e 50%,#c98c4a 75%,#efe6d8 100%);"></span>
+                    <span class="nombre">DEM (.tif, resolución web)</span>
+                </label>
+                <div class="ficha" id="dem-aviso">
+                    Lee un <code>.tif</code> real (valores reales, resolución
+                    reducida para la web). Puede tardar unos segundos en cargar.
+                </div>
+                <button type="button" class="subir-btn" id="btnVer3D" style="margin-top:8px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path d="M12 2 3 7v10l9 5 9-5V7Z" /><path d="M3 7l9 5 9-5M12 12v10" />
+                    </svg>
+                    Ver terreno en 3D
+                </button>
+            </div>
+        </details>
 
-        <h2>Cuenca</h2>
-        <label class="capa-item">
-            <input type="checkbox" data-capa="cuenca" checked>
-            <span class="swatch" style="background:transparent;border-color:#e08b1c;border-width:2px;"></span>
-            <span class="nombre">Límite de la cuenca</span>
-        </label>
-        <label class="capa-item">
-            <input type="checkbox" data-capa="subcuencas">
-            <span class="swatch" style="background:transparent;border-color:#4a7fa5;"></span>
-            <span class="nombre">Subcuencas</span>
-            <span class="conteo" id="cnt-subcuencas"></span>
-        </label>
+        <details class="seccion">
+            <summary>Perfil de elevación</summary>
+            <div class="contenido-seccion">
+                <button type="button" class="subir-btn" id="btnPerfil">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path d="M3 17 9 9l4 4 8-9" /><circle cx="9" cy="9" r="1.4" fill="currentColor" stroke="none" /><circle cx="21" cy="4" r="1.4" fill="currentColor" stroke="none" />
+                    </svg>
+                    Marcar 2 puntos en el mapa
+                </button>
+                <div class="ficha" id="perfilAviso">
+                    Actívalo y haz clic en 2 puntos del mapa para ver el corte
+                    real del terreno entre ellos. Dentro de la cuenca usa el
+                    DEM local; fuera de ella consulta un servicio gratuito de
+                    elevación por internet.
+                </div>
+                <div class="perfil-card" id="perfilContenedor" hidden>
+                    <svg id="perfilSvg" viewBox="0 0 258 130" preserveAspectRatio="none"></svg>
+                    <p class="perfil-resumen" id="perfilResumen"></p>
+                </div>
+            </div>
+        </details>
 
-        <h2>Áreas protegidas</h2>
-        <label class="capa-item">
-            <input type="checkbox" data-capa="parquePNN">
-            <span class="swatch" style="background:#2f8f4e;"></span>
-            <span class="nombre">Parque Nal. Paramillo</span>
-        </label>
-        <label class="capa-item">
-            <input type="checkbox" data-capa="sinapPNN">
-            <span class="swatch" style="background:#5cb377;"></span>
-            <span class="nombre">Otros SINAP (recorte)</span>
-            <span class="conteo" id="cnt-sinap"></span>
-        </label>
-        <label class="capa-item">
-            <input type="checkbox" data-capa="reservasCiviles">
-            <span class="swatch" style="background:#8bd19e;"></span>
-            <span class="nombre">Reservas soc. civil</span>
-            <span class="conteo" id="cnt-reservas"></span>
-        </label>
-        <label class="capa-item">
-            <input type="checkbox" data-capa="dmi">
-            <span class="swatch" style="background:#b7e0a8;"></span>
-            <span class="nombre">Distrito manejo integrado</span>
-        </label>
-        <label class="capa-item">
-            <input type="checkbox" data-capa="conservacionSuelo">
-            <span class="swatch" style="background:#d8edb0;"></span>
-            <span class="nombre">Conservación de suelo</span>
-        </label>
+        <details class="seccion">
+            <summary>Medición</summary>
+            <div class="contenido-seccion">
+                <button type="button" class="subir-btn" id="btnMedirLongitud">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path d="M4 17 17 4" /><circle cx="4" cy="17" r="1.4" fill="currentColor" stroke="none" /><circle cx="17" cy="4" r="1.4" fill="currentColor" stroke="none" />
+                    </svg>
+                    Medir longitud (2 a 4 puntos)
+                </button>
+                <div class="ficha" id="avisoLongitud">
+                    Actívalo y haz clic en 2 a 4 puntos del mapa para medir la
+                    distancia total tramo a tramo entre ellos. Pulsa el botón
+                    de nuevo para terminar antes de llegar a 4 puntos.
+                </div>
 
-        <h2>Agua</h2>
-        <label class="capa-item">
-            <input type="checkbox" data-capa="clasificacionAgua" checked>
-            <span class="swatch" style="background:linear-gradient(90deg,#1c6fb0 50%,#2f8f4e 50%);"></span>
-            <span class="nombre">Clasificación lótico / léntico</span>
-            <span class="conteo" id="cnt-agua"></span>
-        </label>
-        <label class="capa-item">
-            <input type="checkbox" data-capa="embalses">
-            <span class="swatch" style="background:#1c6fb0;"></span>
-            <span class="nombre">Embalses</span>
-        </label>
-        <label class="capa-item">
-            <input type="checkbox" data-capa="lagunas">
-            <span class="swatch" style="background:#2fa3b0;"></span>
-            <span class="nombre">Lagunas / ciénagas</span>
-            <span class="conteo" id="cnt-lagunas"></span>
-        </label>
+                <button type="button" class="subir-btn" id="btnMedirArea" style="margin-top:8px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path d="M12 3 21 9.5 18 20H6L3 9.5Z" />
+                    </svg>
+                    Medir área (3 a 4 puntos)
+                </button>
+                <div class="ficha" id="avisoArea">
+                    Actívalo y haz clic en 3 a 4 puntos del mapa para calcular
+                    el área del polígono que forman. Pulsa el botón de nuevo
+                    para terminar antes de llegar a 4 puntos.
+                </div>
 
-        <h2>Infraestructura</h2>
-        <label class="capa-item">
-            <input type="checkbox" data-capa="poblaciones">
-            <span class="swatch" style="background:#b48a3f;"></span>
-            <span class="nombre">Cabeceras / poblaciones</span>
-            <span class="conteo" id="cnt-poblaciones"></span>
-        </label>
-        <label class="capa-item">
-            <input type="checkbox" data-capa="vias">
-            <span class="swatch" style="background:#8a8a86;"></span>
-            <span class="nombre">Vías principales</span>
-        </label>
-        <label class="capa-item">
-            <input type="checkbox" data-capa="puentes">
-            <span class="swatch" style="background:#6b6b68;"></span>
-            <span class="nombre">Puentes</span>
-        </label>
-        <label class="capa-item">
-            <input type="checkbox" data-capa="plantasTratamiento">
-            <span class="swatch" style="background:#2fb0a3;"></span>
-            <span class="nombre">Plantas de tratamiento</span>
-        </label>
-        <label class="capa-item">
-            <input type="checkbox" data-capa="rellenoSanitario">
-            <span class="swatch" style="background:#a4432f;"></span>
-            <span class="nombre">Rellenos sanitarios</span>
-        </label>
+                <div class="historial-medicion" id="historialMedicion" hidden>
+                    <div class="historial-cabeza">
+                        <span>Mediciones hechas</span>
+                        <button type="button" id="btnLimpiarMediciones">Limpiar todo</button>
+                    </div>
+                    <div id="filasMedicion"></div>
+                </div>
+            </div>
+        </details>
 
-        <h2>Suelo</h2>
-        <label class="capa-item">
-            <input type="checkbox" data-capa="claseSuelo">
-            <span class="swatch" style="background:linear-gradient(90deg,#e2c66a 33%,#c98c4a 33% 66%,#8f6b46 66%);"></span>
-            <span class="nombre">Clase agrológica del suelo</span>
-            <span class="conteo" id="cnt-suelo"></span>
-        </label>
+        <details class="seccion">
+            <summary>Cuenca</summary>
+            <div class="contenido-seccion">
+                <label class="capa-item">
+                    <input type="checkbox" data-capa="cuenca" checked>
+                    <span class="swatch" style="background:transparent;border-color:#e08b1c;border-width:2px;"></span>
+                    <span class="nombre">Límite de la cuenca</span>
+                </label>
+                <label class="capa-item">
+                    <input type="checkbox" data-capa="subcuencas">
+                    <span class="swatch" style="background:transparent;border-color:#4a7fa5;"></span>
+                    <span class="nombre">Subcuencas</span>
+                    <span class="conteo" id="cnt-subcuencas"></span>
+                </label>
+            </div>
+        </details>
 
-        <div class="ficha">
+        <details class="seccion">
+            <summary>Áreas protegidas</summary>
+            <div class="contenido-seccion">
+                <label class="capa-item">
+                    <input type="checkbox" data-capa="parquePNN">
+                    <span class="swatch" style="background:#2f8f4e;"></span>
+                    <span class="nombre">Parque Nal. Paramillo</span>
+                </label>
+                <label class="capa-item">
+                    <input type="checkbox" data-capa="sinapPNN">
+                    <span class="swatch" style="background:#5cb377;"></span>
+                    <span class="nombre">Otros SINAP (recorte)</span>
+                    <span class="conteo" id="cnt-sinap"></span>
+                </label>
+                <label class="capa-item">
+                    <input type="checkbox" data-capa="reservasCiviles">
+                    <span class="swatch" style="background:#8bd19e;"></span>
+                    <span class="nombre">Reservas soc. civil</span>
+                    <span class="conteo" id="cnt-reservas"></span>
+                </label>
+                <label class="capa-item">
+                    <input type="checkbox" data-capa="dmi">
+                    <span class="swatch" style="background:#b7e0a8;"></span>
+                    <span class="nombre">Distrito manejo integrado</span>
+                </label>
+                <label class="capa-item">
+                    <input type="checkbox" data-capa="conservacionSuelo">
+                    <span class="swatch" style="background:#d8edb0;"></span>
+                    <span class="nombre">Conservación de suelo</span>
+                </label>
+            </div>
+        </details>
+
+        <details class="seccion">
+            <summary>Agua</summary>
+            <div class="contenido-seccion">
+                <label class="capa-item">
+                    <input type="checkbox" data-capa="clasificacionAgua" checked>
+                    <span class="swatch" style="background:linear-gradient(90deg,#1c6fb0 50%,#2f8f4e 50%);"></span>
+                    <span class="nombre">Clasificación lótico / léntico</span>
+                    <span class="conteo" id="cnt-agua"></span>
+                </label>
+                <label class="capa-item">
+                    <input type="checkbox" data-capa="embalses">
+                    <span class="swatch" style="background:#1c6fb0;"></span>
+                    <span class="nombre">Embalses</span>
+                </label>
+                <label class="capa-item">
+                    <input type="checkbox" data-capa="lagunas">
+                    <span class="swatch" style="background:#2fa3b0;"></span>
+                    <span class="nombre">Lagunas / ciénagas</span>
+                    <span class="conteo" id="cnt-lagunas"></span>
+                </label>
+            </div>
+        </details>
+
+        <details class="seccion">
+            <summary>Infraestructura</summary>
+            <div class="contenido-seccion">
+                <label class="capa-item">
+                    <input type="checkbox" data-capa="poblaciones">
+                    <span class="swatch" style="background:#b48a3f;"></span>
+                    <span class="nombre">Cabeceras / poblaciones</span>
+                    <span class="conteo" id="cnt-poblaciones"></span>
+                </label>
+                <label class="capa-item">
+                    <input type="checkbox" data-capa="vias">
+                    <span class="swatch" style="background:#8a8a86;"></span>
+                    <span class="nombre">Vías principales</span>
+                </label>
+                <label class="capa-item">
+                    <input type="checkbox" data-capa="puentes">
+                    <span class="swatch" style="background:#6b6b68;"></span>
+                    <span class="nombre">Puentes</span>
+                </label>
+                <label class="capa-item">
+                    <input type="checkbox" data-capa="plantasTratamiento">
+                    <span class="swatch" style="background:#2fb0a3;"></span>
+                    <span class="nombre">Plantas de tratamiento</span>
+                </label>
+                <label class="capa-item">
+                    <input type="checkbox" data-capa="rellenoSanitario">
+                    <span class="swatch" style="background:#a4432f;"></span>
+                    <span class="nombre">Rellenos sanitarios</span>
+                </label>
+            </div>
+        </details>
+
+        <details class="seccion">
+            <summary>Suelo</summary>
+            <div class="contenido-seccion">
+                <label class="capa-item">
+                    <input type="checkbox" data-capa="claseSuelo">
+                    <span class="swatch" style="background:linear-gradient(90deg,#e2c66a 33%,#c98c4a 33% 66%,#8f6b46 66%);"></span>
+                    <span class="nombre">Clase agrológica del suelo</span>
+                    <span class="conteo" id="cnt-suelo"></span>
+                </label>
+            </div>
+        </details>
+
+        <div class="ficha" style="margin-top:12px;">
             Datos propios de la cuenca del río Sinú (delimitación, áreas
             protegidas, infraestructura y clasificación satelital de
             cuerpos de agua). Haz clic en cualquier elemento del mapa
@@ -563,23 +741,22 @@
 <!-- Datos geograficos propios (convertidos de shapefile a GeoJSON y
      envueltos en variables JS para que funcionen abriendo este HTML
      directo con doble clic, sin servidor). -->
-<script src="rio_sinu_data/cuenca.js"></script>
-<script src="rio_sinu_data/subcuencas.js"></script>
-<script src="rio_sinu_data/parque_paramillo.js"></script>
-<script src="rio_sinu_data/sinap_pnn_recorte.js"></script>
-<script src="rio_sinu_data/reservas_civiles.js"></script>
-<script src="rio_sinu_data/distrito_manejo_integrado.js"></script>
-<script src="rio_sinu_data/conservacion_suelo.js"></script>
-<script src="rio_sinu_data/clasificacion_agua.js"></script>
-<script src="rio_sinu_data/infra_embalses.js"></script>
-<script src="rio_sinu_data/infra_lagunas.js"></script>
-<script src="rio_sinu_data/infra_poblaciones.js"></script>
-<script src="rio_sinu_data/infra_vias.js"></script>
-<script src="rio_sinu_data/infra_puentes.js"></script>
-<script src="rio_sinu_data/infra_plantas_tratamiento.js"></script>
-<script src="rio_sinu_data/infra_relleno_sanitario.js"></script>
-<script src="rio_sinu_data/clase_suelo_recorte.js"></script>
-
+<script src="../rio_sinu_data/cuenca.js"></script>
+<script src="../rio_sinu_data/subcuencas.js"></script>
+<script src="../rio_sinu_data/parque_paramillo.js"></script>
+<script src="../rio_sinu_data/sinap_pnn_recorte.js"></script>
+<script src="../rio_sinu_data/reservas_civiles.js"></script>
+<script src="../rio_sinu_data/distrito_manejo_integrado.js"></script>
+<script src="../rio_sinu_data/conservacion_suelo.js"></script>
+<script src="../rio_sinu_data/clasificacion_agua.js"></script>
+<script src="../rio_sinu_data/infra_embalses.js"></script>
+<script src="../rio_sinu_data/infra_lagunas.js"></script>
+<script src="../rio_sinu_data/infra_poblaciones.js"></script>
+<script src="../rio_sinu_data/infra_vias.js"></script>
+<script src="../rio_sinu_data/infra_puentes.js"></script>
+<script src="../rio_sinu_data/infra_plantas_tratamiento.js"></script>
+<script src="../rio_sinu_data/infra_relleno_sanitario.js"></script>
+<script src="../rio_sinu_data/clase_suelo_recorte.js"></script>
 <script>
 (() => {
     "use strict";
@@ -589,6 +766,13 @@
     // calcular cada vertice en cada zoom/pan y el mapa se traba. Canvas
     // dibuja todo de una sola vez por frame, mucho mas fluido.
     const mapa = L.map("mapa", { zoomControl: true, renderer: L.canvas({ padding: 0.5 }) });
+
+    // Bandeja propia para los rasters (DEM, GeoTIFF subido) con una altura
+    // fija por encima del mapa base -- sin esto, al cambiar de mapa base
+    // (oscuro <-> OpenStreetMap) Leaflet vuelve a insertar la capa base
+    // "por encima" de lo que ya estaba puesto, y el .tif se veia tapado.
+    mapa.createPane("panelRaster");
+    mapa.getPane("panelRaster").style.zIndex = 350;
 
     // Dos mapas base para elegir: el oscuro (mas "tecnologico", sin nombres
     // de calles/ciudades para que se vea limpio) como opcion por defecto, y
@@ -602,14 +786,21 @@
         maxNativeZoom: 16,
         maxZoom: 19
     });
-    const capaOSM = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "&copy; OpenStreetMap contributors",
+    // El OpenStreetMap "de verdad" (tile.openstreetmap.org) bloquea sitios
+    // reales/publicos que lo usen asi -- es un servicio de voluntarios, no
+    // pensado para produccion, y empezo a devolver 403 "Access blocked".
+    // Esri World Street Map se ve casi igual (calles, ciudades, nombres,
+    // a color) y es del mismo proveedor gratis que el oscuro, sin ese
+    // problema de bloqueo.
+    const capaCalles = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
+        attribution: "Tiles &copy; Esri &mdash; Esri, HERE, Garmin, USGS, Intermap, INCREMENT P, NRCan, Esri Japan, METI, Esri China (Hong Kong), Esri Korea, Esri (Thailand), NGCC, (c) OpenStreetMap contributors, GIS User Community",
+        maxNativeZoom: 19,
         maxZoom: 19
     });
 
     capaOscura.addTo(mapa);
     L.control.layers(
-        { "Oscuro": capaOscura, "OpenStreetMap": capaOSM },
+        { "Oscuro": capaOscura, "Calles": capaCalles },
         null,
         { position: "topright", collapsed: true }
     ).addTo(mapa);
@@ -744,7 +935,7 @@
     // Version "web" a mitad de resolucion (remuestreada por promedio, no
     // inventada) para quedar bajo el limite de 100MB de GitHub/Vercel.
     // El archivo de resolucion completa se comparte aparte para QGIS/ArcGIS.
-    const RUTA_DEM = "capas_web/DEM_web.tif?v=2";
+    const RUTA_DEM = "../capas_web/DEM_web.tif?v=2";
 
     function colorElevacionRGB(valor) {
         if (valor === null || valor === undefined || valor <= -100) return [40, 44, 50];
@@ -802,6 +993,7 @@
             const georaster = await obtenerGeorasterDEM();
             capaDEM = new GeoRasterLayer({
                 georaster,
+                pane: "panelRaster",
                 resolution: 128,
                 pixelValuesToColorFn: (valores) => colorElevacion(valores[0])
             });
@@ -826,12 +1018,56 @@
     }
 
     function elevacionEnPunto(georaster, lat, lng) {
+        if (!georaster) return null;
         const col = Math.floor((lng - georaster.xmin) / georaster.pixelWidth);
         const row = Math.floor((georaster.ymax - lat) / georaster.pixelHeight);
         if (row < 0 || row >= georaster.height || col < 0 || col >= georaster.width) return null;
         const val = georaster.values[0][row][col];
         if (val === undefined || val === georaster.noDataValue || val <= -100) return null;
         return val;
+    }
+
+    // Fuera de la cuenca no hay DEM local, asi que esos puntos se
+    // consultan a un servicio gratuito de elevacion por internet
+    // (Open-Topo-Data, dataset SRTM 90m, sin necesidad de API key).
+    // Se manda en lotes de 100 puntos (limite del servicio publico) y
+    // se espera entre lotes porque tambien limita a ~1 solicitud/seg.
+    async function consultarElevacionExterna(puntos) {
+        const TAMANO_LOTE = 100;
+        const resultados = new Array(puntos.length).fill(null);
+        for (let inicio = 0; inicio < puntos.length; inicio += TAMANO_LOTE) {
+            const lote = puntos.slice(inicio, inicio + TAMANO_LOTE);
+            const locations = lote.map((p) => `${p.lat},${p.lng}`).join("|");
+            try {
+                const resp = await fetch(
+                    "https://api.opentopodata.org/v1/srtm90m?locations=" + encodeURIComponent(locations)
+                );
+                if (resp.ok) {
+                    const datos = await resp.json();
+                    (datos.results || []).forEach((r, i) => {
+                        resultados[inicio + i] = (typeof r.elevation === "number") ? r.elevation : null;
+                    });
+                }
+            } catch (err) {
+                console.error("Servicio de elevación externo no disponible:", err);
+            }
+            if (inicio + TAMANO_LOTE < puntos.length) {
+                await new Promise((resolve) => setTimeout(resolve, 1100));
+            }
+        }
+        return resultados;
+    }
+
+    async function calcularElevacionesPerfil(georaster, coords) {
+        const elevs = coords.map((c) => elevacionEnPunto(georaster, c.lat, c.lng));
+        const faltantes = [];
+        elevs.forEach((v, i) => { if (v === null) faltantes.push(i); });
+        if (faltantes.length) {
+            perfilAviso.textContent = "Consultando el servicio de elevación externo para los puntos fuera de la cuenca…";
+            const externas = await consultarElevacionExterna(faltantes.map((i) => coords[i]));
+            faltantes.forEach((i, idx) => { elevs[i] = externas[idx]; });
+        }
+        return elevs;
     }
 
     const btnPerfil = document.getElementById("btnPerfil");
@@ -896,18 +1132,21 @@
     }
 
     async function calcularYDibujarPerfil(a, b) {
-        perfilAviso.textContent = "Calculando perfil (usa el DEM, puede tardar si aún no se ha cargado)…";
+        perfilAviso.textContent = "Calculando perfil (usa el DEM de la cuenca, puede tardar si aún no se ha cargado)…";
         try {
-            const georaster = await obtenerGeorasterDEM();
+            let georaster = null;
+            try { georaster = await obtenerGeorasterDEM(); } catch (err) { georaster = null; }
+
             const N = 150;
             const distanciaTotal = distanciaHaversineMetros(a, b);
-            const puntos = [];
+            const coords = [];
             for (let i = 0; i <= N; i++) {
                 const t = i / N;
-                const lat = a.lat + (b.lat - a.lat) * t;
-                const lng = a.lng + (b.lng - a.lng) * t;
-                puntos.push({ dist: distanciaTotal * t, elev: elevacionEnPunto(georaster, lat, lng) });
+                coords.push({ lat: a.lat + (b.lat - a.lat) * t, lng: a.lng + (b.lng - a.lng) * t });
             }
+            const elevaciones = await calcularElevacionesPerfil(georaster, coords);
+            const puntos = coords.map((c, i) => ({ dist: distanciaTotal * (i / N), elev: elevaciones[i] }));
+
             perfilAviso.textContent = "";
             dibujarPerfilSvg(puntos, distanciaTotal);
         } catch (err) {
@@ -946,6 +1185,196 @@
             modoPerfilActivo = false;
             btnPerfil.classList.remove("activo-perfil");
             mapa.getContainer().style.cursor = "";
+        }
+    });
+
+    // ---------- Medición de longitud y área (hasta 4 puntos) ----------
+    const btnMedirLongitud = document.getElementById("btnMedirLongitud");
+    const avisoLongitud = document.getElementById("avisoLongitud");
+    const avisoLongitudOriginal = avisoLongitud.textContent;
+
+    const btnMedirArea = document.getElementById("btnMedirArea");
+    const avisoArea = document.getElementById("avisoArea");
+    const avisoAreaOriginal = avisoArea.textContent;
+
+    const historialMedicionEl = document.getElementById("historialMedicion");
+    const filasMedicionEl = document.getElementById("filasMedicion");
+    const btnLimpiarMediciones = document.getElementById("btnLimpiarMediciones");
+
+    const MAX_PUNTOS_MEDICION = 4;
+
+    let modoMedicion = null; // "longitud" | "area" | null
+    let puntosMedicion = [];
+    let marcadoresMedicion = [];
+    let formaMedicion = null;
+    let historialMediciones = []; // { id, tipo, texto, capas: [...] }
+    let contadorMedicionId = 0;
+
+    function renderHistorialMedicion() {
+        historialMedicionEl.hidden = historialMediciones.length === 0;
+        filasMedicionEl.innerHTML = "";
+        historialMediciones.forEach((item) => {
+            const fila = document.createElement("div");
+            fila.className = "fila-medicion";
+            fila.innerHTML =
+                `<span class="fila-tipo">${item.tipo === "longitud" ? "Longitud" : "Área"}</span>` +
+                `<span class="fila-texto">${item.texto}</span>` +
+                `<button type="button" class="fila-quitar" aria-label="Quitar esta medición">×</button>`;
+            fila.querySelector(".fila-quitar").addEventListener("click", () => quitarMedicion(item.id));
+            filasMedicionEl.appendChild(fila);
+        });
+    }
+
+    function quitarMedicion(id) {
+        const indice = historialMediciones.findIndex((m) => m.id === id);
+        if (indice === -1) return;
+        historialMediciones[indice].capas.forEach((capa) => mapa.removeLayer(capa));
+        historialMediciones.splice(indice, 1);
+        renderHistorialMedicion();
+    }
+
+    btnLimpiarMediciones.addEventListener("click", () => {
+        historialMediciones.forEach((item) => item.capas.forEach((capa) => mapa.removeLayer(capa)));
+        historialMediciones = [];
+        renderHistorialMedicion();
+    });
+
+    function limpiarMedicionEnCurso() {
+        marcadoresMedicion.forEach((m) => mapa.removeLayer(m));
+        marcadoresMedicion = [];
+        if (formaMedicion) { mapa.removeLayer(formaMedicion); formaMedicion = null; }
+        puntosMedicion = [];
+        avisoLongitud.textContent = avisoLongitudOriginal;
+        avisoArea.textContent = avisoAreaOriginal;
+    }
+
+    function apagarModoMedicion() {
+        modoMedicion = null;
+        btnMedirLongitud.classList.remove("activo-medicion");
+        btnMedirArea.classList.remove("activo-medicion");
+        mapa.getContainer().style.cursor = "";
+    }
+
+    function iniciarMedicion(tipo) {
+        limpiarMedicionEnCurso();
+        modoMedicion = tipo;
+        mapa.getContainer().style.cursor = "crosshair";
+        if (tipo === "longitud") {
+            btnMedirLongitud.classList.add("activo-medicion");
+            avisoLongitud.textContent = `Haz clic en 2 a ${MAX_PUNTOS_MEDICION} puntos del mapa…`;
+        } else {
+            btnMedirArea.classList.add("activo-medicion");
+            avisoArea.textContent = `Haz clic en 3 a ${MAX_PUNTOS_MEDICION} puntos del mapa…`;
+        }
+    }
+
+    // Si hay suficientes puntos para ese tipo, deja el dibujo puesto en
+    // el mapa y lo agrega al historial; si no alcanzan, borra lo que
+    // se alcanzo a dibujar (no queda "a medias" en la lista).
+    function comprometerMedicionEnCurso() {
+        const minimo = modoMedicion === "longitud" ? 2 : 3;
+        if (puntosMedicion.length >= minimo) {
+            const texto = modoMedicion === "longitud"
+                ? calcularTextoLongitud(puntosMedicion)
+                : calcularTextoArea(puntosMedicion);
+            historialMediciones.push({
+                id: ++contadorMedicionId,
+                tipo: modoMedicion,
+                texto,
+                capas: formaMedicion ? [...marcadoresMedicion, formaMedicion] : [...marcadoresMedicion]
+            });
+        } else {
+            marcadoresMedicion.forEach((m) => mapa.removeLayer(m));
+            if (formaMedicion) mapa.removeLayer(formaMedicion);
+        }
+        marcadoresMedicion = [];
+        formaMedicion = null;
+        puntosMedicion = [];
+        renderHistorialMedicion();
+    }
+
+    function terminarMedicion() {
+        comprometerMedicionEnCurso();
+        apagarModoMedicion();
+    }
+
+    function areaPoligonoMetros(puntos) {
+        const latMedia = puntos.reduce((s, p) => s + p.lat, 0) / puntos.length;
+        const metrosPorGradoLat = 111320;
+        const metrosPorGradoLon = 111320 * Math.cos((latMedia * Math.PI) / 180);
+        const xy = puntos.map((p) => [p.lng * metrosPorGradoLon, p.lat * metrosPorGradoLat]);
+        let area = 0;
+        for (let i = 0; i < xy.length; i++) {
+            const [x1, y1] = xy[i];
+            const [x2, y2] = xy[(i + 1) % xy.length];
+            area += x1 * y2 - x2 * y1;
+        }
+        return Math.abs(area) / 2;
+    }
+
+    function calcularTextoLongitud(puntos) {
+        let total = 0;
+        for (let i = 1; i < puntos.length; i++) {
+            total += distanciaHaversineMetros(puntos[i - 1], puntos[i]);
+        }
+        return `${total >= 1000 ? (total / 1000).toFixed(2) + " km" : Math.round(total) + " m"} ` +
+            `· ${puntos.length} puntos, ${puntos.length - 1} tramo${puntos.length - 1 === 1 ? "" : "s"}`;
+    }
+
+    function calcularTextoArea(puntos) {
+        const areaM2 = areaPoligonoMetros(puntos);
+        const areaHa = areaM2 / 10000;
+        const areaKm2 = areaM2 / 1000000;
+        const texto = areaKm2 >= 1
+            ? `${areaKm2.toFixed(2)} km² (${areaHa.toFixed(1)} ha)`
+            : areaM2 >= 10000
+                ? `${areaHa.toFixed(2)} ha`
+                : `${Math.round(areaM2)} m²`;
+        return `${texto} · ${puntos.length} puntos`;
+    }
+
+    btnMedirLongitud.addEventListener("click", () => {
+        if (modoMedicion === "longitud") { terminarMedicion(); return; }
+        iniciarMedicion("longitud");
+    });
+    btnMedirArea.addEventListener("click", () => {
+        if (modoMedicion === "area") { terminarMedicion(); return; }
+        iniciarMedicion("area");
+    });
+
+    mapa.on("click", (e) => {
+        if (!modoMedicion || puntosMedicion.length >= MAX_PUNTOS_MEDICION) return;
+
+        const marcador = L.circleMarker(e.latlng, {
+            radius: 5, color: "#f5c400", fillColor: "#f5c400", fillOpacity: 1, weight: 2
+        }).addTo(mapa);
+        marcadoresMedicion.push(marcador);
+        puntosMedicion.push(e.latlng);
+
+        if (formaMedicion) { mapa.removeLayer(formaMedicion); formaMedicion = null; }
+        if (modoMedicion === "area" && puntosMedicion.length >= 3) {
+            formaMedicion = L.polygon(puntosMedicion, {
+                color: "#f5c400", weight: 2, dashArray: "6,4", fillColor: "#f5c400", fillOpacity: 0.18
+            }).addTo(mapa);
+        } else if (puntosMedicion.length >= 2) {
+            formaMedicion = L.polyline(puntosMedicion, { color: "#f5c400", weight: 2, dashArray: "6,4" }).addTo(mapa);
+        }
+
+        const alcanzoMaximo = puntosMedicion.length >= MAX_PUNTOS_MEDICION;
+        if (modoMedicion === "longitud") {
+            const previa = puntosMedicion.length >= 2 ? ` Llevas ${calcularTextoLongitud(puntosMedicion)}.` : "";
+            avisoLongitud.textContent = alcanzoMaximo
+                ? "Máximo de puntos alcanzado."
+                : `Punto ${puntosMedicion.length} marcado.${previa} Sigue haciendo clic o pulsa el botón para terminar.`;
+        } else {
+            const previa = puntosMedicion.length >= 3 ? ` Llevas ${calcularTextoArea(puntosMedicion)}.` : "";
+            avisoArea.textContent = alcanzoMaximo
+                ? "Máximo de puntos alcanzado."
+                : `Punto ${puntosMedicion.length} marcado.${previa} Sigue haciendo clic o pulsa el botón para terminar.`;
+        }
+        if (alcanzoMaximo) {
+            comprometerMedicionEnCurso();
+            apagarModoMedicion();
         }
     });
 
@@ -1000,6 +1429,7 @@
 
             capaTiffUsuario = new GeoRasterLayer({
                 georaster,
+                pane: "panelRaster",
                 resolution: 128,
                 pixelValuesToColorFn: numBandas >= 3
                     ? undefined

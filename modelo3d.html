@@ -1843,6 +1843,32 @@
             border-radius: 16px;
             box-shadow: 0 10px 30px rgba(0,0,0,.16);
         }
+
+        /* ---------------------------------------------------------
+           Modo "embed" (?vista=simple): solo la casa 3D + piso/camara,
+           sin sensores ni ensayo/simulacion. Al final del <style> y con
+           !important para ganarle a las reglas de los @media de arriba
+           sin importar el ancho de pantalla. La clase "modo-embed" la
+           agrega el <script> solo cuando la URL trae ese parametro -- el
+           uso normal de esta pagina no se toca.
+           --------------------------------------------------------- */
+        body.modo-embed .sidebar,
+        body.modo-embed .right-rail,
+        body.modo-embed .mobile-panel-toggles,
+        body.modo-embed .grupo-ensayo,
+        body.modo-embed .grupo-simulacion,
+        body.modo-embed .toolbar-nav {
+            display: none !important;
+        }
+
+        body.modo-embed #viewer {
+            inset: 0 !important;
+        }
+
+        body.modo-embed .topbar {
+            left: 16px !important;
+            right: 16px !important;
+        }
     </style>
 
     <script type="importmap">
@@ -1912,7 +1938,7 @@
 
         <div class="toolbar">
             <div class="toolbar-row">
-                <div class="toolbar-group">
+                <div class="toolbar-group grupo-ensayo">
                     <span class="toolbar-group-label">Ensayo</span>
                     <div class="toolbar-group-buttons">
                         <select class="toolbar-select" id="modelo-ensayo-select" aria-label="Ensayo a mostrar">
@@ -1924,7 +1950,7 @@
                     </div>
                 </div>
 
-                <div class="toolbar-group">
+                <div class="toolbar-group grupo-simulacion">
                     <span class="toolbar-group-label">Simulación</span>
                     <div class="toolbar-group-buttons">
                         <button class="tool-btn environment" id="btn-environment" type="button" title="Activar ambiente urbano">
@@ -2164,6 +2190,15 @@
         import * as THREE from "three";
         import { OrbitControls } from "three/addons/controls/OrbitControls.js";
         import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+        // Modo "embed" (?vista=simple): solo se activa con ese parametro
+        // en la URL, asi que el uso normal de esta pagina (casa.html,
+        // el menu "Casa Vib 3D", etc.) no cambia en nada. Lo usa
+        // Comparador3D.html para mostrar nada mas la casa 3D + el
+        // filtro de piso, sin sensores ni el panel de ensayo/simulacion.
+        if (new URLSearchParams(location.search).get("vista") === "simple") {
+            document.body.classList.add("modo-embed");
+        }
 
         const root = document.getElementById("viewer");
         const loading = document.getElementById("loading");

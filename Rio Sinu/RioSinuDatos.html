@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Datos XM, IDEAM y DHIME | Río Sinú</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --white: #ffffff;
+        --cream: #fffdf6;
+        --beige: #fdf7e9;
+        --yellow: #f5c400;
+        --yellow-dark: #d7aa00;
+        --charcoal: #26292d;
+        --text: #34383d;
+        --muted: #70757b;
+        --line: #e5e5de;
+        --shadow: 0 18px 46px rgba(35,37,40,.16);
+        --radius: 16px;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+        margin: 0;
+        min-height: 100%;
+        font-family: "Inter", sans-serif;
+        color: var(--text);
+        background: linear-gradient(180deg, var(--cream) 0%, var(--beige) 100vh);
+    }
+
+    header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 16px 28px;
+        background: var(--beige);
+        color: var(--charcoal);
+        border-bottom: 2px solid var(--yellow);
+        box-shadow: var(--shadow);
+    }
+    header a.volver {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--charcoal);
+        text-decoration: none;
+        font-weight: 700;
+        font-size: .95rem;
+        opacity: .75;
+        transition: color .15s, opacity .15s;
+    }
+    header a.volver:hover { opacity: 1; color: var(--yellow-dark); }
+    header a.volver svg { width: 18px; height: 18px; }
+    header .titulo { text-align: center; }
+    header .titulo strong { display: block; font-size: 1.15rem; color: var(--charcoal); }
+    header .titulo span {
+        font-size: .8rem; color: var(--yellow-dark); font-weight: 700;
+        text-transform: uppercase; letter-spacing: .1em;
+    }
+    header .spacer { width: 90px; }
+
+    main {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 32px 24px 80px;
+    }
+
+    h2.seccion {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: .82rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .12em;
+        color: var(--yellow-dark);
+        margin: 36px 0 14px;
+    }
+    h2.seccion:first-child { margin-top: 0; }
+    h2.seccion::before {
+        content: "";
+        width: 6px; height: 6px; border-radius: 50%;
+        background: var(--yellow); box-shadow: 0 0 6px var(--yellow);
+    }
+    p.nota {
+        color: var(--muted);
+        font-size: .88rem;
+        line-height: 1.6;
+        max-width: 720px;
+        margin: 0 0 18px;
+    }
+
+    .fila-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+        margin-bottom: 18px;
+    }
+    .stat-tile {
+        background: var(--white);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 14px 16px;
+    }
+    .stat-tile .valor { font-size: 1.5rem; font-weight: 700; color: var(--charcoal); }
+    .stat-tile .etiqueta { font-size: .74rem; color: var(--muted); margin-top: 2px; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    @media (max-width: 760px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .card {
+        background: var(--white);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 18px 20px;
+    }
+    .card h3 { margin: 0 0 2px; font-size: .95rem; color: var(--charcoal); }
+    .card .unidad { font-size: .74rem; color: var(--muted); margin: 0 0 10px; }
+    .card svg { width: 100%; height: auto; display: block; }
+    .card .eje { stroke: var(--line); stroke-width: 1; }
+    .card .linea { fill: none; stroke-width: 2.2; }
+    .card .relleno { opacity: .16; }
+    .card .etiqueta-x, .card .etiqueta-y {
+        font-size: 9px; fill: var(--muted); font-family: "Inter", sans-serif;
+    }
+
+    table.tabla-estaciones {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: .82rem;
+    }
+    table.tabla-estaciones th {
+        text-align: left;
+        color: var(--muted);
+        font-weight: 600;
+        font-size: .72rem;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--line);
+        position: sticky;
+        top: 0;
+        background: var(--white);
+    }
+    table.tabla-estaciones td {
+        padding: 7px 10px;
+        border-bottom: 1px solid var(--line);
+        color: var(--text);
+    }
+    table.tabla-estaciones tr:hover td { background: var(--beige); }
+    .tabla-scroll {
+        max-height: 420px;
+        overflow-y: auto;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--white);
+    }
+    .tabla-scroll::-webkit-scrollbar { width: 8px; }
+    .tabla-scroll::-webkit-scrollbar-track { background: transparent; }
+    .tabla-scroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+
+    .pendiente {
+        background: var(--beige);
+        border: 1px dashed var(--line);
+        border-radius: var(--radius);
+        padding: 16px 18px;
+        color: var(--muted);
+        font-size: .86rem;
+        line-height: 1.6;
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <a class="volver" href="Index.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Río Sinú
+    </a>
+    <div class="titulo">
+        <strong>Datos XM, IDEAM y DHIME</strong>
+        <span>Cuenca del río Sinú</span>
+    </div>
+    <div class="spacer"></div>
+</header>
+
+<main>
+
+    <h2 class="seccion">Urrá — XM / SIMEM</h2>
+    <p class="nota">
+        Datos reales de la hidroeléctrica de Urrá (Tierralta, Córdoba),
+        la única planta del mercado eléctrico colombiano sobre el río
+        Sinú. Últimos 6 meses, sin ningún valor inventado.
+    </p>
+
+    <div class="fila-stats" id="statsUrra"></div>
+
+    <div class="grid-2">
+        <div class="card">
+            <h3>Aportes hídricos</h3>
+            <p class="unidad">m³/s · caudal que entra al embalse</p>
+            <svg id="svgAportes" viewBox="0 0 500 180" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="card">
+            <h3>Nivel de embalse</h3>
+            <p class="unidad">millones de kWh · energía almacenada</p>
+            <svg id="svgEmbalse" viewBox="0 0 500 180" preserveAspectRatio="none"></svg>
+        </div>
+    </div>
+
+    <h2 class="seccion">IDEAM / DHIME — estaciones de monitoreo</h2>
+    <p class="nota">
+        Catálogo real de estaciones del IDEAM ubicadas dentro del
+        polígono de la cuenca (175 en total). Por ahora es solo el
+        directorio — nombre, tipo y municipio — todavía no trae las
+        mediciones reales (lluvia, nivel del río) de cada una; eso
+        depende de conectar con DHIME, que quedó pendiente.
+    </p>
+
+    <div class="fila-stats" id="statsIdeam"></div>
+
+    <div class="tabla-scroll">
+        <table class="tabla-estaciones">
+            <thead>
+                <tr><th>Código</th><th>Nombre</th><th>Municipio</th></tr>
+            </thead>
+            <tbody id="tbodyEstaciones"></tbody>
+        </table>
+    </div>
+
+    <div class="pendiente" style="margin-top:14px;">
+        <b>Pendiente:</b> traer las series reales de DHIME (lluvia, nivel
+        de río) para estas 175 estaciones y sumarlas aquí como una
+        tercera gráfica.
+    </div>
+
+</main>
+
+<script src="../rio_sinu_data/urra_serie.js"></script>
+<script src="../rio_sinu_data/ideam_estaciones.js"></script>
+<script>
+(() => {
+    "use strict";
+
+    // ---------- Gráficas de Urrá ----------
+    function dibujarSerie(idSvg, puntos, color, divisor = 1) {
+        const svg = document.getElementById(idSvg);
+        if (!svg || !puntos || !puntos.length) return;
+
+        const W = 500, H = 180, padL = 46, padR = 12, padT = 12, padB = 24;
+        const innerW = W - padL - padR, innerH = H - padT - padB;
+
+        const valores = puntos.map((p) => p.valor / divisor);
+        let minV = Math.min(...valores), maxV = Math.max(...valores);
+        const margen = (maxV - minV) * 0.1 || 1;
+        minV -= margen; maxV += margen;
+
+        const x = (i) => padL + (i / (puntos.length - 1)) * innerW;
+        const y = (v) => padT + innerH - ((v - minV) / (maxV - minV)) * innerH;
+
+        const pathPuntos = valores.map((v, i) => `${x(i)},${y(v)}`).join(" ");
+
+        let svgHtml = `<line class="eje" x1="${padL}" y1="${padT + innerH}" x2="${padL + innerW}" y2="${padT + innerH}"/>`;
+        svgHtml += `<polygon class="relleno" style="fill:${color}" points="${padL},${padT + innerH} ${pathPuntos} ${padL + innerW},${padT + innerH}"/>`;
+        svgHtml += `<polyline class="linea" style="stroke:${color}" points="${pathPuntos}"/>`;
+        svgHtml += `<text class="etiqueta-y" x="${padL - 6}" y="${y(maxV) + 3}" text-anchor="end">${maxV.toFixed(0)}</text>`;
+        svgHtml += `<text class="etiqueta-y" x="${padL - 6}" y="${y(minV) + 3}" text-anchor="end">${minV.toFixed(0)}</text>`;
+        svgHtml += `<text class="etiqueta-x" x="${padL}" y="${H - 4}">${puntos[0].fecha}</text>`;
+        svgHtml += `<text class="etiqueta-x" x="${padL + innerW}" y="${H - 4}" text-anchor="end">${puntos[puntos.length - 1].fecha}</text>`;
+
+        svg.innerHTML = svgHtml;
+    }
+
+    function statTile(valor, etiqueta) {
+        return `<div class="stat-tile"><div class="valor">${valor}</div><div class="etiqueta">${etiqueta}</div></div>`;
+    }
+
+    if (typeof DATA_URRA !== "undefined") {
+        dibujarSerie("svgAportes", DATA_URRA.aportes_caudal, "#1c6fb0");
+        dibujarSerie("svgEmbalse", DATA_URRA.nivel_embalse, "#2f8f4e", 1_000_000);
+
+        const caudales = DATA_URRA.aportes_caudal.map((p) => p.valor);
+        const embalses = DATA_URRA.nivel_embalse.map((p) => p.valor / 1_000_000);
+
+        document.getElementById("statsUrra").innerHTML = [
+            statTile(Math.max(...caudales).toFixed(0) + " m³/s", "Aporte máximo"),
+            statTile((caudales.reduce((a, b) => a + b, 0) / caudales.length).toFixed(0) + " m³/s", "Aporte promedio"),
+            statTile(Math.min(...embalses).toFixed(0) + " MkWh", "Embalse mínimo"),
+            statTile(Math.max(...embalses).toFixed(0) + " MkWh", "Embalse máximo")
+        ].join("");
+    }
+
+    // ---------- Tabla de estaciones IDEAM ----------
+    if (typeof DATA_IDEAM_ESTACIONES !== "undefined") {
+        const porMunicipio = {};
+        DATA_IDEAM_ESTACIONES.forEach((e) => {
+            porMunicipio[e.municipio] = (porMunicipio[e.municipio] || 0) + 1;
+        });
+        const municipioTop = Object.entries(porMunicipio).sort((a, b) => b[1] - a[1])[0];
+
+        document.getElementById("statsIdeam").innerHTML = [
+            statTile(DATA_IDEAM_ESTACIONES.length, "Estaciones en la cuenca"),
+            statTile(Object.keys(porMunicipio).length, "Municipios cubiertos"),
+            statTile(municipioTop ? `${municipioTop[1]} (${municipioTop[0]})` : "—", "Municipio con más estaciones")
+        ].join("");
+
+        document.getElementById("tbodyEstaciones").innerHTML = DATA_IDEAM_ESTACIONES.map((e) =>
+            `<tr><td>${e.codigo}</td><td>${e.nombre}</td><td>${e.municipio}</td></tr>`
+        ).join("");
+    }
+})();
+</script>
+
+</body>
+</html>

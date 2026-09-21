@@ -74,6 +74,60 @@
             background: #f5c400 !important;
             color: #1f2937 !important;
         }
+
+        /* Menu plegable "Experimentos SinergIA" */
+        .dropdown-experimentos {
+            position: relative;
+        }
+
+        .dropdown-experimentos .flecha {
+            width: 12px;
+            height: 12px;
+            margin-left: 2px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            transition: transform .2s ease;
+        }
+
+        .dropdown-experimentos.abierto .flecha {
+            transform: rotate(180deg);
+        }
+
+        .menu-experimentos {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            min-width: 250px;
+            background: #ffffff;
+            border: 1px solid #d8dde5;
+            border-radius: 12px;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, .14);
+            padding: 8px;
+            z-index: 50;
+        }
+
+        .dropdown-experimentos.abierto .menu-experimentos {
+            display: block;
+        }
+
+        .menu-experimentos a {
+            display: block;
+            padding: 10px 12px;
+            border-radius: 8px;
+            color: #2b2f33;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .menu-experimentos a:hover {
+            background: #fff9dd;
+            color: #7a5e00;
+        }
     </style>
 
 </head>
@@ -156,29 +210,36 @@
                     </button>
 
 
-                    <a class="map-direct-link"
-                       href="casa.html"
-                       aria-label="Abrir dashboard CIAM">
+                    <div class="dropdown-experimentos"
+                         id="dropdownExperimentos">
 
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M3 3h18v18H3z"></path>
-                            <path d="M7 15l3-3 3 2 4-5"></path>
-                        </svg>
+                        <button class="map-direct-link"
+                                type="button"
+                                id="btnExperimentos"
+                                aria-haspopup="true"
+                                aria-expanded="false">
 
-                        Dashboard CIAM
-                    </a>
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z"></path>
+                                <path d="M3 7l9 5 9-5M12 12v10"></path>
+                            </svg>
 
-                    <a class="map-direct-link"
-                       href="modelo3d.html"
-                       aria-label="Abrir experimento mesa vibratoria 3D">
+                            Experimentos SinergIA
 
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z"></path>
-                            <path d="M3 7l9 5 9-5M12 12v10"></path>
-                        </svg>
+                            <svg class="flecha" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M6 9l6 6 6-6"></path>
+                            </svg>
+                        </button>
 
-                        Experimento mesa vibratoria
-                    </a>
+                        <div class="menu-experimentos" id="menuExperimentos">
+                            <a href="casa.html">Dashboard CIAM</a>
+                            <a href="modelo3d.html">Casa Vib 3D</a>
+                            <a href="Rio%20Sinu/Index.html">Río Sinú</a>
+                            <a href="Comparador3D.html">Comparación 3D y nube de puntos</a>
+                            <a href="Prueba3D-MapLibre.html">3D Bogotá</a>
+                        </div>
+
+                    </div>
 
                     <a class="map-direct-link"
                        href="Mapa.html"
@@ -456,7 +517,7 @@
                             </p>
 
                             <a class="card-action"
-                               href="./RioSinu.html">
+                               href="./Rio%20Sinu/Index.html">
 
                                 Seleccionar
 
@@ -564,6 +625,27 @@
 
     <script src="geodata.js"></script>
     <script src="agente1/agente.js"></script>
+
+    <script>
+        (function () {
+            const contenedor = document.getElementById("dropdownExperimentos");
+            const boton = document.getElementById("btnExperimentos");
+            if (!contenedor || !boton) return;
+
+            boton.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const abierto = contenedor.classList.toggle("abierto");
+                boton.setAttribute("aria-expanded", abierto);
+            });
+
+            document.addEventListener("click", (e) => {
+                if (!contenedor.contains(e.target)) {
+                    contenedor.classList.remove("abierto");
+                    boton.setAttribute("aria-expanded", "false");
+                }
+            });
+        })();
+    </script>
 
 </body>
 </html>

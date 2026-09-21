@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comparador — Nube de puntos / Modelo 3D — Universidad de los Andes</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Sans+3:wght@600;700;800&display=swap" rel="stylesheet">
+
+<style>
+    * { box-sizing: border-box; }
+    html, body {
+        margin: 0; min-height: 100%;
+        font-family: "Inter", sans-serif;
+        background: #ffffff;
+        color: #34383d;
+    }
+
+    /* ---------- Encabezado (mismo estilo que el resto del sitio) ---------- */
+    header {
+        height: 84px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 0 24px;
+        background: rgba(255,255,255,.97);
+        border-bottom: 1px solid #e5e5de;
+        box-shadow: 0 3px 15px rgba(34,36,39,.06);
+        position: relative;
+        z-index: 10;
+    }
+    header .logo-box {
+        height: 46px;
+        display: flex;
+        align-items: center;
+        padding-right: 18px;
+        border-right: 1px solid #e5e5de;
+    }
+    header .logo-box img { max-height: 42px; width: auto; display: block; }
+    header .brand-copy small {
+        display: block;
+        margin-bottom: 2px;
+        color: #898d91;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .07em;
+        text-transform: uppercase;
+    }
+    header .brand-copy strong {
+        display: block;
+        font: 700 21px/1.1 "Source Sans 3", sans-serif;
+        color: #26292d;
+    }
+    header .badge {
+        margin-left: auto; font-size: 11px; font-weight: 700;
+        letter-spacing: .04em; text-transform: uppercase;
+        color: #7a5e00;
+        background: #fff3c2; border: 1px solid #f5c400;
+        padding: 5px 12px; border-radius: 12px;
+    }
+
+    /* ---------- Zona de comparacion ---------- */
+    #comparador {
+        position: relative;
+        width: 100%;
+        height: 62vh;
+        min-height: 420px;
+        background: #060f1a;
+        overflow: hidden;
+    }
+
+    /* ---------- Barra de herramientas flotante (estilo Esri) ---------- */
+    #barraHerramientas {
+        position: absolute; top: 14px; left: 14px; z-index: 6;
+        display: flex; flex-direction: column;
+        background: rgba(14, 35, 56, 0.92);
+        border: 1px solid rgba(245, 196, 0, 0.3);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+    }
+    .herramienta {
+        width: 38px; height: 38px;
+        background: transparent; border: none;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        color: #eaf2fb; font-size: 16px; font-weight: 700;
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        transition: background .15s, color .15s;
+        font-family: "Inter", sans-serif;
+    }
+    .herramienta:last-child { border-bottom: none; }
+    .herramienta:hover { background: rgba(245, 196, 0, 0.18); color: #f5c400; }
+
+    /* Debajo de la barra de herramientas (4 botones x 38px), no al lado
+       de la etiqueta -- para no encimarse con ninguna de las dos. */
+    #cajaBusqueda {
+        position: absolute; top: 166px; left: 14px; z-index: 6;
+        display: none;
+    }
+    #cajaBusqueda input {
+        height: 38px; padding: 0 12px; border-radius: 8px;
+        border: 1px solid rgba(245, 196, 0, 0.4);
+        background: rgba(14, 35, 56, 0.92); color: #eaf2fb;
+        font-size: 13px; width: 220px; outline: none;
+        font-family: "Inter", sans-serif;
+    }
+    #cajaBusqueda input::placeholder { color: #9fb6ca; }
+    .capa { position: absolute; top: 0; left: 0; }
+    #capaDerecha { position: absolute; inset: 0; }
+    .panel-activo { box-shadow: inset 0 0 0 3px #f5c400; }
+    #recorteIzquierda {
+        position: absolute; top: 0; left: 0; height: 100%;
+        width: 50%;
+        overflow: hidden;
+    }
+    #capaIzquierda { position: absolute; top: 0; left: 0; height: 100%; }
+
+    .visor3d {
+        position: absolute; inset: 0;
+        width: 100%; height: 100%;
+        display: none;
+        border: none;
+        background: #081422;
+    }
+
+    .etiqueta {
+        position: absolute; top: 14px;
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid #f5c400;
+        color: #26292d;
+        padding: 6px 14px; border-radius: 4px;
+        font-size: 12px; letter-spacing: 0.05em;
+        text-transform: uppercase; font-weight: 700;
+        pointer-events: none;
+    }
+    /* 14 (margen) + 38 (ancho barraHerramientas) + 10 (separacion) */
+    #etiquetaIzquierda { left: 62px; }
+    #etiquetaDerecha { right: 14px; }
+    .etiqueta.etiqueta-activa {
+        background: #f5c400; border-color: #f5c400; color: #1f2937;
+    }
+
+    #divisor {
+        position: absolute; top: 0; bottom: 0; left: 50%;
+        width: 14px; margin-left: -7px;
+        z-index: 5;
+        cursor: ew-resize;
+        display: flex; justify-content: center;
+    }
+    #divisor::before {
+        content: "";
+        width: 3px; height: 100%;
+        background: #ffffff;
+        box-shadow: 0 0 8px rgba(255,255,255,0.7);
+    }
+    #manija {
+        position: absolute; top: 50%; left: 50%;
+        width: 40px; height: 40px;
+        transform: translate(-50%, -50%);
+        background: #f5c400; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        color: #26292d; font-size: 16px; font-weight: bold;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+        cursor: ew-resize;
+    }
+
+    /* ---------- Panel inferior de seleccion ---------- */
+    /* Sin altura fija ni scroll propio: si el contenido no cabe, se
+       desplaza toda la pagina (scroll normal del navegador), no solo
+       este cuadro. */
+    #seleccion {
+        background: #ffffff;
+        border-top: 1px solid #e5e5de;
+        display: flex;
+        flex-wrap: wrap;
+        padding: 26px 32px 40px;
+        gap: 48px;
+    }
+    .columna { flex: 1; min-width: 230px; display: flex; flex-direction: column; gap: 14px; }
+    .columna h3 {
+        margin: 0 0 4px 0; font-size: 12px;
+        letter-spacing: 0.08em; font-weight: 700;
+        color: #898d91; text-transform: uppercase;
+        font-family: "Source Sans 3", sans-serif;
+        transition: color .2s;
+    }
+    .columna.columna-activa h3 { color: #b98600; }
+    .columna.columna-activa h3::after { content: " ● activo"; font-size: 9px; letter-spacing: normal; text-transform: none; }
+
+    .opcion {
+        display: flex; align-items: center; gap: 12px;
+        background: #ffffff; border: 1px solid #d8dde5;
+        color: #2b2f33; padding: 13px 16px; border-radius: 10px;
+        font-size: 13.5px; font-weight: 600; text-align: left; cursor: pointer;
+        transition: .2s ease;
+        font-family: "Inter", sans-serif;
+    }
+    .opcion:hover { border-color: #f5c400; background: #fff9dd; }
+    .opcion.activa {
+        background: #f5c400; border-color: #f5c400; color: #1f2937;
+    }
+    .opcion .icono { font-size: 15px; width: 18px; text-align: center; }
+
+    .columna.info {
+        flex: 1.3; border-left: 1px solid #e5e5de; padding-left: 32px;
+    }
+    .columna.info p {
+        font-size: 13px; line-height: 1.7; color: #63676c; margin: 0;
+    }
+    .columna.info code {
+        background: #f5f6f8; border: 1px solid #e5e5de; border-radius: 4px;
+        padding: 1px 5px; font-size: 12px; color: #26292d;
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <span class="logo-box">
+        <img src="Imagenes/logo-uniandes.png" alt="Universidad de los Andes">
+    </span>
+    <span class="brand-copy">
+        <small>SinergIA Lab · Prototipo</small>
+        <strong>Comparador — Nube de puntos / Modelo 3D</strong>
+    </span>
+    <div class="badge">Mockup · solo visual</div>
+</header>
+
+<div id="comparador">
+    <div id="capaDerecha" class="capa">
+        <canvas id="canvasDerecha"></canvas>
+        <iframe id="visorDerecha" class="visor3d" title="Modelo 3D interactivo (igual que modelo3d.html)"></iframe>
+        <div id="etiquetaDerecha" class="etiqueta">Nube de puntos (despues)</div>
+    </div>
+    <div id="recorteIzquierda">
+        <div id="capaIzquierda" class="capa">
+            <canvas id="canvasIzquierda"></canvas>
+            <iframe id="visorIzquierda" class="visor3d" title="Modelo 3D interactivo (igual que modelo3d.html)"></iframe>
+            <div id="etiquetaIzquierda" class="etiqueta">Nube de puntos (antes)</div>
+        </div>
+    </div>
+    <div id="divisor"><div id="manija">⟷</div></div>
+
+    <div id="barraHerramientas">
+        <button class="herramienta" id="btnBuscar" title="Buscar">🔍</button>
+        <button class="herramienta" id="btnZoomMas" title="Acercar">+</button>
+        <button class="herramienta" id="btnZoomMenos" title="Alejar">−</button>
+        <button class="herramienta" id="btnCaptura" title="Tomar pantallazo">📷</button>
+    </div>
+    <div id="cajaBusqueda">
+        <input type="text" id="inputBusqueda" placeholder="Buscar ubicación o capa...">
+    </div>
+</div>
+
+<div id="seleccion">
+    <div class="columna izq">
+        <h3>Izquierda</h3>
+        <button class="opcion activa" data-lado="izq" data-tipo="antes"><span class="icono">☁</span> Nube de puntos (antes)</button>
+        <button class="opcion" data-lado="izq" data-tipo="modelo"><span class="icono">🧊</span> Modelo 3D</button>
+        <button class="opcion" data-lado="izq" data-tipo="despues"><span class="icono">☁</span> Nube de puntos (despues)</button>
+    </div>
+    <div class="columna der">
+        <h3>Derecha</h3>
+        <button class="opcion" data-lado="der" data-tipo="antes"><span class="icono">☁</span> Nube de puntos (antes)</button>
+        <button class="opcion" data-lado="der" data-tipo="modelo"><span class="icono">🧊</span> Modelo 3D</button>
+        <button class="opcion activa" data-lado="der" data-tipo="despues"><span class="icono">☁</span> Nube de puntos (despues)</button>
+    </div>
+    <div class="columna info">
+        <h3>Nota</h3>
+        <p>
+            Esta es solo una maqueta visual del diseño. Arrastra el circulo
+            amarillo para deslizar entre lo elegido a la izquierda y a la
+            derecha. Haz clic en un panel para activarlo (se marca en
+            amarillo) y luego usa +/- o la rueda del mouse para acercar o
+            alejar ese panel, o clic derecho + arrastrar para moverlo.
+            Abajo eliges que se muestra en cada lado (nube de puntos antes,
+            modelo 3D, o nube de puntos despues). El "Modelo 3D" carga
+            <strong>modelo3d.html</strong> real dentro del panel, en su
+            version simple: solo la casa y el filtro "Piso 1 / Piso 2" +
+            camara, sin la lista de sensores ni el panel de ensayo/
+            simulacion. La "Nube de puntos (antes)" ya carga el visor
+            real <strong>Potree</strong> con la nube de puntos convertida
+            (<code>NubePuntos/</code>). La "Nube de puntos (despues)"
+            sigue siendo una representacion dibujada (sin datos reales
+            todavia, falta convertir esa nube).
+            <br><br>
+            <strong>Importante:</strong> el modelo 3D y la nube de puntos
+            solo cargan si esta pagina se abre por el servidor Flask del
+            proyecto (necesario para que la nube de puntos, de varios GB,
+            cargue por partes), no con doble clic ni con un servidor
+            simple. Corre <code>INICIAR_MAPA_GDB.bat</code> y entra a
+            <code>http://localhost:5500/Comparador3D.html</code>.
+        </p>
+    </div>
+</div>
+
+<script>
+    const comparador = document.getElementById("comparador");
+    const recorteIzquierda = document.getElementById("recorteIzquierda");
+    const capaIzquierda = document.getElementById("capaIzquierda");
+    const capaDerecha = document.getElementById("capaDerecha");
+    const divisor = document.getElementById("divisor");
+    const canvasIzquierda = document.getElementById("canvasIzquierda");
+    const canvasDerecha = document.getElementById("canvasDerecha");
+    const visorIzquierda = document.getElementById("visorIzquierda");
+    const visorDerecha = document.getElementById("visorDerecha");
+    const etiquetaIzquierda = document.getElementById("etiquetaIzquierda");
+    const etiquetaDerecha = document.getElementById("etiquetaDerecha");
+    const columnaIzq = document.querySelector(".columna.izq");
+    const columnaDer = document.querySelector(".columna.der");
+
+    const NOMBRES = {
+        antes: "Nube de puntos (antes)",
+        modelo: "Modelo 3D",
+        despues: "Nube de puntos (despues)"
+    };
+
+    // Que tipo carga un iframe con contenido real (en vez del canvas de
+    // maqueta) y que URL le corresponde. "despues" no esta aqui todavia
+    // porque esa nube de puntos aun no se ha convertido/cargado.
+    const IFRAME_SRC = {
+        modelo: "modelo3d.html?vista=simple",
+        antes: "NubePuntos/index.html"
+    };
+
+    let tipoIzquierda = "antes";
+    let tipoDerecha = "despues";
+    let zoomIzquierda = 1;
+    let zoomDerecha = 1;
+    let panIzquierda = { x: 0, y: 0 };
+    let panDerecha = { x: 0, y: 0 };
+    let ladoActivo = "izq";
+
+    // ---------- Dibujo de las "escenas" (mockup, sin datos reales) ----------
+
+    // Generador de numeros pseudoaleatorios con semilla fija (mulberry32):
+    // asi la nube de puntos de un mismo tipo siempre sale igual entre un
+    // redibujado y otro, y el paneo con clic derecho se ve como que de
+    // verdad mueve los mismos puntos (no una nube distinta cada vez).
+    function hashCadena(s) {
+        let h = 0;
+        for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+        return h >>> 0;
+    }
+    function crearRng(semilla) {
+        let s = semilla >>> 0;
+        return function () {
+            s = (s + 0x6D2B79F5) | 0;
+            let t = Math.imul(s ^ (s >>> 15), 1 | s);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+    }
+
+    function colorearAltura(alturaRelativa, esquema) {
+        // Degradado tipo mapa de elevacion (nube de puntos LiDAR real),
+        // con el amarillo institucional como tono alto en vez de blanco.
+        const paradas = esquema === "despues"
+            ? [[40, 60, 140], [60, 120, 190], [245, 196, 0], [220, 140, 0], [200, 60, 60]]
+            : [[40, 90, 70], [70, 140, 90], [150, 170, 90], [200, 175, 60], [245, 196, 0]];
+        const i = Math.min(paradas.length - 2, Math.floor(alturaRelativa * (paradas.length - 1)));
+        const t = alturaRelativa * (paradas.length - 1) - i;
+        const a = paradas[i], b = paradas[i + 1];
+        const r = Math.round(a[0] + (b[0] - a[0]) * t);
+        const g = Math.round(a[1] + (b[1] - a[1]) * t);
+        const bl = Math.round(a[2] + (b[2] - a[2]) * t);
+        return `rgb(${r},${g},${bl})`;
+    }
+
+    function dibujarNubeDePuntos(ctx, w, h, esquema, zoom, pan) {
+        ctx.fillStyle = "#060f1a";
+        ctx.fillRect(0, 0, w, h);
+
+        const rng = crearRng(hashCadena(esquema));
+
+        // El zoom y el paneo (clic derecho) se hornean en el dibujo (no
+        // son solo CSS) para que el pantallazo capture exactamente lo
+        // que se ve.
+        ctx.save();
+        ctx.translate(w / 2 + pan.x, h / 2 + pan.y);
+        ctx.scale(zoom, zoom);
+        ctx.translate(-w / 2, -h / 2);
+
+        const cantidad = 9000;
+        for (let n = 0; n < cantidad; n++) {
+            const x = rng() * w;
+            const y = rng() * h;
+            // "Terreno" simulado con ondas, solo para que se vea variado.
+            const base = 0.5
+                + 0.25 * Math.sin(x / 140 + y / 260)
+                + 0.2 * Math.sin(x / 60 - y / 90);
+            let altura = Math.max(0, Math.min(1, base + (rng() - 0.5) * 0.15));
+
+            if (esquema === "despues") {
+                // Zona "afectada" simulada, para que se note el cambio
+                // entre antes y despues (como en el ejemplo de Esri).
+                const cx = w * 0.6, cy = h * 0.55, radio = Math.min(w, h) * 0.28;
+                const d = Math.hypot(x - cx, y - cy);
+                if (d < radio) altura = Math.max(0.75, altura);
+            }
+
+            ctx.fillStyle = colorearAltura(altura, esquema);
+            const r = 1 + rng() * 1.3;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+
+    // "Modelo 3D" y "Nube de puntos (antes)" ya no son un boceto: cargan
+    // paginas reales (modelo3d.html / NubePuntos, el visor Potree) en un
+    // iframe, asi que esta funcion solo dibuja los tipos que siguen
+    // siendo maqueta (por ahora, "despues").
+    function dibujarEscena(canvas, tipo, zoom, pan) {
+        if (IFRAME_SRC[tipo]) return;
+        const w = comparador.clientWidth, h = comparador.clientHeight;
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        dibujarNubeDePuntos(ctx, w, h, tipo, zoom, pan);
+    }
+
+    // Alterna entre el canvas (maqueta) y el iframe con contenido real
+    // (IFRAME_SRC). Se carga perezoso: solo la primera vez que ese lado
+    // pide ese tipo, y si el lado cambia entre dos tipos con iframe
+    // (ej. de "Modelo 3D" a "Nube de puntos (antes)") actualiza el src.
+    function actualizarVisor(lado) {
+        const tipo = lado === "izq" ? tipoIzquierda : tipoDerecha;
+        const srcIframe = IFRAME_SRC[tipo];
+        const canvas = lado === "izq" ? canvasIzquierda : canvasDerecha;
+        const visor = lado === "izq" ? visorIzquierda : visorDerecha;
+        const etiqueta = lado === "izq" ? etiquetaIzquierda : etiquetaDerecha;
+        canvas.style.display = srcIframe ? "none" : "block";
+        visor.style.display = srcIframe ? "block" : "none";
+        // Su titulo propio ya dice de que se trata -- nuestra etiqueta
+        // ahi encima solo lo taparia.
+        etiqueta.style.display = srcIframe ? "none" : "block";
+        if (srcIframe && !visor.src.endsWith(srcIframe)) visor.src = srcIframe;
+        actualizarToolbarFlotante();
+    }
+
+    // modelo3d.html y NubePuntos traen su propia barra de controles
+    // arriba (sensores/camara, o panel de Potree) -- si se deja tambien
+    // la nuestra ahi encima, quedan una sobre la otra. Se oculta la
+    // nuestra mientras la izquierda muestre cualquiera de los dos.
+    function actualizarToolbarFlotante() {
+        const ocultar = Boolean(IFRAME_SRC[tipoIzquierda]);
+        document.getElementById("barraHerramientas").style.display = ocultar ? "none" : "flex";
+        if (ocultar) document.getElementById("cajaBusqueda").style.display = "none";
+    }
+
+    function actualizarTamanos() {
+        const w = comparador.clientWidth, h = comparador.clientHeight;
+        capaIzquierda.style.width = w + "px";
+        capaIzquierda.style.height = h + "px";
+        capaDerecha.style.width = w + "px";
+        capaDerecha.style.height = h + "px";
+        ajustarVisoresIframe();
+    }
+
+    // El iframe de "Modelo 3D" NO debe comportarse como la nube de
+    // puntos (una imagen ancha que el divisor solo recorta): se
+    // redimensiona para ocupar EXACTAMENTE el ancho visible de su lado,
+    // para que el modelo3d.html de adentro (que ya centra la casa segun
+    // el ancho real de su propio visor) la vea siempre centrada, en vez
+    // de recortada de un lienzo mas ancho.
+    function ajustarVisoresIframe() {
+        const anchoTotal = comparador.clientWidth;
+        const anchoIzq = recorteIzquierda.clientWidth;
+
+        visorIzquierda.style.width = anchoIzq + "px";
+
+        visorDerecha.style.left = anchoIzq + "px";
+        visorDerecha.style.right = "auto";
+        visorDerecha.style.width = Math.max(0, anchoTotal - anchoIzq) + "px";
+    }
+
+    function redibujarTodo() {
+        actualizarTamanos();
+        dibujarEscena(canvasIzquierda, tipoIzquierda, zoomIzquierda, panIzquierda);
+        dibujarEscena(canvasDerecha, tipoDerecha, zoomDerecha, panDerecha);
+        etiquetaIzquierda.textContent = NOMBRES[tipoIzquierda];
+        etiquetaDerecha.textContent = NOMBRES[tipoDerecha];
+        actualizarVisor("izq");
+        actualizarVisor("der");
+    }
+
+    // ---------- Panel activo (izquierda o derecha) ----------
+    function actualizarPlaceholderBusqueda() {
+        const nombreLado = ladoActivo === "izq" ? "izquierdo" : "derecho";
+        const tipo = ladoActivo === "izq" ? tipoIzquierda : tipoDerecha;
+        document.getElementById("inputBusqueda").placeholder =
+            `Buscar en el panel ${nombreLado} (${NOMBRES[tipo]})...`;
+    }
+
+    function fijarActivo(lado) {
+        ladoActivo = lado;
+        capaIzquierda.classList.toggle("panel-activo", lado === "izq");
+        capaDerecha.classList.toggle("panel-activo", lado === "der");
+        etiquetaIzquierda.classList.toggle("etiqueta-activa", lado === "izq");
+        etiquetaDerecha.classList.toggle("etiqueta-activa", lado === "der");
+        columnaIzq.classList.toggle("columna-activa", lado === "izq");
+        columnaDer.classList.toggle("columna-activa", lado === "der");
+        actualizarPlaceholderBusqueda();
+    }
+
+    function aplicarZoom(lado, delta) {
+        // El "Modelo 3D" real se acerca/aleja con su propia rueda, no
+        // con este control (que solo pinta la nube de puntos).
+        if ((lado === "izq" ? tipoIzquierda : tipoDerecha) === "modelo") return;
+        if (lado === "izq") {
+            zoomIzquierda = Math.max(0.5, Math.min(2.5, +(zoomIzquierda + delta).toFixed(2)));
+            dibujarEscena(canvasIzquierda, tipoIzquierda, zoomIzquierda, panIzquierda);
+        } else {
+            zoomDerecha = Math.max(0.5, Math.min(2.5, +(zoomDerecha + delta).toFixed(2)));
+            dibujarEscena(canvasDerecha, tipoDerecha, zoomDerecha, panDerecha);
+        }
+    }
+
+    fijarActivo("izq");
+
+    window.addEventListener("resize", redibujarTodo);
+    redibujarTodo();
+
+    // ---------- Botones de seleccion ----------
+    document.querySelectorAll(".opcion").forEach((boton) => {
+        boton.addEventListener("click", () => {
+            const lado = boton.dataset.lado;
+            const tipo = boton.dataset.tipo;
+
+            document.querySelectorAll(`.opcion[data-lado="${lado}"]`)
+                .forEach((b) => b.classList.remove("activa"));
+            boton.classList.add("activa");
+
+            if (lado === "izq") { tipoIzquierda = tipo; dibujarEscena(canvasIzquierda, tipo, zoomIzquierda, panIzquierda); etiquetaIzquierda.textContent = NOMBRES[tipo]; }
+            else { tipoDerecha = tipo; dibujarEscena(canvasDerecha, tipo, zoomDerecha, panDerecha); etiquetaDerecha.textContent = NOMBRES[tipo]; }
+
+            actualizarVisor(lado);
+            fijarActivo(lado);
+        });
+    });
+
+    // ---------- Arrastrar el divisor (solo desde el circulo amarillo) ----------
+    let arrastrandoDivisor = false;
+    // ---------- Clic derecho: mover (panear) el contenido de un panel ----------
+    let arrastrandoPan = null; // "izq" | "der" | null
+    let panOrigenX = 0, panOrigenY = 0;
+
+    function moverDivisor(clientX) {
+        const rect = comparador.getBoundingClientRect();
+        let pct = ((clientX - rect.left) / rect.width) * 100;
+        pct = Math.max(0, Math.min(100, pct));
+        recorteIzquierda.style.width = pct + "%";
+        divisor.style.left = pct + "%";
+        ajustarVisoresIframe();
+    }
+
+    function ladoDeClic(clientX) {
+        const rect = comparador.getBoundingClientRect();
+        const anchoIzqActual = recorteIzquierda.getBoundingClientRect().width;
+        return (clientX - rect.left) < anchoIzqActual ? "izq" : "der";
+    }
+
+    // La linea divisoria SOLO se mueve arrastrando el circulo amarillo,
+    // no con cualquier clic dentro del comparador.
+    divisor.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        arrastrandoDivisor = true;
+    });
+
+    // No mostrar el menu del navegador al hacer clic derecho.
+    comparador.addEventListener("contextmenu", (e) => e.preventDefault());
+
+    comparador.addEventListener("pointerdown", (e) => {
+        if (e.target.closest("#barraHerramientas, #cajaBusqueda")) return;
+
+        const lado = ladoDeClic(e.clientX);
+        fijarActivo(lado);
+
+        // El "Modelo 3D" real (iframe con modelo3d.html) trae sus
+        // propios controles: no se le debe robar el clic ni el arrastre.
+        if (e.target.tagName === "IFRAME") return;
+
+        e.preventDefault();
+        if (e.button === 2) {
+            // Clic derecho: arrastrar para mover (panear) ese panel.
+            arrastrandoPan = lado;
+            panOrigenX = e.clientX;
+            panOrigenY = e.clientY;
+        }
+    });
+
+    window.addEventListener("pointermove", (e) => {
+        if (arrastrandoDivisor) {
+            moverDivisor(e.clientX);
+            return;
+        }
+        if (arrastrandoPan) {
+            const dx = e.clientX - panOrigenX;
+            const dy = e.clientY - panOrigenY;
+            panOrigenX = e.clientX;
+            panOrigenY = e.clientY;
+            if (arrastrandoPan === "izq") {
+                panIzquierda.x += dx; panIzquierda.y += dy;
+                dibujarEscena(canvasIzquierda, tipoIzquierda, zoomIzquierda, panIzquierda);
+            } else {
+                panDerecha.x += dx; panDerecha.y += dy;
+                dibujarEscena(canvasDerecha, tipoDerecha, zoomDerecha, panDerecha);
+            }
+        }
+    });
+    window.addEventListener("pointerup", () => { arrastrandoDivisor = false; arrastrandoPan = null; });
+
+    // ---------- Barra de herramientas (buscar, zoom, pantallazo) ----------
+    // "+"/"-" y la rueda del mouse afectan solo al panel activo (el
+    // ultimo en el que se hizo clic).
+    document.getElementById("btnZoomMas").addEventListener("click", () => aplicarZoom(ladoActivo, 0.2));
+    document.getElementById("btnZoomMenos").addEventListener("click", () => aplicarZoom(ladoActivo, -0.2));
+
+    comparador.addEventListener("wheel", (e) => {
+        // El "Modelo 3D" real (iframe) ya hace zoom con su propia rueda.
+        if (e.target.tagName === "IFRAME") return;
+        e.preventDefault();
+        aplicarZoom(ladoActivo, e.deltaY < 0 ? 0.15 : -0.15);
+    }, { passive: false });
+
+    // Los clics dentro del iframe no llegan a este documento, pero
+    // "entrar" con el mouse si -- asi el panel igual se marca activo.
+    visorIzquierda.addEventListener("pointerenter", () => fijarActivo("izq"));
+    visorDerecha.addEventListener("pointerenter", () => fijarActivo("der"));
+
+    const cajaBusqueda = document.getElementById("cajaBusqueda");
+    document.getElementById("btnBuscar").addEventListener("click", () => {
+        actualizarPlaceholderBusqueda();
+        const visible = cajaBusqueda.style.display === "block";
+        cajaBusqueda.style.display = visible ? "none" : "block";
+        if (!visible) document.getElementById("inputBusqueda").focus();
+    });
+
+    // Para los tipos con iframe real (modelo3d.html, NubePuntos), el
+    // pantallazo intenta tomar el canvas de three.js/Potree de adentro
+    // (mismo origen, asi que se deberia poder); si el navegador lo
+    // bloquea o la pagina aun no cargo, deja un aviso en vez de fallar.
+    function fuenteDibujable(lado) {
+        const tipo = lado === "izq" ? tipoIzquierda : tipoDerecha;
+        if (!IFRAME_SRC[tipo]) return lado === "izq" ? canvasIzquierda : canvasDerecha;
+        const visor = lado === "izq" ? visorIzquierda : visorDerecha;
+        try {
+            return (visor.contentDocument && visor.contentDocument.querySelector("canvas")) || null;
+        } catch (err) {
+            return null;
+        }
+    }
+
+    function pintarLadoEnCaptura(ctx, lado, w, h) {
+        const fuente = fuenteDibujable(lado);
+        if (fuente) {
+            ctx.drawImage(fuente, 0, 0, w, h);
+        } else {
+            ctx.fillStyle = "#081422";
+            ctx.fillRect(0, 0, w, h);
+            ctx.fillStyle = "#f5c400";
+            ctx.font = "600 14px Inter, sans-serif";
+            ctx.fillText("Modelo 3D (no se pudo capturar)", 20, h / 2);
+        }
+    }
+
+    document.getElementById("btnCaptura").addEventListener("click", () => {
+        const w = comparador.clientWidth, h = comparador.clientHeight;
+        const pct = parseFloat(recorteIzquierda.style.width || "50") / 100;
+
+        const temp = document.createElement("canvas");
+        temp.width = w; temp.height = h;
+        const ctx = temp.getContext("2d");
+
+        pintarLadoEnCaptura(ctx, "der", w, h);
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, w * pct, h);
+        ctx.clip();
+        pintarLadoEnCaptura(ctx, "izq", w, h);
+        ctx.restore();
+
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(w * pct - 1.5, 0, 3, h);
+
+        const enlace = document.createElement("a");
+        enlace.download = "comparador-uniandes.png";
+        enlace.href = temp.toDataURL("image/png");
+        enlace.click();
+    });
+</script>
+
+</body>
+</html>

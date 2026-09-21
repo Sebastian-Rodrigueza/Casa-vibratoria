@@ -6,21 +6,21 @@ __pycache__/
 # Copia de la base de datos: contiene los datos ya cargados,
 # no hace falta que este en GitHub (es publico). Se usa solo
 # una vez para migrar la info a la base de datos en la nube.
-backup_geodbandes.sql
-cloud_import.sql
-sample_ensayos.sql
-import_ensayos.bat
+# (movidos a _archivo_local/ el 2026-09-15, por eso es una carpeta
+# entera y no archivos sueltos como antes)
+_archivo_local/
 
 # Otros archivos de proyectos aparte que no hacen falta en el sitio
 NubePuntos/conversion_log.txt
-requirements_gdb.txt
 
 # Proyecto aparte (webscraping) que no se usa en el sitio y tiene
 # una contraseña de MySQL escrita directo en el codigo
 Webscraping/
 
-# Proyecto aparte de nube de puntos (9+ GB, ningun html del sitio
-# lo usa) - GitHub no admite archivos de ese tamano de todos modos
+# Visor de nube de puntos (Potree) que usa Comparador3D.html -- se
+# queda fuera del repo solo por el tamano de los datos convertidos
+# (varios GB en NubePuntos/datos_antes/, etc.), no porque no se use.
+# GitHub tampoco admite archivos de ese tamano de todos modos.
 NubePuntos/
 
 # Datos crudos originales de la cuenca del rio Sinu (744MB: shapefiles,

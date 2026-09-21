@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <meta name="theme-color"
+          content="#ffffff">
+
+    <meta name="description"
+          content="Visores de la cuenca del río Sinú del Laboratorio Digital CIAM">
+
+    <title>
+        Río Sinú | Universidad de los Andes
+    </title>
+
+    <link rel="preconnect"
+          href="https://fonts.googleapis.com">
+
+    <link rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Sans+3:wght@600;700;800&display=swap"
+          rel="stylesheet">
+
+    <link rel="stylesheet"
+          href="./css/rio-sinu.css">
+
+</head>
+
+<body>
+
+    <div class="page-shell">
+
+        <!-- ==========================================
+             ENCABEZADO
+        =========================================== -->
+
+        <header class="topbar">
+
+            <div class="topbar-inner">
+
+                <button class="brand"
+                        id="brandBtn"
+                        type="button">
+
+                    <span class="logo-box">
+
+                        <img src="../Imagenes/logo-uniandes.png"
+                             alt="Universidad de los Andes"
+                             onerror="
+                                this.style.display='none';
+                                this.parentElement.classList.add('logo-error');
+                             ">
+
+                    </span>
+
+                    <span class="brand-copy">
+
+                        <small>
+                            Universidad de los Andes · CIAM
+                        </small>
+
+                        <strong>
+                            Río Sinú
+                        </strong>
+
+                    </span>
+
+                </button>
+
+                <button class="menu-toggle"
+                        id="menuToggle"
+                        type="button"
+                        aria-label="Abrir menú">
+
+                    <span></span>
+                    <span></span>
+                    <span></span>
+
+                </button>
+
+                <nav class="navigation"
+                     id="mainNav"
+                     aria-label="Navegación principal">
+
+                    <button type="button"
+                            id="btnVolverInicio">
+
+                        Inicio
+
+                    </button>
+
+                    <button type="button"
+                            data-ir-colecciones="1">
+
+                        Visores
+
+                    </button>
+
+                    <button class="nav-primary"
+                            type="button"
+                            data-ir-colecciones="1">
+
+                        Explorar
+
+                    </button>
+
+                </nav>
+
+            </div>
+
+        </header>
+
+
+        <!-- ==========================================
+             CONTENIDO PRINCIPAL
+        =========================================== -->
+
+        <main>
+
+            <section class="collections-section"
+                     id="colecciones">
+
+                <div class="section-heading">
+
+                    <small>
+                        Visores disponibles
+                    </small>
+
+                    <h1>
+                        Río Sinú
+                    </h1>
+
+                    <p>
+                        Selecciona el visor que deseas consultar. El geovisor
+                        reúne mapas y capas de la cuenca; el panel de datos
+                        reúne las series reales de XM, IDEAM y DHIME.
+                    </p>
+
+                </div>
+
+
+                <div class="collections-grid">
+
+                    <!-- ==================================
+                         01 · MAPA DE LA CUENCA
+                    =================================== -->
+
+                    <article class="collection-card"
+                             data-destino="./RioSinu.html"
+                             tabindex="0"
+                             aria-label="Abrir Mapa de la cuenca">
+
+                        <img class="collection-background"
+                             src="../Imagenes/riosinu.jpg"
+                             alt="Mapa de la cuenca">
+
+                        <div class="collection-overlay"></div>
+
+                        <span class="collection-number">
+                            01
+                        </span>
+
+                        <div class="collection-icon">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"></path>
+                                <path d="M9 3v15M15 6v15"></path>
+                            </svg>
+                        </div>
+
+                        <div class="collection-content">
+
+                            <span class="collection-label">
+                                Geovisor
+                            </span>
+
+                            <h2>
+                                Mapa de la cuenca
+                            </h2>
+
+                            <p>
+                                Cuenca, subcuencas, áreas protegidas,
+                                infraestructura, clasificación de agua y
+                                GeoTIFF reales — todo en un mapa interactivo.
+                            </p>
+
+                            <div class="collection-tags">
+                                <span>Cuenca</span>
+                                <span>Infraestructura</span>
+                                <span>GeoTIFF</span>
+                                <span>Perfil de elevación</span>
+                            </div>
+
+                            <button class="collection-button"
+                                    type="button"
+                                    data-destino="./RioSinu.html">
+
+                                Abrir visor
+
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M5 12h14M13 6l6 6-6 6"></path>
+                                </svg>
+
+                            </button>
+
+                        </div>
+
+                    </article>
+
+                    <!-- ==================================
+                         02 · DATOS XM, IDEAM Y DHIME
+                    =================================== -->
+
+                    <article class="collection-card"
+                             data-destino="./RioSinuDatos.html"
+                             tabindex="0"
+                             aria-label="Abrir Datos XM, IDEAM y DHIME">
+
+                        <img class="collection-background"
+                             src="../Imagenes/riosinu.jpg"
+                             alt="Datos XM, IDEAM y DHIME">
+
+                        <div class="collection-overlay"></div>
+
+                        <span class="collection-number">
+                            02
+                        </span>
+
+                        <div class="collection-icon">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M4 20V10M12 20V4M20 20v-7"></path>
+                            </svg>
+                        </div>
+
+                        <div class="collection-content">
+
+                            <span class="collection-label">
+                                Series de tiempo
+                            </span>
+
+                            <h2>
+                                Datos XM, IDEAM y DHIME
+                            </h2>
+
+                            <p>
+                                Aportes hídricos, generación y nivel de
+                                embalse de Urrá (XM), y estaciones de
+                                monitoreo de IDEAM/DHIME dentro de la cuenca.
+                            </p>
+
+                            <div class="collection-tags">
+                                <span>Urrá</span>
+                                <span>Aportes hídricos</span>
+                                <span>Embalse</span>
+                                <span>Estaciones IDEAM</span>
+                            </div>
+
+                            <button class="collection-button"
+                                    type="button"
+                                    data-destino="./RioSinuDatos.html">
+
+                                Abrir visor
+
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M5 12h14M13 6l6 6-6 6"></path>
+                                </svg>
+
+                            </button>
+
+                        </div>
+
+                    </article>
+
+                </div>
+
+            </section>
+
+        </main>
+
+
+        <!-- ==========================================
+             PIE DE PÁGINA
+        =========================================== -->
+
+        <footer>
+
+            <div class="footer-inner">
+
+                <div>
+
+                    <strong>
+                        Río Sinú
+                    </strong>
+
+                    <span>
+                        Laboratorio Digital CIAM
+                    </span>
+
+                </div>
+
+                <p>
+                    © 2026 Universidad de los Andes
+                </p>
+
+            </div>
+
+        </footer>
+
+    </div>
+
+
+    <!-- ==========================================
+         MENSAJE TEMPORAL
+    =========================================== -->
+
+    <div class="toast" id="toast"></div>
+
+    <script src="./js/rio-sinu.js"></script>
+
+</body>
+</html>

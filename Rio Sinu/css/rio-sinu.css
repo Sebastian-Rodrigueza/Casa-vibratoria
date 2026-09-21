@@ -1,0 +1,533 @@
+:root {
+    --white: #ffffff;
+    --cream: #fffdf6;
+    --beige: #fdf7e9;
+    --soft: #f7f7f3;
+    --yellow: #f5c400;
+    --yellow-dark: #d4a800;
+    --charcoal: #25282c;
+    --text: #34383d;
+    --muted: #70757b;
+    --line: #e5e5de;
+    --line-strong: #d4d4cb;
+    --warning: #cf5731;
+    --shadow: 0 18px 48px rgba(34, 36, 39, 0.12);
+    --max-width: 1240px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    position: relative;
+    color: var(--text);
+    background: linear-gradient(180deg, var(--cream) 0%, var(--beige) 100vh);
+    font-family: "Inter", sans-serif;
+}
+
+/* Escudo de la Universidad de los Andes centrado como marca de agua,
+   muy pequeño y tenue, fijo detrás de todo el contenido. */
+body::before {
+    content: "";
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: -1;
+    width: 280px;
+    height: 280px;
+    transform: translate(-50%, -50%);
+    background: url("../../Imagenes/escudoandes.jpg") center / contain no-repeat;
+    opacity: .08;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+}
+
+button {
+    font: inherit;
+    cursor: pointer;
+}
+
+img,
+svg {
+    display: block;
+}
+
+.page-shell {
+    min-height: 100vh;
+}
+
+/* Encabezado */
+
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(255, 255, 255, 0.97);
+    border-bottom: 1px solid var(--line);
+    box-shadow: 0 3px 15px rgba(34, 36, 39, 0.06);
+    backdrop-filter: blur(14px);
+}
+
+.topbar-inner {
+    width: min(var(--max-width), calc(100% - 40px));
+    min-height: 84px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 30px;
+}
+
+.brand {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 0;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    text-align: left;
+}
+
+.logo-box {
+    width: 178px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    padding-right: 18px;
+    border-right: 1px solid var(--line);
+}
+
+    .logo-box img {
+        max-width: 100%;
+        max-height: 46px;
+        object-fit: contain;
+    }
+
+.brand-copy small {
+    display: block;
+    margin-bottom: 2px;
+    color: #898d91;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.brand-copy strong {
+    display: block;
+    color: var(--charcoal);
+    font: 700 21px/1.1 "Source Sans 3", sans-serif;
+}
+
+/* Menú */
+
+.navigation {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+    .navigation button {
+        min-width: 88px;
+        min-height: 42px;
+        padding: 0 16px;
+        color: var(--muted);
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 11px;
+        font-weight: 700;
+    }
+
+        .navigation button:hover {
+            color: var(--charcoal);
+            background: var(--soft);
+            border-color: var(--line);
+        }
+
+    .navigation .nav-primary {
+        color: var(--charcoal);
+        background: var(--yellow);
+        border-color: var(--yellow-dark);
+    }
+
+.menu-toggle {
+    display: none;
+    width: 42px;
+    height: 42px;
+    padding: 9px;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+}
+
+    .menu-toggle span {
+        display: block;
+        height: 2px;
+        margin: 4px 0;
+        background: var(--charcoal);
+        border-radius: 5px;
+    }
+
+/* Título */
+
+.collections-section {
+    width: min(var(--max-width), calc(100% - 40px));
+    min-height: calc(100vh - 180px);
+    margin: 0 auto;
+    padding: 70px 0 90px;
+}
+
+.section-heading {
+    max-width: 760px;
+    margin: 0 auto 40px;
+    text-align: center;
+}
+
+    .section-heading small {
+        display: block;
+        margin-bottom: 8px;
+        color: #927200;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+
+    .section-heading h1 {
+        margin: 0;
+        color: var(--charcoal);
+        font: 700 clamp(44px, 5vw, 68px)/1 "Source Sans 3", sans-serif;
+        letter-spacing: -0.035em;
+    }
+
+    .section-heading p {
+        max-width: 680px;
+        margin: 18px auto 0;
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1.7;
+    }
+
+/* Tarjetas */
+
+.collections-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+}
+
+.collection-card {
+    position: relative;
+    min-height: 500px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+    padding: 32px;
+    background: var(--white);
+    border: 1px solid var(--line-strong);
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    isolation: isolate;
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+    .collection-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 26px 60px rgba(35, 37, 40, 0.2);
+    }
+
+.collection-background {
+    position: absolute;
+    inset: 0;
+    z-index: -3;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    transition: transform 0.6s ease;
+}
+
+.collection-card:hover .collection-background {
+    transform: scale(1.04);
+}
+
+.collection-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    background: linear-gradient( 180deg, rgba(20, 23, 27, 0.07) 0%, rgba(20, 23, 27, 0.28) 42%, rgba(20, 23, 27, 0.95) 100% );
+}
+
+.collection-number {
+    position: absolute;
+    top: 26px;
+    right: 28px;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.13em;
+}
+
+.collection-icon {
+    position: absolute;
+    top: 26px;
+    left: 28px;
+    width: 56px;
+    height: 56px;
+    display: grid;
+    place-items: center;
+    color: var(--charcoal);
+    background: rgba(255, 247, 207, 0.95);
+    border: 1px solid #e6d36d;
+    border-radius: 16px;
+    backdrop-filter: blur(8px);
+}
+
+.collection-icon-warning {
+    color: var(--warning);
+    background: rgba(255, 240, 232, 0.95);
+    border-color: #efc2ac;
+}
+
+.collection-icon svg {
+    width: 27px;
+    height: 27px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.collection-content {
+    position: relative;
+    z-index: 2;
+}
+
+.collection-label {
+    color: #ffe271;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.collection-content h2 {
+    max-width: 490px;
+    margin: 9px 0 0;
+    color: var(--white);
+    font: 700 37px/1.06 "Source Sans 3", sans-serif;
+    letter-spacing: -0.025em;
+}
+
+.collection-content > p {
+    max-width: 510px;
+    margin: 16px 0 0;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 14px;
+    line-height: 1.68;
+}
+
+.collection-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+    .collection-tags span {
+        padding: 7px 10px;
+        color: rgba(255, 255, 255, 0.92);
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        backdrop-filter: blur(6px);
+    }
+
+.collection-button {
+    min-height: 47px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 25px;
+    padding: 0 18px;
+    color: var(--charcoal);
+    background: var(--yellow);
+    border: 1px solid var(--yellow-dark);
+    border-radius: 11px;
+    font-weight: 800;
+}
+
+    .collection-button svg {
+        width: 18px;
+        height: 18px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2.1;
+    }
+
+/* Footer */
+
+footer {
+    background: var(--white);
+    border-top: 1px solid var(--line);
+}
+
+.footer-inner {
+    width: min(var(--max-width), calc(100% - 40px));
+    min-height: 95px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    color: var(--muted);
+}
+
+    .footer-inner strong {
+        display: block;
+        color: var(--charcoal);
+        font-size: 14px;
+    }
+
+    .footer-inner span {
+        display: block;
+        margin-top: 3px;
+        font-size: 11px;
+    }
+
+    .footer-inner p {
+        margin: 0;
+        font-size: 12px;
+    }
+
+/* Mensajes */
+
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    z-index: 100;
+    max-width: calc(100% - 30px);
+    transform: translate(-50%, 18px);
+    padding: 13px 18px;
+    color: var(--charcoal);
+    background: var(--white);
+    border: 1px solid var(--line-strong);
+    border-radius: 12px;
+    box-shadow: 0 16px 38px rgba(34, 36, 39, 0.18);
+    opacity: 0;
+    pointer-events: none;
+    transition: 0.22s ease;
+}
+
+.toast-visible {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+/* Responsive */
+
+@media (max-width: 920px) {
+    .topbar-inner {
+        position: relative;
+    }
+
+    .menu-toggle {
+        display: block;
+        margin-left: auto;
+    }
+
+    .navigation {
+        position: absolute;
+        top: 76px;
+        right: 0;
+        width: min(300px, calc(100vw - 40px));
+        display: none;
+        flex-direction: column;
+        align-items: stretch;
+        padding: 12px;
+        background: var(--white);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: var(--shadow);
+    }
+
+    .navigation-open {
+        display: flex;
+    }
+
+    .collections-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 620px) {
+    .topbar-inner {
+        width: calc(100% - 24px);
+        min-height: 76px;
+    }
+
+    .logo-box {
+        width: 120px;
+        height: 45px;
+        padding-right: 10px;
+    }
+
+    .brand-copy small {
+        display: none;
+    }
+
+    .brand-copy strong {
+        font-size: 16px;
+    }
+
+    .collections-section {
+        width: calc(100% - 24px);
+        padding-top: 44px;
+    }
+
+    .section-heading h1 {
+        font-size: 43px;
+    }
+
+    .collection-card {
+        min-height: 460px;
+        padding: 25px;
+    }
+
+    .collection-content h2 {
+        font-size: 31px;
+    }
+
+    .collection-icon {
+        top: 20px;
+        left: 20px;
+    }
+
+    .collection-number {
+        top: 22px;
+        right: 22px;
+    }
+
+    .footer-inner {
+        width: calc(100% - 24px);
+        padding: 22px 0;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

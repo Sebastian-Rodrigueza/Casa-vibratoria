@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prueba MapLibre 3D — Universidad de los Andes</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Sans+3:wght@500;600;700&display=swap" rel="stylesheet">
+
+<link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css" rel="stylesheet">
+
+<style>
+    html, body { margin: 0; height: 100%; font-family: "Inter", sans-serif; color: #34383d; }
+    header {
+        height: 84px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        padding: 0 24px;
+        background: rgba(255,255,255,.97);
+        border-bottom: 1px solid #e5e5de;
+        box-shadow: 0 3px 15px rgba(34,36,39,.06);
+        position: relative;
+        z-index: 10;
+    }
+    header .logo-box {
+        height: 46px;
+        display: flex;
+        align-items: center;
+        padding-right: 18px;
+        border-right: 1px solid #e5e5de;
+    }
+    header .logo-box img { max-height: 42px; width: auto; display: block; }
+    header .brand-copy small {
+        display: block;
+        margin-bottom: 2px;
+        color: #898d91;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .07em;
+        text-transform: uppercase;
+    }
+    header .brand-copy strong {
+        display: block;
+        font: 700 21px/1.1 "Source Sans 3", sans-serif;
+        color: #26292d;
+    }
+    /* Fondo de estrellas: solo se alcanza a ver cuando el globo esta
+       alejado (zoom bajo), porque a nivel ciudad el mapa tapa todo el
+       contenedor. Es CSS puro (sin imagen externa) -- puntitos blancos
+       repetidos sobre un azul casi negro. */
+    #map {
+        position: absolute; top: 84px; left: 0; right: 0; bottom: 0;
+        background-color: #050814;
+        background-image:
+            radial-gradient(1.6px 1.6px at 20px 30px, #fff, transparent),
+            radial-gradient(1px 1px at 80px 90px, #fff, transparent),
+            radial-gradient(1.3px 1.3px at 145px 45px, #cfe0ff, transparent),
+            radial-gradient(1px 1px at 190px 130px, #fff, transparent),
+            radial-gradient(1.4px 1.4px at 230px 20px, #fff, transparent),
+            radial-gradient(1px 1px at 40px 160px, #cfe0ff, transparent),
+            radial-gradient(1.2px 1.2px at 110px 190px, #fff, transparent),
+            radial-gradient(1px 1px at 270px 200px, #fff, transparent),
+            radial-gradient(1.5px 1.5px at 10px 220px, #fff, transparent),
+            radial-gradient(1px 1px at 260px 100px, #cfe0ff, transparent);
+        background-repeat: repeat;
+        background-size: 300px 260px;
+    }
+    .info {
+        position: absolute;
+        top: 96px;
+        left: 12px;
+        z-index: 5;
+        background: rgba(255,255,255,.95);
+        padding: 10px 14px;
+        border-radius: 10px;
+        box-shadow: 0 4px 14px rgba(0,0,0,.2);
+        font-size: 13px;
+        max-width: 260px;
+    }
+    .info b { display: block; margin-bottom: 4px; font-size: 15px; }
+    .btn-girar {
+        position: absolute;
+        bottom: 24px;
+        left: 12px;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 999px;
+        box-shadow: 0 4px 14px rgba(0,0,0,.2);
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+    .btn-girar.activo { background: #f5c400; border-color: #d7aa00; }
+    .fps {
+        position: absolute;
+        bottom: 24px;
+        right: 12px;
+        z-index: 5;
+        background: rgba(0,0,0,.7);
+        color: #0f0;
+        font-family: monospace;
+        font-size: 13px;
+        padding: 6px 10px;
+        border-radius: 8px;
+    }
+    .panel-lugares {
+        position: absolute;
+        top: 96px;
+        right: 12px;
+        z-index: 5;
+        background: rgba(255,255,255,.96);
+        border-radius: 12px;
+        box-shadow: 0 4px 14px rgba(0,0,0,.2);
+        padding: 12px;
+        width: 200px;
+    }
+    .panel-lugares b { display: block; font-size: 13px; margin-bottom: 8px; }
+    .panel-lugares button {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 8px 10px;
+        margin-bottom: 4px;
+        background: #f7f7f3;
+        border: 1px solid #e5e5de;
+        border-radius: 8px;
+        font-size: 12.5px;
+        font-family: inherit;
+        cursor: pointer;
+        transition: background .15s;
+    }
+    .panel-lugares button:hover { background: #fff3ad; }
+    .panel-lugares button.activo { background: #f5c400; border-color: #d7aa00; font-weight: 700; }
+    .panel-lugares label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid #e5e5de;
+        font-size: 12px;
+        cursor: pointer;
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <span class="logo-box">
+        <img src="Imagenes/logo-uniandes.png" alt="Universidad de los Andes">
+    </span>
+    <span class="brand-copy">
+        <small>Universidad de los Andes</small>
+        <strong>Lab SinergIA</strong>
+    </span>
+</header>
+
+<div id="map"></div>
+<div class="info">
+    <b>Ciudades inteligentes</b>
+    Modelo 3D de Bogotá — arrastra con el botón derecho (o dos dedos)
+    para rotar/inclinar y explorar los edificios.
+</div>
+<button class="btn-girar" id="btnGirar" type="button">▶ Girar cámara</button>
+<button class="btn-girar" id="btnVueloDron" type="button" style="bottom:128px;">🚁 Sobrevuelo desde el norte</button>
+<button class="btn-girar" id="btnEspacio" type="button" style="bottom:180px;">🚀 Vuelo desde el espacio</button>
+<label class="fps" style="left:12px; right:auto; bottom:76px; cursor:pointer; color:#fff;">
+    <input type="checkbox" id="chkTerreno"> Terreno 3D (pesado)
+</label>
+<div class="fps" id="fps">-- FPS</div>
+
+<div class="panel-lugares">
+    <b>Recorrido por Bogotá</b>
+    <div id="listaLugares"></div>
+    <label>
+        <input type="checkbox" id="chkSatelital" checked>
+        Imagen satelital del campus
+    </label>
+    <label>
+        <input type="checkbox" id="chkTransmilenio">
+        Estaciones TransMilenio (153)
+    </label>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+<script src="bogota3d_data/transmilenio_estaciones.js"></script>
+<script>
+    const UNIANDES = [-74.065173, 4.601613]; // [lng, lat]
+
+    // En pantallas de alta resolucion (Retina, 4K, muchos laptops nuevos)
+    // el navegador por defecto dibuja a 2x o 3x la resolucion real -- eso
+    // es 4x u 9x mas pixeles que renderizar en 3D cada cuadro. Limitarlo
+    // a 1 es, con diferencia, lo que mas ayuda al rendimiento aqui.
+    Object.defineProperty(window, "devicePixelRatio", { get: () => 1 });
+
+    const map = new maplibregl.Map({
+        container: "map",
+        style: "https://tiles.openfreemap.org/styles/liberty",
+        center: UNIANDES,
+        zoom: 15.7,
+        pitch: 60,
+        bearing: -20,
+        antialias: false // el antialiasing con terreno 3D es de lo mas pesado que hay -- se ve un poco mas dentado, pero mucho mas fluido
+    });
+
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
+
+    // ---------- Recorrido por lugares icónicos de Bogotá ----------
+    // Coordenadas reales verificadas (no aproximadas a ojo).
+
+    // Caja real de TODA Bogota + Soacha (limites administrativos reales,
+    // verificados via Nominatim/OSM), no solo un recorte agrandado del
+    // campus -- asi la imagen satelital cubre toda la ciudad.
+    const CAMPUS_BOUNDS = [-74.3080, 4.3820, -74.0100, 4.8335];
+
+    // Ruta real del "vuelo de dron": arranca en la Terminal Satelite del
+    // Norte (sobre la Autopista Norte / Av. Carrera 45), baja por esa
+    // misma avenida pasando por puntos reales conocidos, y termina
+    // entrando a los Andes. Todas las coordenadas son reales, verificadas
+    // por geocodificacion (no aproximadas a ojo).
+    //
+    // El "bearing" (rumbo) de cada tramo NO es decorativo: se calculo con
+    // la formula real de rumbo entre cada par de puntos (norte=0,
+    // este=90, sur=180) para que la camara SIGA MIRANDO hacia donde
+    // realmente va volando (sur) en vez de ir "de espaldas" mirando al
+    // norte mientras avanza al sur. Solo en el ultimo tramo gira hacia el
+    // -20 con el que se ve el campus en el resto del sitio (el giro final
+    // de "aterrizaje"). El zoom tambien se subio bastante (antes era una
+    // vista de dron muy alto/lejano) para que se sienta bajo y cerca de
+    // los edificios, como al navegar manualmente pegado a la Autopista Norte.
+    const RUTA_VUELO_NORTE = [
+        { nombre: "Terminal Satélite del Norte", center: [-74.0422135, 4.7701124], zoom: 15.0, pitch: 58, bearing: 179 },
+        { nombre: "Unicentro (Autopista Norte)", center: [-74.0412813, 4.7021592], zoom: 15.2, pitch: 60, bearing: 195, duration: 7000 },
+        { nombre: "Parque de la 93", center: [-74.0482874, 4.6767680], zoom: 15.4, pitch: 61, bearing: 198, duration: 5500 },
+        { nombre: "Torre Colpatria", center: [-74.070289, 4.611040], zoom: 15.8, pitch: 62, bearing: 152, duration: 5500 },
+        { nombre: "Universidad de los Andes", center: UNIANDES, zoom: 16.5, pitch: 60, bearing: -20, duration: 5000 }
+    ];
+
+    // Secuencia "alejarse hasta el espacio": mismo punto (los Andes) todo
+    // el tiempo, solo bajando el zoom en etapas -- barrio, ciudad, espacio.
+    // Como el mapa quedo en proyeccion "globe", al llegar a zoom muy bajo
+    // (nivel Tierra completa) se ve literalmente como una esfera, no un
+    // rectangulo plano.
+    const ETAPA_CAMPUS = { nombre: "Universidad de los Andes", center: UNIANDES, zoom: 16.5, pitch: 60, bearing: -20, duration: 4000 };
+    const ETAPA_BARRIO = { nombre: "Barrio (La Candelaria)", center: UNIANDES, zoom: 14.3, pitch: 35, bearing: 0, duration: 3000 };
+    const ETAPA_CIUDAD = { nombre: "Ciudad (Bogotá)", center: UNIANDES, zoom: 10.5, pitch: 10, bearing: 0, duration: 4000 };
+    const ETAPA_ESPACIO = { nombre: "Espacio (la Tierra)", center: UNIANDES, zoom: 1.3, pitch: 0, bearing: 0, duration: 7000 };
+
+    const RUTA_A_ESPACIO = [ETAPA_BARRIO, ETAPA_CIUDAD, ETAPA_ESPACIO];
+    const RUTA_A_CAMPUS = [ETAPA_CIUDAD, ETAPA_BARRIO, ETAPA_CAMPUS];
+
+    // Coordenadas y datos reales de OpenStreetMap (Overpass API, edificios
+    // con building=university dentro del campus) y de las paginas oficiales
+    // de cada facultad (verificadas por busqueda, no inventadas).
+    const LUGARES = [
+        { nombre: "Universidad de los Andes", coords: UNIANDES, zoom: 16.5 },
+        { nombre: "Plaza de Bolívar", coords: [-74.076111, 4.598056], zoom: 17.2 },
+        { nombre: "Monserrate", coords: [-74.056389, 4.605833], zoom: 15.3 },
+        { nombre: "Torre Colpatria", coords: [-74.070289, 4.611040], zoom: 16.8 },
+        {
+            nombre: "Edificio Mario Laserna",
+            coords: [-74.06482, 4.60275],
+            zoom: 18.5,
+            edificio: true,
+            popup: `<b>Edificio Mario Laserna</b><br>
+                Universidad de los Andes<br>
+                Inaugurado en 2007 · 8 pisos + 2 sótanos<br>
+                56 laboratorios · 19 salones<br>
+                Sede del Departamento de Ingeniería de Sistemas y Computación`
+        },
+        {
+            nombre: "Bloque W",
+            coords: [-74.0650403, 4.6021445],
+            zoom: 18.5,
+            edificio: true,
+            popup: `<b>Bloque W (Edificio Carlos Pacheco Devia)</b><br>
+                Universidad de los Andes<br>
+                Reconstruido en 2008-2009, diseño de Daniel Bermúdez<br>
+                9 pisos · 17 salones · 2 salas de cómputo · 70 oficinas<br>
+                Conectado por puentes peatonales al Mario Laserna`
+        },
+        {
+            nombre: "Edificio Santo Domingo (SD)",
+            coords: [-74.0658777, 4.6044380],
+            zoom: 18.5,
+            edificio: true,
+            popup: `<b>Edificio Julio Mario Santo Domingo (SD)</b><br>
+                Universidad de los Andes<br>
+                Construido en 2004-2007, diseño de Daniel Bonilla Arquitectos<br>
+                10 pisos · biblioteca especializada · auditorio para 135 personas<br>
+                Sede de la Facultad de Administración`
+        },
+        {
+            nombre: "Edificio Lleras (LL)",
+            coords: [-74.0652635, 4.6020450],
+            zoom: 18.5,
+            edificio: true,
+            popup: `<b>Edificio Alberto Lleras Camargo (LL)</b><br>
+                Universidad de los Andes<br>
+                Construido en 1989, diseño de Guillermo y Daniel Bermúdez<br>
+                5.040 m² · salones, hemiciclos y auditorio<br>
+                Premio al Mejor Diseño Arquitectónico, Bienal Colombiana 1992`
+        }
+    ];
+
+    const listaLugares = document.getElementById("listaLugares");
+    LUGARES.forEach((lugar, i) => {
+        const boton = document.createElement("button");
+        boton.type = "button";
+        boton.textContent = lugar.nombre;
+        boton.addEventListener("click", () => {
+            document.querySelectorAll(".panel-lugares button").forEach((b) => b.classList.remove("activo"));
+            boton.classList.add("activo");
+            map.flyTo({
+                center: lugar.coords,
+                zoom: lugar.zoom,
+                pitch: 60,
+                bearing: -20,
+                duration: 3000,
+                curve: 1.4
+            });
+        });
+        listaLugares.appendChild(boton);
+
+        new maplibregl.Marker({ color: lugar.edificio ? "#2f6fb0" : "#f5c400" })
+            .setLngLat(lugar.coords)
+            .setPopup(new maplibregl.Popup().setHTML(lugar.popup || `<b>${lugar.nombre}</b>`))
+            .addTo(map);
+
+        if (i === 0) boton.classList.add("activo");
+    });
+
+    map.on("load", () => {
+        // ---------- Cielo/atmosfera: le da sensacion de "estar ahi" en vez
+        // de ver bloques flotando en un fondo plano ----------
+        map.setSky({
+            "sky-color": "#87ceeb",
+            "sky-horizon-blend": 0.5,
+            "horizon-color": "#ffffff",
+            "horizon-fog-blend": 0.6,
+            "fog-color": "#d8e6ec",
+            "fog-ground-blend": 0.5
+        });
+
+        // ---------- Luz mas dramatica (angulo bajo = sombras largas,
+        // como al atardecer, en vez de la luz plana de mediodia) ----------
+        map.setLight({
+            anchor: "map",
+            color: "#fff2d9",
+            intensity: 0.55,
+            position: [1.6, 200, 40] // [radio, azimut, altura] -- altura baja = sombras marcadas
+        });
+
+        // Proyeccion "globo": a este zoom (ciudad) se ve exactamente igual
+        // que el mapa plano de siempre -- solo se nota (se ve la Tierra
+        // como esfera) cuando el zoom baja mucho, que es justo lo que se
+        // necesita para el efecto "alejarse hasta el espacio". OJO: esto
+        // solo se puede llamar aqui adentro, con el estilo ya cargado --
+        // llamarlo antes (como estaba) tira "Style is not done loading."
+        // y esa excepcion frenaba TODO el script que venia despues (por
+        // eso desaparecio el panel de lugares y ningun boton funcionaba).
+        map.setProjection({ type: "globe" });
+
+        // ---------- Terreno real (las colinas de Bogota) ----------
+        // APAGADO por defecto: es lo mas caro de dibujar (recalcula la
+        // malla del relieve en cada cuadro al girar), y en el equipo de
+        // prueba bajo los FPS de forma muy notoria. Queda el checkbox
+        // para prenderlo aparte y comparar.
+        map.addSource("terreno", {
+            type: "raster-dem",
+            tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
+            encoding: "terrarium",
+            tileSize: 256,
+            maxzoom: 15
+        });
+
+        const chkTerreno = document.getElementById("chkTerreno");
+        chkTerreno.addEventListener("change", () => {
+            map.setTerrain(chkTerreno.checked ? { source: "terreno", exaggeration: 1.0 } : null);
+        });
+
+        // ---------- Imagen satelital real de todo el campus ----------
+        // Mismo servicio que ya usamos y verificamos (Esri World Imagery,
+        // gratis, sin API key). "bounds" limita donde se piden/dibujan
+        // tiles a la caja real del campus -- se inserta justo antes de la
+        // capa de edificios 3D del estilo ("building-3d") para que quede
+        // como "piso" real y los bloques se sigan viendo parados encima.
+        map.addSource("campus-imagen", {
+            type: "raster",
+            tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+            tileSize: 256,
+            maxzoom: 19,
+            bounds: CAMPUS_BOUNDS,
+            attribution: "Esri World Imagery"
+        });
+        map.addLayer({
+            id: "campus-imagen",
+            type: "raster",
+            source: "campus-imagen",
+            layout: { visibility: "visible" },
+            paint: { "raster-opacity": 1 }
+        }, "building-3d");
+
+        const chkSatelital = document.getElementById("chkSatelital");
+        chkSatelital.addEventListener("change", () => {
+            map.setLayoutProperty("campus-imagen", "visibility", chkSatelital.checked ? "visible" : "none");
+        });
+
+        // ---------- Estaciones reales de TransMilenio ----------
+        // Datos abiertos de Bogota (datosabiertos.bogota.gov.co), 153
+        // estaciones con nombre y ubicacion real -- no son puntos inventados.
+        map.addSource("transmilenio", { type: "geojson", data: DATA_TRANSMILENIO });
+        map.addLayer({
+            id: "transmilenio-puntos",
+            type: "circle",
+            source: "transmilenio",
+            layout: { visibility: "none" },
+            paint: {
+                "circle-radius": 5,
+                "circle-color": "#e03131",
+                "circle-stroke-width": 1.5,
+                "circle-stroke-color": "#ffffff"
+            }
+        });
+
+        const chkTransmilenio = document.getElementById("chkTransmilenio");
+        chkTransmilenio.addEventListener("change", () => {
+            map.setLayoutProperty(
+                "transmilenio-puntos", "visibility",
+                chkTransmilenio.checked ? "visible" : "none"
+            );
+        });
+
+        map.on("click", "transmilenio-puntos", (e) => {
+            new maplibregl.Popup()
+                .setLngLat(e.lngLat)
+                .setHTML(`<b>${e.features[0].properties.nombre}</b><br>Estación TransMilenio`)
+                .addTo(map);
+        });
+        map.on("mouseenter", "transmilenio-puntos", () => map.getCanvas().style.cursor = "pointer");
+        map.on("mouseleave", "transmilenio-puntos", () => map.getCanvas().style.cursor = "");
+
+        // ---------- Camara girando (solo cuando el usuario le da al boton) ----------
+        // setBearing() en vez de rotateTo(): rotateTo esta pensada para UNA
+        // transicion puntual con easing, no para llamarla en cada frame --
+        // por eso se sentia "trabado". setBearing solo mueve el valor, sin
+        // easing ni recalculos de mas, mucho mas fluido cuadro a cuadro.
+        const btnGirar = document.getElementById("btnGirar");
+        let girando = false;
+        let ultimoTiempo = null;
+        const GRADOS_POR_SEGUNDO = 12; // ajusta esto para mas o menos velocidad
+
+        function girarCamara(tiempo) {
+            if (!girando) { ultimoTiempo = null; return; }
+
+            if (ultimoTiempo !== null) {
+                const deltaSegundos = (tiempo - ultimoTiempo) / 1000;
+                map.setBearing(map.getBearing() + GRADOS_POR_SEGUNDO * deltaSegundos);
+            }
+            ultimoTiempo = tiempo;
+            requestAnimationFrame(girarCamara);
+        }
+
+        function alternarGiro() {
+            girando = !girando;
+            btnGirar.textContent = girando ? "⏸ Detener giro" : "▶ Girar cámara";
+            btnGirar.classList.toggle("activo", girando);
+            if (girando) requestAnimationFrame(girarCamara);
+        }
+
+        btnGirar.addEventListener("click", alternarGiro);
+
+        // Si el usuario agarra el mapa con el mouse mientras gira, se detiene
+        // (para no pelear con su control manual).
+        map.on("dragstart", () => {
+            if (girando) alternarGiro();
+        });
+
+        // ---------- Vuelo de dron: Terminal del Norte -> Autopista Norte -> Andes ----------
+        // 1) jumpTo (instantaneo) al primer punto de la ruta, arriba y lejos,
+        //    como si el dron arrancara ahi.
+        // 2) easeTo encadenado punto por punto (Unicentro, Parque de la 93,
+        //    Torre Colpatria...) siguiendo la Autopista Norte hacia el sur --
+        //    easeTo hace un paneo/zoom mas parejo, sin el "sube y baja" de
+        //    flyTo, para que se sienta como una ruta continua y no un salto.
+        // 3) El ultimo tramo (Colpatria -> Andes) SI usa flyTo, para que la
+        //    llegada al campus tenga ese efecto de "aterrizaje" mas dramatico.
+        const btnVueloDron = document.getElementById("btnVueloDron");
+        btnVueloDron.addEventListener("click", () => {
+            if (girando) alternarGiro();
+
+            btnVueloDron.disabled = true;
+
+            const primero = RUTA_VUELO_NORTE[0];
+            map.jumpTo({ center: primero.center, zoom: primero.zoom, pitch: primero.pitch, bearing: primero.bearing });
+
+            let paso = 1;
+            function siguienteTramo() {
+                if (paso >= RUTA_VUELO_NORTE.length) {
+                    btnVueloDron.disabled = false;
+                    btnVueloDron.textContent = "🚁 Sobrevuelo desde el norte";
+                    document.querySelectorAll(".panel-lugares button").forEach((b) => b.classList.remove("activo"));
+                    listaLugares.querySelector("button").classList.add("activo");
+                    return;
+                }
+
+                const tramo = RUTA_VUELO_NORTE[paso];
+                btnVueloDron.textContent = "🚁 Volando: " + tramo.nombre;
+                const esUltimoTramo = paso === RUTA_VUELO_NORTE.length - 1;
+
+                map.once("moveend", siguienteTramo);
+
+                if (esUltimoTramo) {
+                    map.flyTo({
+                        center: tramo.center, zoom: tramo.zoom, pitch: tramo.pitch, bearing: tramo.bearing,
+                        duration: tramo.duration, curve: 1.4
+                    });
+                } else {
+                    map.easeTo({
+                        center: tramo.center, zoom: tramo.zoom, pitch: tramo.pitch, bearing: tramo.bearing,
+                        duration: tramo.duration
+                    });
+                }
+
+                paso++;
+            }
+
+            map.once("idle", siguienteTramo);
+        });
+
+        // ---------- Alejarse hasta el espacio (y volver) ----------
+        // Mismo patron de encadenado que el vuelo de dron de arriba, pero
+        // generico (recorrerRuta) porque aca se necesita en dos sentidos:
+        // ida (campus -> barrio -> ciudad -> espacio) y vuelta (al reves).
+        // El ultimo paso de cada sentido usa flyTo (para el "empujon" final
+        // hacia el espacio, o el "aterrizaje" de vuelta al campus); los
+        // pasos de en medio usan easeTo para un alejamiento parejo.
+        function recorrerRuta(ruta, boton, textoBase, alTerminar) {
+            let paso = 0;
+            function siguientePaso() {
+                if (paso >= ruta.length) {
+                    if (alTerminar) alTerminar();
+                    return;
+                }
+
+                const etapa = ruta[paso];
+                boton.textContent = textoBase + etapa.nombre;
+                const esUltimoPaso = paso === ruta.length - 1;
+
+                map.once("moveend", siguientePaso);
+
+                const opciones = {
+                    center: etapa.center, zoom: etapa.zoom, pitch: etapa.pitch,
+                    bearing: etapa.bearing, duration: etapa.duration
+                };
+                if (esUltimoPaso) {
+                    map.flyTo({ ...opciones, curve: 1.4 });
+                } else {
+                    map.easeTo(opciones);
+                }
+
+                paso++;
+            }
+            siguientePaso();
+        }
+
+        const btnEspacio = document.getElementById("btnEspacio");
+        let enElEspacio = false;
+        let primerVuelo = true;
+
+        // A zoom de globo completo, la capa satelital y los puntos de
+        // TransMilenio piden/dibujan un solo tile gigante que tapa medio
+        // planeta (se ve como un parche feo) -- se ocultan mientras se
+        // esta alejado y se devuelven a como estaban al volver al campus.
+        function mostrarCapasDeCampus(visible) {
+            if (map.getLayer("campus-imagen")) {
+                map.setLayoutProperty("campus-imagen", "visibility", visible && chkSatelital.checked ? "visible" : "none");
+            }
+            if (map.getLayer("transmilenio-puntos")) {
+                map.setLayoutProperty("transmilenio-puntos", "visibility", visible && chkTransmilenio.checked ? "visible" : "none");
+            }
+        }
+
+        btnEspacio.addEventListener("click", () => {
+            if (girando) alternarGiro();
+            btnEspacio.disabled = true;
+
+            if (primerVuelo) {
+                // Vuelo "a la inversa" pedido: en vez de alejarnos poco a
+                // poco desde el campus, la camara salta (sin animar) a la
+                // vista completa de la Tierra y desde ahi se ve, en vivo,
+                // el descenso real hasta los Andes. Se usa "idle" (no
+                // "moveend") despues del jumpTo por la misma razon que en
+                // el vuelo de dron: un jumpTo puede disparar su propio
+                // "moveend" antes de tiempo y adelantar el primer tramo.
+                primerVuelo = false;
+                mostrarCapasDeCampus(false);
+                map.jumpTo(ETAPA_ESPACIO);
+                map.once("idle", () => {
+                    recorrerRuta(RUTA_A_CAMPUS, btnEspacio, "🚀 Llegando desde el espacio: ", () => {
+                        enElEspacio = false;
+                        btnEspacio.disabled = false;
+                        btnEspacio.textContent = "🌌 Alejarse hasta el espacio";
+                        mostrarCapasDeCampus(true);
+                        document.querySelectorAll(".panel-lugares button").forEach((b) => b.classList.remove("activo"));
+                        listaLugares.querySelector("button").classList.add("activo");
+                    });
+                });
+                return;
+            }
+
+            const yendoAlEspacio = !enElEspacio;
+            const ruta = yendoAlEspacio ? RUTA_A_ESPACIO : RUTA_A_CAMPUS;
+            const texto = yendoAlEspacio ? "🌌 Alejando: " : "🚀 Llegando desde el espacio: ";
+
+            if (yendoAlEspacio) mostrarCapasDeCampus(false);
+
+            recorrerRuta(ruta, btnEspacio, texto, () => {
+                enElEspacio = !enElEspacio;
+                btnEspacio.disabled = false;
+                btnEspacio.textContent = enElEspacio ? "🌍 Volver a los Andes" : "🌌 Alejarse hasta el espacio";
+
+                if (enElEspacio) {
+                    // El globo se queda girando solo -- se siente "vivo" en
+                    // vez de una foto fija -- hasta que le den a "Volver".
+                    if (!girando) alternarGiro();
+                } else {
+                    mostrarCapasDeCampus(true);
+                    document.querySelectorAll(".panel-lugares button").forEach((b) => b.classList.remove("activo"));
+                    listaLugares.querySelector("button").classList.add("activo");
+                }
+            });
+        });
+
+        // ---------- Contador de FPS real ----------
+        // Para saber con un numero exacto si los cambios de arriba
+        // ayudaron, en vez de solo "se ve lento".
+        const elFps = document.getElementById("fps");
+        let cuadros = 0, ultimoSegundo = performance.now();
+        function medirFps(ahora) {
+            cuadros++;
+            if (ahora - ultimoSegundo >= 1000) {
+                elFps.textContent = cuadros + " FPS";
+                cuadros = 0;
+                ultimoSegundo = ahora;
+            }
+            requestAnimationFrame(medirFps);
+        }
+        requestAnimationFrame(medirFps);
+    });
+</script>
+
+</body>
+</html>
