@@ -668,13 +668,15 @@ def proxy_geojson():
 # =====================================================================
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = "gemini-3.6-flash"
+# "flash" normal solo da 20 solicitudes gratis/dia; "flash-lite" tiene
+# mucho mas cupo gratis y de sobra para esto.
+GEMINI_MODEL = "gemini-flash-lite-latest"
 GEMINI_URL = (
     f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 )
 
 
-def llamar_gemini(prompt, intentos=3, timeout_por_intento=30):
+def llamar_gemini(prompt, intentos=3, timeout_por_intento=60):
     """
     Llama a Gemini usando curl.exe en vez de la libreria 'requests'.
 
@@ -692,13 +694,9 @@ def llamar_gemini(prompt, intentos=3, timeout_por_intento=30):
 
     Devuelve el JSON de la respuesta de Gemini ya parseado (un dict).
     """
-    # gemini-3.6-flash "piensa" antes de responder por defecto -- con el
-    # catalogo completo en el prompt eso tarda 60+ segundos; sin thinking
-    # responde en ~2s con la misma calidad para este caso.
-    cuerpo_peticion = json.dumps({
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"thinkingConfig": {"thinkingBudget": 0}},
-    })
+    # "flash-lite" no tiene modo de razonamiento (no acepta
+    # thinkingConfig), y ya responde rapido de por si.
+    cuerpo_peticion = json.dumps({"contents": [{"parts": [{"text": prompt}]}]})
     ultimo_error = None
 
     for intento in range(1, intentos + 1):

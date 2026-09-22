@@ -276,7 +276,10 @@ def proxy_geojson():
 # =====================================================================
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = "gemini-3.6-flash"
+# El modelo "flash" normal solo da 20 solicitudes GRATIS por dia -- se
+# agota facilisimo en una demo. El "flash-lite" tiene un cupo gratis
+# mucho mas alto, y de sobra para este uso (recomendar datasets).
+GEMINI_MODEL = "gemini-flash-lite-latest"
 GEMINI_URL = (
     f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 )
@@ -379,16 +382,14 @@ def agente_consultar():
             respuesta = req_lib.post(
                 GEMINI_URL,
                 headers={"Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY},
-                json={
-                    "contents": [{"parts": [{"text": prompt}]}],
-                    # gemini-3.6-flash "piensa" antes de responder por
-                    # defecto -- con el catalogo completo en el prompt eso
-                    # tardaba 60+ segundos (mas que nuestro timeout) y
-                    # timeouteaba. Sin thinking responde en ~2s, con la
-                    # misma calidad para este caso (recomendar datasets).
-                    "generationConfig": {"thinkingConfig": {"thinkingBudget": 0}},
-                },
-                timeout=30,
+                # "flash-lite" no tiene modo de razonamiento (no acepta
+                # thinkingConfig, responde 400 si se lo mandamos), asi
+                # que ni hace falta -- ya responde rapido de por si.
+                json={"contents": [{"parts": [{"text": prompt}]}]},
+                # Con el catalogo completo en el prompt, Gemini a veces
+                # tarda 30-40s en responder -- Vercel permite funciones de
+                # hasta 300s, asi que hay margen de sobra para esperar.
+                timeout=60,
             )
             respuesta.raise_for_status()
             cuerpo = respuesta.json()
