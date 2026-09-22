@@ -651,6 +651,24 @@
         </details>
 
         <details class="seccion">
+            <summary>Estaciones IDEAM</summary>
+            <div class="contenido-seccion">
+                <label class="capa-item">
+                    <input type="checkbox" data-capa="estacionesIdeam">
+                    <span class="swatch" style="background:#2fb0a3;"></span>
+                    <span class="nombre">Estaciones dentro de la cuenca</span>
+                    <span class="conteo" id="cnt-ideam"></span>
+                </label>
+                <div class="ficha">
+                    Catálogo real del IDEAM (servidor de DHIME), recortado a
+                    las estaciones que caen dentro del polígono de la
+                    cuenca. Haz clic en un punto para ver código, tipo y
+                    altitud. Verde = activa, gris = suspendida.
+                </div>
+            </div>
+        </details>
+
+        <details class="seccion">
             <summary>Infraestructura</summary>
             <div class="contenido-seccion">
                 <label class="capa-item">
@@ -757,6 +775,7 @@
 <script src="../rio_sinu_data/infra_plantas_tratamiento.js"></script>
 <script src="../rio_sinu_data/infra_relleno_sanitario.js"></script>
 <script src="../rio_sinu_data/clase_suelo_recorte.js"></script>
+<script src="../rio_sinu_data/ideam_estaciones.js"></script>
 <script>
 (() => {
     "use strict";
@@ -904,6 +923,21 @@
                 fillOpacity: .45
             }),
             onEachFeature: (f, l) => popupGenerico(f, l, [["NOMBRE", "Clase de suelo"], ["AREA_ha", "Área (ha)"]])
+        }),
+        // Catalogo real del IDEAM (servidor ArcGIS de DHIME), recortado a
+        // las estaciones que caen dentro del poligono de la cuenca.
+        estacionesIdeam: () => L.geoJSON(DATA_IDEAM_ESTACIONES, {
+            pointToLayer: (f, latlng) => L.circleMarker(latlng, {
+                radius: 5,
+                color: f.properties.activa ? "#1c7f74" : "#8a8a86",
+                fillColor: f.properties.activa ? "#2fb0a3" : "#a8a8a4",
+                fillOpacity: .85,
+                weight: 1
+            }),
+            onEachFeature: (f, l) => popupGenerico(f, l, [
+                ["codigo", "Código IDEAM"], ["nombre", "Estación"], ["categoria", "Tipo"],
+                ["altitud", "Altitud (m)"]
+            ])
         })
     };
 
@@ -1469,7 +1503,8 @@
         "cnt-agua": DATA_CLASIFICACION_AGUA.features.length,
         "cnt-lagunas": DATA_LAGUNAS.features.length,
         "cnt-poblaciones": DATA_POBLACIONES.features.length,
-        "cnt-suelo": DATA_CLASE_SUELO.features.length
+        "cnt-suelo": DATA_CLASE_SUELO.features.length,
+        "cnt-ideam": DATA_IDEAM_ESTACIONES.features.length
     };
     Object.entries(conteos).forEach(([id, n]) => {
         const el = document.getElementById(id);
