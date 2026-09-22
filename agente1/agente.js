@@ -919,11 +919,18 @@ if (elSelect) {
             burbujaCargando.remove();
             console.error("Error consultando al agente ICDE:", error);
 
-            agregarBurbuja(
-                "No pude conectarme con el agente. Verifica que el servidor esté activo " +
-                "(<code>python api.py</code>) en <code>http://localhost:5000</code>.",
-                "bot"
-            );
+            // Si el servidor respondio pero con un error puntual (ej. falta
+            // la clave de Gemini), ese mensaje ya es claro y viene en
+            // error.message -- mostrarlo tal cual en vez de un aviso
+            // generico que asuma que siempre es un servidor local caido.
+            const esErrorDeRed = error instanceof TypeError;
+            const mensaje = !esErrorDeRed && error.message
+                ? escaparTexto(error.message)
+                : "No pude conectarme con el agente. Verifica que el servidor esté activo " +
+                  "(<code>python api.py</code>) en <code>http://localhost:5000</code>, o que " +
+                  "la API este desplegada correctamente en Vercel.";
+
+            agregarBurbuja(mensaje, "bot");
         }
     }
 
