@@ -2559,7 +2559,9 @@
         const MARKER_OFF_MS = 5000;
 
 
-        const API_BASE = "https://casa-vibratoria.onrender.com"; // CAMBIA ESTA URL SI TU API ESTÁ EN OTRA IP
+        // Vacio = mismo dominio (Vercel sirve el HTML y la API juntos en
+        // /api/*). Antes apuntaba a Render, que ya no existe.
+        const API_BASE = "";
         let historico = [];
         let apiChannels = [];
         const sensorChannelMap = JSON.parse(localStorage.getItem("ciamSensorChannelMap") || "{}");
