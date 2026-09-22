@@ -2527,7 +2527,13 @@
                 return fallback;
             }
 
-            const ARCGIS_PROXY = "http://localhost:5000/api/arcgis-proxy";
+            // En Vercel, /api/* lo atiende api/index.py (mismo dominio).
+            // En local se sigue usando el api.py viejo en el puerto 5000
+            // (si lo tienes corriendo), para no romper ese flujo.
+            const ARCGIS_PROXY =
+                (location.hostname === "localhost" || location.hostname === "127.0.0.1")
+                    ? "http://localhost:5000/api/arcgis-proxy"
+                    : "/api/arcgis-proxy";
 
             async function fetchArcgisJson(url, options = {}) {
                 const [baseUrl, queryString] = String(url).split("?");
