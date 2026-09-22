@@ -1,10 +1,13 @@
 # No hace falta que Vercel suba ni considere esto para el sitio estatico
 # (RioSinu.html, Mapa.html, Index.html, casa.html, etc.)
 
-# Backend de la casa vibratoria: vive en Render, no en Vercel
-api.py
+# Backend viejo de la casa vibratoria (Flask + MySQL): vivia en Render,
+# ya no se usa. OJO: "requirements.txt" NO va aqui -- sin la barra "/"
+# adelante, un patron de .vercelignore excluye ese nombre en CUALQUIER
+# carpeta (asi se rompio antes "api/requirements.txt", el que si hace
+# falta para la API real en Vercel, api/index.py + Supabase).
+/api.py
 api_sensores_LAB.py
-requirements.txt
 Procfile
 servidor_mapa_gdb.py
 INICIAR_MAPA_GDB.bat
