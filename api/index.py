@@ -26,6 +26,7 @@ Variables de entorno que hay que configurar en Vercel (Project Settings
 
 import os
 import re
+import time
 
 import psycopg2
 import psycopg2.extras
@@ -369,19 +370,33 @@ def agente_consultar():
         f'Pregunta de la persona: "{mensaje}"'
     )
 
-    try:
-        respuesta = req_lib.post(
-            GEMINI_URL,
-            headers={"Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY},
-            json={"contents": [{"parts": [{"text": prompt}]}]},
-            timeout=30,
-        )
-        respuesta.raise_for_status()
-        cuerpo = respuesta.json()
-    except req_lib.exceptions.RequestException as e:
-        return jsonify({"ok": False, "error": f"No fue posible conectar con Gemini: {str(e)}"}), 502
-    except ValueError:
-        return jsonify({"ok": False, "error": "Gemini no devolvio un JSON valido"}), 502
+    # Gemini a veces responde 503 "high demand" un momento y ya -- 2
+    # reintentos cortos evitan que eso tumbe la demo por algo pasajero.
+    ultimo_error = None
+    cuerpo = None
+    for intento in range(3):
+        try:
+            respuesta = req_lib.post(
+                GEMINI_URL,
+                headers={"Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY},
+                json={"contents": [{"parts": [{"text": prompt}]}]},
+                timeout=30,
+            )
+            respuesta.raise_for_status()
+            cuerpo = respuesta.json()
+            break
+        except req_lib.exceptions.HTTPError as e:
+            ultimo_error = e
+            if respuesta.status_code != 503 or intento == 2:
+                return jsonify({"ok": False, "error": f"No fue posible conectar con Gemini: {str(e)}"}), 502
+            time.sleep(1.5)
+        except req_lib.exceptions.RequestException as e:
+            return jsonify({"ok": False, "error": f"No fue posible conectar con Gemini: {str(e)}"}), 502
+        except ValueError:
+            return jsonify({"ok": False, "error": "Gemini no devolvio un JSON valido"}), 502
+
+    if cuerpo is None:
+        return jsonify({"ok": False, "error": f"No fue posible conectar con Gemini: {str(ultimo_error)}"}), 502
 
     try:
         texto_ia = (
