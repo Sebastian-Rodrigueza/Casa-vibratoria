@@ -692,7 +692,13 @@ def llamar_gemini(prompt, intentos=3, timeout_por_intento=30):
 
     Devuelve el JSON de la respuesta de Gemini ya parseado (un dict).
     """
-    cuerpo_peticion = json.dumps({"contents": [{"parts": [{"text": prompt}]}]})
+    # gemini-3.6-flash "piensa" antes de responder por defecto -- con el
+    # catalogo completo en el prompt eso tarda 60+ segundos; sin thinking
+    # responde en ~2s con la misma calidad para este caso.
+    cuerpo_peticion = json.dumps({
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"thinkingConfig": {"thinkingBudget": 0}},
+    })
     ultimo_error = None
 
     for intento in range(1, intentos + 1):

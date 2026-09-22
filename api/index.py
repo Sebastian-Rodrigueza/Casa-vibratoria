@@ -379,7 +379,15 @@ def agente_consultar():
             respuesta = req_lib.post(
                 GEMINI_URL,
                 headers={"Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY},
-                json={"contents": [{"parts": [{"text": prompt}]}]},
+                json={
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    # gemini-3.6-flash "piensa" antes de responder por
+                    # defecto -- con el catalogo completo en el prompt eso
+                    # tardaba 60+ segundos (mas que nuestro timeout) y
+                    # timeouteaba. Sin thinking responde en ~2s, con la
+                    # misma calidad para este caso (recomendar datasets).
+                    "generationConfig": {"thinkingConfig": {"thinkingBudget": 0}},
+                },
                 timeout=30,
             )
             respuesta.raise_for_status()
