@@ -1427,7 +1427,9 @@
         </main>
     </div>
     <script>
-        const API_BASE = "https://casa-vibratoria.onrender.com";
+        // Vacio = mismo dominio (Vercel sirve el HTML y la API juntos en
+        // /api/*). Antes apuntaba a Render, que ya no existe.
+        const API_BASE = "";
         const COLORES = ["var(--series-1)", "var(--series-2)", "var(--series-3)", "var(--series-4)"];
         const COLORES_HEX = ["#2a78d6", "#eb6834", "#1baf7a", "#8b5cf6"];
         // Sensores reales sugeridos por defecto para las 4 gráficas (una

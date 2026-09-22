@@ -608,7 +608,12 @@ if (elSelect) {
 
 (() => {
 
-    const API_AGENTE_ICDE = "http://localhost:5000/api/agente/consultar";
+    // En Vercel, /api/* lo atiende api/index.py (mismo dominio, ruta
+    // relativa). En local se sigue usando el api.py viejo en el puerto
+    // 5000 (si lo tienes corriendo), para no romper ese flujo.
+    const API_AGENTE_ICDE = (location.hostname === "localhost" || location.hostname === "127.0.0.1")
+        ? "http://localhost:5000/api/agente/consultar"
+        : "/api/agente/consultar";
 
     // Ruta absoluta desde la raiz del sitio (con "/" al inicio), para
     // que funcione igual sin importar desde que carpeta se abrio esta
