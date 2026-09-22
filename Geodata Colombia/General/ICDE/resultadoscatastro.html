@@ -1022,7 +1022,9 @@
             ========================================== */
 
             const API_BASE =
-                "http://localhost:5000/api/datasets";
+                (location.hostname === "localhost" || location.hostname === "127.0.0.1")
+                    ? "http://localhost:5000/api/datasets"
+                    : "/api/datasets";
 
             /*
              * Ruta relativa hacia Mapa.html desde esta página.
