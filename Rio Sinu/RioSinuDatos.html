@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Datos XM, IDEAM y DHIME | Río Sinú</title>
+<title>Río Sinú en datos | IDEAM, GloFAS y XM</title>
 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
@@ -19,8 +20,16 @@
         --text: #34383d;
         --muted: #70757b;
         --line: #e5e5de;
-        --shadow: 0 18px 46px rgba(35,37,40,.16);
+        --grid: #ecebe4;
+        --shadow: 0 18px 46px rgba(35,37,40,.12);
         --radius: 16px;
+
+        /* Color de cada medida (una sola serie por grafica; el rango
+           del pronostico de caudal va como franja del mismo azul). */
+        --c-caudal: #1c6fb0;
+        --c-nivel: #1c6fb0;
+        --c-lluvia: #1a8f86;
+        --c-embalse: #2f8f4e;
     }
     * { box-sizing: border-box; }
     html, body {
@@ -28,46 +37,122 @@
         min-height: 100%;
         font-family: "Inter", sans-serif;
         color: var(--text);
-        background: linear-gradient(180deg, var(--cream) 0%, var(--beige) 100vh);
+        background: var(--cream);
     }
 
+    /* ---------- Encabezado ---------- */
     header {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 16px;
-        padding: 16px 28px;
+        padding: 14px 28px;
         background: var(--beige);
-        color: var(--charcoal);
         border-bottom: 2px solid var(--yellow);
-        box-shadow: var(--shadow);
+        position: relative;
+        z-index: 1000;
     }
-    header a.volver {
+    header a.volver, header a.inicio {
         display: inline-flex;
         align-items: center;
         gap: 8px;
         color: var(--charcoal);
         text-decoration: none;
         font-weight: 700;
-        font-size: .95rem;
-        opacity: .75;
-        transition: color .15s, opacity .15s;
+        font-size: .92rem;
     }
+    header a.volver { opacity: .75; }
     header a.volver:hover { opacity: 1; color: var(--yellow-dark); }
     header a.volver svg { width: 18px; height: 18px; }
+    header a.inicio {
+        padding: 8px 14px;
+        border-radius: 8px;
+        background: var(--yellow);
+        border: 1px solid var(--yellow-dark);
+    }
+    header a.inicio:hover { background: #ffd633; }
     header .titulo { text-align: center; }
-    header .titulo strong { display: block; font-size: 1.15rem; color: var(--charcoal); }
+    header .titulo strong { display: block; font-size: 1.05rem; color: var(--charcoal); }
     header .titulo span {
-        font-size: .8rem; color: var(--yellow-dark); font-weight: 700;
+        font-size: .74rem; color: var(--yellow-dark); font-weight: 700;
         text-transform: uppercase; letter-spacing: .1em;
     }
-    header .spacer { width: 90px; }
+
+    /* ---------- Portada con la imagen del rio ---------- */
+    .hero {
+        position: relative;
+        min-height: 300px;
+        display: flex;
+        align-items: flex-end;
+        background: #1d2b22 url("../Imagenes/GeoColombia/riosinu.gif") center / cover no-repeat;
+        color: #fff;
+    }
+    .hero::before {
+        content: "";
+        position: absolute; inset: 0;
+        background: linear-gradient(180deg, rgba(10,20,15,.15) 0%, rgba(10,20,15,.78) 100%);
+    }
+    .hero-contenido {
+        position: relative;
+        max-width: 1180px;
+        width: 100%;
+        margin: 0 auto;
+        padding: 40px 24px 34px;
+    }
+    .hero h1 {
+        margin: 0 0 8px;
+        font-size: clamp(1.8rem, 4vw, 2.7rem);
+        font-weight: 800;
+        letter-spacing: -.01em;
+    }
+    .hero p {
+        margin: 0;
+        max-width: 700px;
+        font-size: .98rem;
+        line-height: 1.6;
+        color: rgba(255,255,255,.9);
+    }
 
     main {
-        max-width: 1100px;
+        max-width: 1180px;
         margin: 0 auto;
-        padding: 32px 24px 80px;
+        padding: 22px 24px 80px;
     }
+
+    /* ---------- Filtro de periodo (una sola fila, arriba de todo) ---------- */
+    .filtros {
+        position: sticky;
+        top: 0;
+        z-index: 900;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 0;
+        background: var(--cream);
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 8px;
+    }
+    .filtros .etiqueta-filtro { font-size: .8rem; font-weight: 700; color: var(--muted); }
+    .segmentado {
+        display: inline-flex;
+        background: var(--white);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 3px;
+    }
+    .segmentado button {
+        border: 0;
+        background: transparent;
+        font: 600 .82rem "Inter", sans-serif;
+        color: var(--text);
+        padding: 7px 14px;
+        border-radius: 7px;
+        cursor: pointer;
+    }
+    .segmentado button:hover { background: var(--beige); }
+    .segmentado button[aria-pressed="true"] { background: var(--yellow); color: var(--charcoal); }
+    .filtros .nota-filtro { font-size: .76rem; color: var(--muted); margin-left: auto; }
 
     h2.seccion {
         display: flex;
@@ -78,27 +163,28 @@
         text-transform: uppercase;
         letter-spacing: .12em;
         color: var(--yellow-dark);
-        margin: 36px 0 14px;
+        margin: 38px 0 6px;
     }
-    h2.seccion:first-child { margin-top: 0; }
     h2.seccion::before {
         content: "";
         width: 6px; height: 6px; border-radius: 50%;
-        background: var(--yellow); box-shadow: 0 0 6px var(--yellow);
+        background: var(--yellow);
     }
     p.nota {
         color: var(--muted);
         font-size: .88rem;
         line-height: 1.6;
-        max-width: 720px;
-        margin: 0 0 18px;
+        max-width: 780px;
+        margin: 0 0 16px;
     }
+    p.nota a { color: var(--charcoal); }
 
+    /* ---------- Tarjetas de resumen ---------- */
     .fila-stats {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
         gap: 12px;
-        margin-bottom: 18px;
+        margin-top: 18px;
     }
     .stat-tile {
         background: var(--white);
@@ -106,12 +192,12 @@
         border-radius: var(--radius);
         box-shadow: var(--shadow);
         padding: 14px 16px;
+        min-height: 104px;
     }
-    .stat-tile .valor { font-size: 1.5rem; font-weight: 700; color: var(--charcoal); }
-    .stat-tile .etiqueta { font-size: .74rem; color: var(--muted); margin-top: 2px; }
-
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-    @media (max-width: 760px) { .grid-2 { grid-template-columns: 1fr; } }
+    .stat-tile .etiqueta { font-size: .76rem; color: var(--muted); font-weight: 600; }
+    .stat-tile .valor { font-size: 1.65rem; font-weight: 700; color: var(--charcoal); margin: 4px 0 2px; }
+    .stat-tile .detalle { font-size: .75rem; color: var(--muted); line-height: 1.4; }
+    .stat-tile.cargando .valor { color: var(--line); }
 
     .card {
         background: var(--white);
@@ -120,60 +206,196 @@
         box-shadow: var(--shadow);
         padding: 18px 20px;
     }
-    .card h3 { margin: 0 0 2px; font-size: .95rem; color: var(--charcoal); }
-    .card .unidad { font-size: .74rem; color: var(--muted); margin: 0 0 10px; }
-    .card svg { width: 100%; height: auto; display: block; }
-    .card .eje { stroke: var(--line); stroke-width: 1; }
-    .card .linea { fill: none; stroke-width: 2.2; }
-    .card .relleno { opacity: .16; }
-    .card .etiqueta-x, .card .etiqueta-y {
-        font-size: 9px; fill: var(--muted); font-family: "Inter", sans-serif;
+    .card h3 { margin: 0 0 2px; font-size: .98rem; color: var(--charcoal); }
+    .card .unidad { font-size: .76rem; color: var(--muted); margin: 0 0 8px; }
+
+    .grid-mapa { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; align-items: stretch; }
+    .columna-graficas { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    @media (max-width: 900px) {
+        .grid-mapa, .grid-2 { grid-template-columns: 1fr; }
     }
 
-    table.tabla-estaciones {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: .82rem;
+    /* ---------- Mapa ---------- */
+    #mapa {
+        height: 100%;
+        min-height: 420px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
     }
-    table.tabla-estaciones th {
-        text-align: left;
-        color: var(--muted);
-        font-weight: 600;
-        font-size: .72rem;
-        text-transform: uppercase;
-        letter-spacing: .04em;
-        padding: 8px 10px;
-        border-bottom: 1px solid var(--line);
-        position: sticky;
-        top: 0;
+    .leyenda-mapa {
+        background: rgba(255,255,255,.95);
+        padding: 8px 11px;
+        border-radius: 10px;
+        box-shadow: 0 4px 14px rgba(0,0,0,.15);
+        font: 500 .74rem "Inter", sans-serif;
+        color: var(--text);
+        line-height: 1.7;
+    }
+    .leyenda-mapa i {
+        display: inline-block; width: 11px; height: 11px; border-radius: 50%;
+        margin-right: 6px; vertical-align: -1px; border: 2px solid #fff;
+        box-shadow: 0 0 0 1px rgba(0,0,0,.25);
+    }
+
+    /* ---------- Selectores tipo "chip" ---------- */
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 12px; }
+    .chip {
+        border: 1px solid var(--line);
         background: var(--white);
+        color: var(--text);
+        font: 600 .8rem "Inter", sans-serif;
+        padding: 7px 12px;
+        border-radius: 999px;
+        cursor: pointer;
+        display: inline-flex; align-items: center; gap: 6px;
     }
-    table.tabla-estaciones td {
-        padding: 7px 10px;
-        border-bottom: 1px solid var(--line);
+    .chip:hover { border-color: var(--yellow); background: #fff9dd; }
+    .chip[aria-pressed="true"] { background: var(--yellow); border-color: var(--yellow-dark); color: var(--charcoal); }
+    .chip small { font-weight: 500; color: var(--muted); }
+    .chip[aria-pressed="true"] small { color: #5b4a00; }
+
+    /* ---------- Graficas ---------- */
+    .grafica {
+        position: relative;
+        width: 100%;
+        min-height: 250px;
+        outline: none;
+        transition: opacity .2s;
+    }
+    .grafica:focus-visible { box-shadow: 0 0 0 2px var(--yellow); border-radius: 6px; }
+    .grafica.recargando { opacity: .45; }
+    .grafica svg { display: block; width: 100%; overflow: visible; }
+    .grafica .rejilla { stroke: var(--grid); stroke-width: 1; }
+    .grafica .eje { stroke: #d4d3cb; stroke-width: 1; }
+    .grafica .tick { font-size: 10.5px; fill: var(--muted); font-family: "Inter", sans-serif; font-variant-numeric: tabular-nums; }
+    .grafica .etiqueta-directa { font-size: 11px; font-weight: 700; fill: var(--charcoal); font-family: "Inter", sans-serif; }
+    .grafica .zona-pronostico { fill: rgba(245,196,0,.10); }
+    .grafica .texto-pronostico { font-size: 10px; font-weight: 700; fill: #9a7a00; letter-spacing: .06em; font-family: "Inter", sans-serif; }
+    .grafica .linea-hoy { stroke: #c9a200; stroke-width: 1; }
+    .grafica .cruz { stroke: #8d9195; stroke-width: 1; }
+    .grafica .mensaje {
+        position: absolute; inset: 0;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+        text-align: center; padding: 20px;
+        font-size: .86rem; color: var(--muted);
+        background: rgba(255,255,255,.7);
+    }
+    .grafica .mensaje button {
+        font: 600 .8rem "Inter", sans-serif;
+        padding: 7px 14px; border-radius: 8px;
+        border: 1px solid var(--yellow-dark); background: var(--yellow); cursor: pointer;
+    }
+    .tooltip {
+        position: absolute;
+        pointer-events: none;
+        background: var(--white);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        box-shadow: 0 8px 24px rgba(0,0,0,.14);
+        padding: 8px 11px;
+        font-size: .76rem;
+        color: var(--muted);
+        white-space: nowrap;
+        z-index: 5;
+        display: none;
+    }
+    .tooltip .fecha { font-weight: 600; margin-bottom: 4px; color: var(--muted); }
+    .tooltip .fila { display: flex; align-items: center; gap: 7px; }
+    .tooltip .fila b { color: var(--charcoal); font-size: .9rem; }
+    .tooltip .clave { width: 12px; height: 2px; border-radius: 1px; display: inline-block; }
+
+    .leyenda { display: flex; flex-wrap: wrap; gap: 14px; font-size: .76rem; color: var(--muted); margin: 2px 0 6px; }
+    .leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+    .leyenda i { width: 14px; height: 2px; border-radius: 1px; display: inline-block; }
+    .leyenda i.caja { height: 10px; width: 12px; border-radius: 2px; }
+
+    details.tabla-datos { margin-top: 8px; font-size: .78rem; }
+    details.tabla-datos summary { cursor: pointer; color: var(--muted); font-weight: 600; }
+    details.tabla-datos .tabla-scroll { max-height: 220px; margin-top: 8px; }
+
+    .fila-mini {
+        display: flex; flex-wrap: wrap; gap: 8px 22px;
+        font-size: .8rem; color: var(--muted);
+        margin: 6px 0 10px;
+    }
+    .fila-mini b { color: var(--charcoal); }
+
+    /* ---------- Tabla / directorio ---------- */
+    .controles-tabla { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+    .controles-tabla input[type="search"], .controles-tabla select {
+        font: 500 .84rem "Inter", sans-serif;
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--white);
         color: var(--text);
     }
-    table.tabla-estaciones tr:hover td { background: var(--beige); }
-    .tabla-scroll {
-        max-height: 420px;
-        overflow-y: auto;
-        border: 1px solid var(--line);
-        border-radius: var(--radius);
-        background: var(--white);
-    }
-    .tabla-scroll::-webkit-scrollbar { width: 8px; }
-    .tabla-scroll::-webkit-scrollbar-track { background: transparent; }
-    .tabla-scroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+    .controles-tabla input[type="search"] { min-width: 240px; flex: 1; max-width: 360px; }
+    .controles-tabla label { font-size: .82rem; display: inline-flex; gap: 6px; align-items: center; }
+    .controles-tabla .conteo { margin-left: auto; font-size: .8rem; color: var(--muted); }
 
-    .pendiente {
-        background: var(--beige);
-        border: 1px dashed var(--line);
-        border-radius: var(--radius);
-        padding: 16px 18px;
-        color: var(--muted);
-        font-size: .86rem;
-        line-height: 1.6;
+    table.tabla { width: 100%; border-collapse: collapse; font-size: .82rem; }
+    table.tabla th {
+        text-align: left; color: var(--muted); font-weight: 600; font-size: .7rem;
+        text-transform: uppercase; letter-spacing: .04em;
+        padding: 8px 10px; border-bottom: 1px solid var(--line);
+        position: sticky; top: 0; background: var(--white);
     }
+    table.tabla td { padding: 7px 10px; border-bottom: 1px solid var(--line); }
+    table.tabla td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    table.tabla tr:hover td { background: var(--beige); }
+    .tabla-scroll {
+        max-height: 440px; overflow: auto;
+        border: 1px solid var(--line); border-radius: 12px; background: var(--white);
+    }
+    .estado { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+    .estado::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #b9bcbf; }
+    .estado.activa::before { background: #2f8f4e; }
+    .estado.mantenimiento::before { background: #d7aa00; }
+
+    p.actualizacion {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: -6px 0 14px;
+        padding: 6px 12px;
+        border-radius: 8px;
+        background: var(--white);
+        border: 1px solid var(--line);
+        font-size: .8rem;
+        color: var(--muted);
+    }
+    p.actualizacion::before {
+        content: "";
+        width: 8px; height: 8px; border-radius: 50%;
+        background: #2f8f4e;
+    }
+    p.actualizacion b { color: var(--charcoal); }
+
+    .etiqueta-sim {
+        display: inline-block;
+        margin-left: 8px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: .68rem;
+        font-weight: 700;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        vertical-align: 2px;
+        color: #5b4a00;
+        background: #fff3c2;
+        border: 1px solid var(--yellow-dark);
+    }
+    .btn-vivo {
+        font: 700 .7rem "Inter", sans-serif;
+        padding: 4px 9px; border-radius: 999px;
+        border: 1px solid var(--yellow-dark); background: #fff3c2; color: #6b5300;
+        cursor: pointer;
+    }
+
+    .fuentes { margin-top: 40px; font-size: .8rem; color: var(--muted); line-height: 1.7; }
+    .fuentes a { color: var(--charcoal); }
 </style>
 </head>
 <body>
@@ -184,136 +406,1218 @@
         Río Sinú
     </a>
     <div class="titulo">
-        <strong>Datos XM, IDEAM y DHIME</strong>
-        <span>Cuenca del río Sinú</span>
+        <strong>Río Sinú en datos</strong>
+        <span>IDEAM · GloFAS · XM</span>
     </div>
-    <div class="spacer"></div>
+    <a class="inicio" href="../Index.html" aria-label="Ir al inicio">⌂ Inicio</a>
 </header>
+
+<section class="hero">
+    <div class="hero-contenido">
+        <h1>Río Sinú</h1>
+        <p>Datos observados del IDEAM, pronóstico de caudal GloFAS y embalse de Urrá.</p>
+    </div>
+</section>
 
 <main>
 
-    <h2 class="seccion">Urrá — XM / SIMEM</h2>
-    <p class="nota">
-        Datos reales de la hidroeléctrica de Urrá (Tierralta, Córdoba),
-        la única planta del mercado eléctrico colombiano sobre el río
-        Sinú. Últimos 6 meses, sin ningún valor inventado.
-    </p>
+    <div class="filtros" role="group" aria-label="Periodo de las gráficas">
+        <span class="etiqueta-filtro">Periodo</span>
+        <div class="segmentado" id="filtroPeriodo">
+            <button type="button" data-dias="30" aria-pressed="true">Último mes</button>
+            <button type="button" data-dias="90">Últimos 3 meses</button>
+            <button type="button" data-dias="365">Último año</button>
+        </div>
+        <span class="nota-filtro" id="notaPeriodo"></span>
+    </div>
 
-    <div class="fila-stats" id="statsUrra"></div>
+    <!-- ================= RESUMEN ================= -->
+    <div class="fila-stats" id="resumen">
+        <div class="stat-tile cargando" id="tileNivel">
+            <div class="etiqueta">Nivel del río en Lorica</div>
+            <div class="valor">—</div>
+            <div class="detalle">IDEAM</div>
+        </div>
+        <div class="stat-tile cargando" id="tileEstaciones">
+            <div class="etiqueta">Estaciones IDEAM activas en la cuenca</div>
+            <div class="valor">—</div>
+            <div class="detalle">Catálogo Nacional de Estaciones</div>
+        </div>
+        <div class="stat-tile cargando" id="tileEmbalse">
+            <div class="etiqueta">Energía embalsada en Urrá</div>
+            <div class="valor">—</div>
+            <div class="detalle">Dato de XM</div>
+        </div>
+    </div>
+
+    <!-- ================= OBSERVADO: IDEAM ================= -->
+    <h2 class="seccion">Observado · IDEAM</h2>
+    <p class="nota">
+        Fuente: IDEAM, <a href="https://www.datos.gov.co" target="_blank" rel="noopener">Datos Abiertos Colombia</a>.
+        El IDEAM publica con un día de retraso.
+    </p>
+    <p class="actualizacion" id="actualizacionIdeam">Consultando última lectura…</p>
+
+    <div class="chips" id="chipsEstaciones" role="group" aria-label="Estación del IDEAM"></div>
+
+    <div class="grid-mapa">
+        <div class="card" style="padding:10px;">
+            <div id="mapa" role="application" aria-label="Mapa de la cuenca del río Sinú con estaciones del IDEAM"></div>
+        </div>
+        <div class="columna-graficas">
+            <div class="card">
+                <h3>Nivel del río</h3>
+                <p class="unidad" id="unidadNivel">m · diario</p>
+                <div class="leyenda">
+                    <span><i style="background:var(--c-nivel)"></i>Promedio del día</span>
+                    <span><i class="caja" style="background:var(--c-nivel);opacity:.22"></i>Mínimo – máximo del día</span>
+                </div>
+                <div class="grafica" id="graficaNivel" tabindex="0" aria-label="Gráfica de nivel diario del río"></div>
+                <div class="fila-mini" id="miniNivel"></div>
+            </div>
+            <div class="card">
+                <h3>Lluvia</h3>
+                <p class="unidad" id="unidadLluvia">mm por día</p>
+                <div class="grafica" id="graficaLluvia" tabindex="0" aria-label="Gráfica de lluvia diaria"></div>
+                <div class="fila-mini" id="miniLluvia"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= PRONOSTICO: GloFAS ================= -->
+    <h2 class="seccion">Pronóstico de caudal · Simulación GloFAS</h2>
+    <p class="nota">
+        <b>Esto es una simulación, no son datos medidos.</b> El caudal lo
+        calcula el modelo hidrológico GloFAS (Copernicus) a partir del
+        pronóstico del tiempo, para los próximos 30 días.
+    </p>
+    <p class="actualizacion" id="actualizacionSim"></p>
+
+    <div class="card">
+        <h3><span id="tituloCaudal">Caudal en Montería</span><span class="etiqueta-sim">Simulación</span></h3>
+        <p class="unidad">m³/s · diario · modelo hidrológico GloFAS</p>
+        <div class="chips" id="chipsCaudal" role="group" aria-label="Punto del río"></div>
+        <div class="leyenda">
+            <span><i style="background:var(--c-caudal)"></i>Caudal simulado</span>
+            <span><i class="caja" style="background:var(--c-caudal);opacity:.22"></i>Rango probable (25–75 %)</span>
+        </div>
+        <div class="grafica" id="graficaCaudal" tabindex="0" aria-label="Gráfica de pronóstico de caudal"></div>
+        <div class="fila-mini" id="miniCaudal"></div>
+    </div>
+
+    <!-- ================= URRA (XM) ================= -->
+    <h2 class="seccion">Embalse de Urrá · XM</h2>
+    <p class="nota" id="notaUrra">Fuente: XM.</p>
 
     <div class="grid-2">
         <div class="card">
             <h3>Aportes hídricos</h3>
             <p class="unidad">m³/s · caudal que entra al embalse</p>
-            <svg id="svgAportes" viewBox="0 0 500 180" preserveAspectRatio="none"></svg>
+            <div class="grafica" id="graficaAportes" tabindex="0" aria-label="Gráfica de aportes hídricos de Urrá"></div>
         </div>
         <div class="card">
-            <h3>Nivel de embalse</h3>
-            <p class="unidad">millones de kWh · energía almacenada</p>
-            <svg id="svgEmbalse" viewBox="0 0 500 180" preserveAspectRatio="none"></svg>
+            <h3>Energía embalsada</h3>
+            <p class="unidad">GWh · energía almacenada en el embalse</p>
+            <div class="grafica" id="graficaEmbalse" tabindex="0" aria-label="Gráfica de energía embalsada en Urrá"></div>
         </div>
     </div>
 
-    <h2 class="seccion">IDEAM / DHIME — estaciones de monitoreo</h2>
-    <p class="nota">
-        Catálogo real de estaciones del IDEAM ubicadas dentro del
-        polígono de la cuenca (175 en total). Por ahora es solo el
-        directorio — nombre, tipo y municipio — todavía no trae las
-        mediciones reales (lluvia, nivel del río) de cada una; eso
-        depende de conectar con DHIME, que quedó pendiente.
-    </p>
+    <!-- ================= DIRECTORIO ================= -->
+    <h2 class="seccion">Directorio de estaciones de la cuenca</h2>
+    <p class="nota" id="fuenteCatalogo">Consultando el catálogo del IDEAM…</p>
 
-    <div class="fila-stats" id="statsIdeam"></div>
-
+    <div class="controles-tabla">
+        <input type="search" id="buscarEstacion" placeholder="Buscar por nombre, código o municipio…" aria-label="Buscar estación">
+        <select id="filtroSubzona" aria-label="Filtrar por subzona hidrográfica">
+            <option value="">Todas las subzonas</option>
+        </select>
+        <select id="filtroCategoria" aria-label="Filtrar por tipo de estación">
+            <option value="">Todos los tipos</option>
+        </select>
+        <label><input type="checkbox" id="soloActivas"> Solo activas</label>
+        <span class="conteo" id="conteoEstaciones"></span>
+    </div>
     <div class="tabla-scroll">
-        <table class="tabla-estaciones">
+        <table class="tabla">
             <thead>
-                <tr><th>Código</th><th>Nombre</th><th>Municipio</th></tr>
+                <tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Tecnología</th><th>Subzona</th><th>Municipio</th><th class="num">Altitud (m)</th><th>Estado</th><th></th></tr>
             </thead>
             <tbody id="tbodyEstaciones"></tbody>
         </table>
     </div>
 
-    <div class="pendiente" style="margin-top:14px;">
-        <b>Pendiente:</b> traer las series reales de DHIME (lluvia, nivel
-        de río) para estas 175 estaciones y sumarlas aquí como una
-        tercera gráfica.
+    <div class="fuentes">
+        <b>Fuentes.</b>
+        Nivel y precipitación: IDEAM, Datos Abiertos Colombia
+        (<a href="https://www.datos.gov.co/resource/bdmn-sqnh" target="_blank" rel="noopener">bdmn-sqnh</a>,
+        <a href="https://www.datos.gov.co/resource/s54a-sgyg" target="_blank" rel="noopener">s54a-sgyg</a>).
+        Pronóstico de caudal (simulación, no medición): modelo hidrológico GloFAS de Copernicus, vía
+        <a href="https://open-meteo.com/en/docs/flood-api" target="_blank" rel="noopener">Open-Meteo</a>.
+        Urrá: XM. Estaciones: Catálogo Nacional de Estaciones del IDEAM
+        (<a href="https://www.datos.gov.co/resource/hp9r-jxuu" target="_blank" rel="noopener">hp9r-jxuu</a>).
     </div>
 
 </main>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="../rio_sinu_data/cuenca.js"></script>
 <script src="../rio_sinu_data/urra_serie.js"></script>
 <script src="../rio_sinu_data/ideam_estaciones.js"></script>
 <script>
 (() => {
     "use strict";
 
-    // ---------- Gráficas de Urrá ----------
-    function dibujarSerie(idSvg, puntos, color, divisor = 1) {
-        const svg = document.getElementById(idSvg);
-        if (!svg || !puntos || !puntos.length) return;
+    // =================================================================
+    // CONFIGURACION
+    // =================================================================
 
-        const W = 500, H = 180, padL = 46, padR = 12, padT = 12, padB = 24;
-        const innerW = W - padL - padR, innerH = H - padT - padB;
+    // Celdas del modelo GloFAS que caen SOBRE el cauce del Sinu (se
+    // eligieron buscando la celda de mayor caudal medio alrededor de cada
+    // ciudad; un punto a 5 km del rio devuelve el caudal de un arroyo).
+    const PUNTOS_RIO = [
+        { id: "urra",      nombre: "Salida de Urrá", lat: 8.075, lon: -76.175 },
+        { id: "tierralta", nombre: "Tierralta",      lat: 8.225, lon: -76.075 },
+        { id: "monteria",  nombre: "Montería",       lat: 8.825, lon: -75.925 },
+        { id: "cerete",    nombre: "Cereté",         lat: 8.975, lon: -75.925 },
+        { id: "lorica",    nombre: "Lorica",         lat: 9.225, lon: -75.925 }
+    ];
 
-        const valores = puntos.map((p) => p.valor / divisor);
-        let minV = Math.min(...valores), maxV = Math.max(...valores);
-        const margen = (maxV - minV) * 0.1 || 1;
-        minV -= margen; maxV += margen;
+    // Estaciones automaticas del IDEAM dentro de la cuenca que publican
+    // datos recientes en datos.gov.co (revisado sep-2026). Si alguna deja
+    // de transmitir, la grafica simplemente dice que no hay datos.
+    const ESTACIONES_VIVAS = [
+        { codigo: "13077060", nombre: "Cotoca Abajo",            municipio: "Lorica",    nivel: true,  lluvia: true  },
+        { codigo: "13057010", nombre: "Nueva Colombia",          municipio: "Montería",  nivel: true,  lluvia: false },
+        { codigo: "13067020", nombre: "Montería",                municipio: "Montería",  nivel: true,  lluvia: false },
+        { codigo: "13015040", nombre: "Represa Urrá",            municipio: "Tierralta", nivel: false, lluvia: true  },
+        { codigo: "13035501", nombre: "Aeropuerto Los Garzones", municipio: "Cereté",    nivel: false, lluvia: true  },
+        { codigo: "13075010", nombre: "Chimá",                   municipio: "Chimá",     nivel: false, lluvia: true  }
+    ];
 
-        const x = (i) => padL + (i / (puntos.length - 1)) * innerW;
-        const y = (v) => padT + innerH - ((v - minV) / (maxV - minV)) * innerH;
+    const SOCRATA = "https://www.datos.gov.co/resource/";
+    const DATASET_NIVEL = "bdmn-sqnh";
+    const DATASET_LLUVIA = "s54a-sgyg";
 
-        const pathPuntos = valores.map((v, i) => `${x(i)},${y(v)}`).join(" ");
+    const estado = {
+        dias: 30,
+        punto: "monteria",
+        estacion: "13077060"
+    };
 
-        let svgHtml = `<line class="eje" x1="${padL}" y1="${padT + innerH}" x2="${padL + innerW}" y2="${padT + innerH}"/>`;
-        svgHtml += `<polygon class="relleno" style="fill:${color}" points="${padL},${padT + innerH} ${pathPuntos} ${padL + innerW},${padT + innerH}"/>`;
-        svgHtml += `<polyline class="linea" style="stroke:${color}" points="${pathPuntos}"/>`;
-        svgHtml += `<text class="etiqueta-y" x="${padL - 6}" y="${y(maxV) + 3}" text-anchor="end">${maxV.toFixed(0)}</text>`;
-        svgHtml += `<text class="etiqueta-y" x="${padL - 6}" y="${y(minV) + 3}" text-anchor="end">${minV.toFixed(0)}</text>`;
-        svgHtml += `<text class="etiqueta-x" x="${padL}" y="${H - 4}">${puntos[0].fecha}</text>`;
-        svgHtml += `<text class="etiqueta-x" x="${padL + innerW}" y="${H - 4}" text-anchor="end">${puntos[puntos.length - 1].fecha}</text>`;
+    // =================================================================
+    // UTILIDADES
+    // =================================================================
 
-        svg.innerHTML = svgHtml;
+    const fmtNum = (v, dec = 0) =>
+        Number(v).toLocaleString("es-CO", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+    const fmtDia = new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short" });
+    const fmtDiaAnio = new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", year: "numeric" });
+    const fmtHora = new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+
+    // "2026-09-27" o "2026-09-27T23:00:00.000" -> Date en hora local
+    // (el IDEAM publica en hora de Colombia, sin zona horaria).
+    function parseFecha(texto) {
+        const [f, h = "00:00:00"] = texto.split("T");
+        const [y, m, d] = f.split("-").map(Number);
+        const [hh, mm] = h.split(":").map(Number);
+        return new Date(y, m - 1, d, hh || 0, mm || 0);
+    }
+    function isoSinZona(fecha) {
+        const p = (n) => String(n).padStart(2, "0");
+        return `${fecha.getFullYear()}-${p(fecha.getMonth() + 1)}-${p(fecha.getDate())}T00:00:00`;
+    }
+    function hace(dias) {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        d.setDate(d.getDate() - dias);
+        return d;
     }
 
-    function statTile(valor, etiqueta) {
-        return `<div class="stat-tile"><div class="valor">${valor}</div><div class="etiqueta">${etiqueta}</div></div>`;
+    // Cache por URL: cambiar de periodo o volver a una estacion ya vista
+    // no repite la consulta.
+    const cache = new Map();
+    function pedirJSON(url) {
+        if (!cache.has(url)) {
+            const promesa = fetch(url).then((r) => {
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                return r.json();
+            });
+            promesa.catch(() => cache.delete(url));
+            cache.set(url, promesa);
+        }
+        return cache.get(url);
     }
 
-    if (typeof DATA_URRA !== "undefined") {
-        dibujarSerie("svgAportes", DATA_URRA.aportes_caudal, "#1c6fb0");
-        dibujarSerie("svgEmbalse", DATA_URRA.nivel_embalse, "#2f8f4e", 1_000_000);
-
-        const caudales = DATA_URRA.aportes_caudal.map((p) => p.valor);
-        const embalses = DATA_URRA.nivel_embalse.map((p) => p.valor / 1_000_000);
-
-        document.getElementById("statsUrra").innerHTML = [
-            statTile(Math.max(...caudales).toFixed(0) + " m³/s", "Aporte máximo"),
-            statTile((caudales.reduce((a, b) => a + b, 0) / caudales.length).toFixed(0) + " m³/s", "Aporte promedio"),
-            statTile(Math.min(...embalses).toFixed(0) + " MkWh", "Embalse mínimo"),
-            statTile(Math.max(...embalses).toFixed(0) + " MkWh", "Embalse máximo")
-        ].join("");
+    function consultaSocrata(dataset, params) {
+        const qs = Object.entries(params)
+            .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+            .join("&");
+        return pedirJSON(`${SOCRATA}${dataset}.json?${qs}`);
     }
 
-    // ---------- Tabla de estaciones IDEAM ----------
-    if (typeof DATA_IDEAM_ESTACIONES !== "undefined") {
-        const porMunicipio = {};
-        DATA_IDEAM_ESTACIONES.forEach((e) => {
-            porMunicipio[e.municipio] = (porMunicipio[e.municipio] || 0) + 1;
+    function el(tag, clase, texto) {
+        const nodo = document.createElement(tag);
+        if (clase) nodo.className = clase;
+        if (texto !== undefined) nodo.textContent = texto;
+        return nodo;
+    }
+
+    // Ticks "bonitos" (0, 50, 100...) para el eje Y
+    function ticksBonitos(min, max, cuantos = 4) {
+        const rango = max - min || 1;
+        const pasoCrudo = rango / cuantos;
+        const mag = Math.pow(10, Math.floor(Math.log10(pasoCrudo)));
+        const norm = pasoCrudo / mag;
+        const paso = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
+        const ini = Math.floor(min / paso) * paso;
+        const fin = Math.ceil(max / paso) * paso;
+        const ticks = [];
+        for (let v = ini; v <= fin + paso / 2; v += paso) ticks.push(+v.toFixed(10));
+        return { ticks, min: ini, max: fin, paso };
+    }
+
+    // =================================================================
+    // GRAFICA REUTILIZABLE (linea o barras, con cruz + tooltip)
+    // =================================================================
+
+    function crearGrafica(contenedor, opciones) {
+        const cfg = Object.assign({
+            tipo: "linea",       // "linea" | "barras"
+            alto: 250,
+            unidad: "",
+            decimales: 0,
+            conHora: false,
+            desdeCero: false,
+            pronosticoDesde: null,
+            nombreTabla: "Ver datos en tabla"
+        }, opciones);
+
+        let series = [];
+        let indiceActivo = null;
+        let ultimoRender = null;
+
+        const tooltip = el("div", "tooltip");
+        contenedor.appendChild(tooltip);
+
+        const detalles = el("details", "tabla-datos");
+        const resumen = el("summary", null, cfg.nombreTabla);
+        detalles.appendChild(resumen);
+        contenedor.after(detalles);
+        detalles.addEventListener("toggle", () => { if (detalles.open) llenarTabla(); });
+
+        function formatoFecha(t) {
+            return cfg.conHora ? fmtHora.format(t) : fmtDiaAnio.format(t);
+        }
+
+        function llenarTabla() {
+            detalles.querySelectorAll(".tabla-scroll").forEach((n) => n.remove());
+            if (!series.length || !series[0].puntos.length) return;
+            const envoltura = el("div", "tabla-scroll");
+            const tabla = el("table", "tabla");
+            const cab = el("tr");
+            cab.appendChild(el("th", null, "Fecha"));
+            series.forEach((s) => { const th = el("th", "num", `${s.nombre} (${cfg.unidad})`); cab.appendChild(th); });
+            const thead = el("thead"); thead.appendChild(cab); tabla.appendChild(thead);
+            const tbody = el("tbody");
+            series[0].puntos.slice().reverse().forEach((p) => {
+                const tr = el("tr");
+                tr.appendChild(el("td", null, formatoFecha(p.t)));
+                series.forEach((s, i) => {
+                    const q = i === 0 ? p : s.puntos.find((x) => +x.t === +p.t);
+                    const texto = !q ? "—"
+                        : s.banda ? `${fmtNum(q.lo, cfg.decimales)} – ${fmtNum(q.hi, cfg.decimales)}`
+                        : fmtNum(q.v, cfg.decimales);
+                    tr.appendChild(el("td", "num", texto));
+                });
+                tbody.appendChild(tr);
+            });
+            tabla.appendChild(tbody);
+            envoltura.appendChild(tabla);
+            detalles.appendChild(envoltura);
+        }
+
+        function mensaje(texto, reintentar) {
+            contenedor.querySelectorAll(".mensaje").forEach((n) => n.remove());
+            if (!texto) return;
+            const caja = el("div", "mensaje");
+            caja.appendChild(el("span", null, texto));
+            if (reintentar) {
+                const b = el("button", null, "Reintentar");
+                b.type = "button";
+                b.addEventListener("click", reintentar);
+                caja.appendChild(b);
+            }
+            contenedor.appendChild(caja);
+        }
+
+        function dibujar() {
+            contenedor.querySelectorAll("svg").forEach((n) => n.remove());
+            tooltip.style.display = "none";
+            const principal = series[0];
+            if (!principal || !principal.puntos.length) return;
+
+            const W = Math.max(contenedor.clientWidth, 280);
+            const H = cfg.alto;
+            const pad = { l: 46, r: 16, t: 18, b: 28 };
+            const iw = W - pad.l - pad.r;
+            const ih = H - pad.t - pad.b;
+
+            const todos = series.flatMap((s) => s.puntos);
+            let tMin = Math.min(...todos.map((p) => +p.t));
+            let tMax = Math.max(...todos.map((p) => +p.t));
+            const DIA = 86400000;
+            if (cfg.tipo === "barras") { tMin -= DIA / 2; tMax += DIA / 2; }
+            if (tMax === tMin) tMax = tMin + DIA;
+
+            // Las franjas (series con banda) traen lo/hi en vez de v
+            let vMin = Math.min(...todos.map((p) => (p.lo ?? p.v)));
+            let vMax = Math.max(...todos.map((p) => (p.hi ?? p.v)));
+            if (cfg.desdeCero || cfg.tipo === "barras") vMin = Math.min(0, vMin);
+            else vMin -= (vMax - vMin) * 0.08;
+            if (vMax === vMin) vMax = vMin + 1;
+            const escala = ticksBonitos(vMin, vMax, 4);
+
+            const x = (t) => pad.l + ((+t - tMin) / (tMax - tMin)) * iw;
+            const y = (v) => pad.t + ih - ((v - escala.min) / (escala.max - escala.min)) * ih;
+
+            const NS = "http://www.w3.org/2000/svg";
+            const svg = document.createElementNS(NS, "svg");
+            svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+            svg.setAttribute("height", H);
+            svg.setAttribute("role", "img");
+            const nuevo = (tag, attrs) => {
+                const n = document.createElementNS(NS, tag);
+                Object.entries(attrs).forEach(([k, v]) => n.setAttribute(k, v));
+                return n;
+            };
+
+            // Zona de pronostico
+            if (cfg.pronosticoDesde && +cfg.pronosticoDesde <= tMax) {
+                const xp = x(cfg.pronosticoDesde);
+                svg.appendChild(nuevo("rect", { class: "zona-pronostico", x: xp, y: pad.t, width: pad.l + iw - xp, height: ih }));
+                svg.appendChild(nuevo("line", { class: "linea-hoy", x1: xp, x2: xp, y1: pad.t, y2: pad.t + ih }));
+                const tx = nuevo("text", { class: "texto-pronostico", x: xp + 6, y: pad.t + 11 });
+                tx.textContent = "PRONÓSTICO";
+                svg.appendChild(tx);
+            }
+
+            // Rejilla + ticks Y
+            escala.ticks.forEach((v) => {
+                svg.appendChild(nuevo("line", { class: v === escala.min ? "eje" : "rejilla", x1: pad.l, x2: pad.l + iw, y1: y(v), y2: y(v) }));
+                const t = nuevo("text", { class: "tick", x: pad.l - 7, y: y(v) + 3.5, "text-anchor": "end" });
+                t.textContent = fmtNum(v, escala.paso < 1 ? (escala.paso < 0.1 ? 2 : 1) : 0);
+                svg.appendChild(t);
+            });
+
+            // Ticks X (5 fechas repartidas)
+            const nTicks = W < 480 ? 3 : 5;
+            for (let i = 0; i < nTicks; i++) {
+                const t = tMin + (i / (nTicks - 1)) * (tMax - tMin);
+                const tx = nuevo("text", {
+                    class: "tick", x: x(t), y: H - 8,
+                    "text-anchor": i === 0 ? "start" : i === nTicks - 1 ? "end" : "middle"
+                });
+                tx.textContent = fmtDia.format(new Date(t));
+                svg.appendChild(tx);
+            }
+
+            // Series (en orden inverso: la principal queda encima)
+            series.slice().reverse().forEach((s) => {
+                if (s.banda) {
+                    // Franja: borde superior (hi) de ida y borde inferior (lo) de vuelta
+                    const pts = s.puntos;
+                    const ida = pts.map((p, i) => `${i ? "L" : "M"}${x(p.t).toFixed(1)},${y(p.hi).toFixed(1)}`).join(" ");
+                    const vuelta = pts.slice().reverse().map((p) => `L${x(p.t).toFixed(1)},${y(p.lo).toFixed(1)}`).join(" ");
+                    svg.appendChild(nuevo("path", { d: `${ida} ${vuelta} Z`, fill: s.color, "fill-opacity": 0.22 }));
+                    return;
+                }
+                if (cfg.tipo === "barras") {
+                    const anchoDia = iw / ((tMax - tMin) / DIA);
+                    const ancho = Math.max(2, Math.min(24, anchoDia - 2));
+                    s.puntos.forEach((p) => {
+                        const altura = Math.max(0, y(escala.min) - y(p.v));
+                        if (altura <= 0) return;
+                        const x0 = x(p.t) - ancho / 2;
+                        const r = Math.min(4, ancho / 2, altura);
+                        const y0 = y(p.v);
+                        const yb = y(escala.min);
+                        // Punta redondeada (4px), base cuadrada
+                        svg.appendChild(nuevo("path", {
+                            d: `M${x0},${yb} V${y0 + r} Q${x0},${y0} ${x0 + r},${y0} H${x0 + ancho - r} Q${x0 + ancho},${y0} ${x0 + ancho},${y0 + r} V${yb} Z`,
+                            fill: s.color
+                        }));
+                    });
+                    return;
+                }
+
+                // Linea con cortes donde faltan datos (hueco > 3 pasos tipicos)
+                const pts = s.puntos;
+                const pasos = pts.slice(1).map((p, i) => +p.t - +pts[i].t).sort((a, b) => a - b);
+                const pasoTipico = pasos.length ? pasos[Math.floor(pasos.length / 2)] : DIA;
+                const tramos = [];
+                let actual = [];
+                pts.forEach((p, i) => {
+                    if (i > 0 && +p.t - +pts[i - 1].t > pasoTipico * 3) { tramos.push(actual); actual = []; }
+                    actual.push(p);
+                });
+                tramos.push(actual);
+
+                tramos.forEach((tramo) => {
+                    if (!tramo.length) return;
+                    const d = tramo.map((p, i) => `${i ? "L" : "M"}${x(p.t).toFixed(1)},${y(p.v).toFixed(1)}`).join(" ");
+                    if (s.area) {
+                        const base = y(escala.min);
+                        svg.appendChild(nuevo("path", {
+                            d: `${d} L${x(tramo[tramo.length - 1].t).toFixed(1)},${base} L${x(tramo[0].t).toFixed(1)},${base} Z`,
+                            fill: s.color, "fill-opacity": 0.1
+                        }));
+                    }
+                    svg.appendChild(nuevo("path", {
+                        d, fill: "none", stroke: s.color,
+                        "stroke-width": s.fino ? 1.5 : 2,
+                        "stroke-linejoin": "round", "stroke-linecap": "round"
+                    }));
+                    if (tramo.length === 1) {
+                        svg.appendChild(nuevo("circle", { cx: x(tramo[0].t), cy: y(tramo[0].v), r: 3, fill: s.color }));
+                    }
+                });
+            });
+
+            // Etiqueta directa: ultimo valor de la serie principal (o del
+            // "hoy" si hay pronostico), con punto y anillo del color de fondo.
+            const marcado = cfg.pronosticoDesde
+                ? principal.puntos.reduce((a, p) => (Math.abs(+p.t - +cfg.pronosticoDesde) < Math.abs(+a.t - +cfg.pronosticoDesde) ? p : a))
+                : principal.puntos[principal.puntos.length - 1];
+            if (cfg.tipo === "linea") {
+                svg.appendChild(nuevo("circle", { cx: x(marcado.t), cy: y(marcado.v), r: 4.5, fill: principal.color, stroke: "#fff", "stroke-width": 2 }));
+            }
+            const etiq = nuevo("text", {
+                class: "etiqueta-directa",
+                x: Math.min(x(marcado.t), pad.l + iw - 2),
+                y: Math.max(y(marcado.v) - 10, pad.t + 10),
+                "text-anchor": x(marcado.t) > pad.l + iw - 60 ? "end" : "middle"
+            });
+            etiq.textContent = `${fmtNum(marcado.v, cfg.decimales)} ${cfg.unidad}`;
+            svg.appendChild(etiq);
+
+            // Cruz (se mueve con el puntero)
+            const cruz = nuevo("line", { class: "cruz", y1: pad.t, y2: pad.t + ih, visibility: "hidden" });
+            svg.appendChild(cruz);
+            const puntosCruz = series.map((s) =>
+                svg.appendChild(nuevo("circle", { r: 4, fill: s.color, stroke: "#fff", "stroke-width": 2, visibility: "hidden" }))
+            );
+
+            // Zona sensible: toda el area de trazado
+            const zona = nuevo("rect", { x: pad.l, y: 0, width: iw, height: H, fill: "transparent" });
+            svg.appendChild(zona);
+
+            contenedor.insertBefore(svg, contenedor.firstChild);
+            ultimoRender = { x, y, pad, iw, ih, W, cruz, puntosCruz };
+
+            zona.addEventListener("pointermove", (ev) => {
+                const caja = svg.getBoundingClientRect();
+                const px = ((ev.clientX - caja.left) / caja.width) * W;
+                const t = tMin + ((px - pad.l) / iw) * (tMax - tMin);
+                mostrar(indiceMasCercano(t));
+            });
+            zona.addEventListener("pointerleave", ocultar);
+        }
+
+        function indiceMasCercano(t) {
+            const pts = series[0].puntos;
+            let lo = 0, hi = pts.length - 1;
+            while (hi - lo > 1) {
+                const mid = (lo + hi) >> 1;
+                if (+pts[mid].t < t) lo = mid; else hi = mid;
+            }
+            return Math.abs(+pts[lo].t - t) <= Math.abs(+pts[hi].t - t) ? lo : hi;
+        }
+
+        function mostrar(i) {
+            if (!ultimoRender || !series.length) return;
+            indiceActivo = i;
+            const { x, y, W, cruz, puntosCruz } = ultimoRender;
+            const p = series[0].puntos[i];
+            const px = x(p.t);
+            cruz.setAttribute("x1", px); cruz.setAttribute("x2", px);
+            cruz.setAttribute("visibility", "visible");
+
+            tooltip.replaceChildren();
+            tooltip.appendChild(el("div", "fecha",
+                formatoFecha(p.t) + (cfg.pronosticoDesde && +p.t >= +cfg.pronosticoDesde ? " · pronóstico" : "")));
+            series.forEach((s, k) => {
+                const q = k === 0 ? p : s.puntos.find((z) => +z.t === +p.t);
+                const punto = puntosCruz[k];
+                if (!q) { punto.setAttribute("visibility", "hidden"); return; }
+                if (s.banda) {
+                    punto.setAttribute("visibility", "hidden");
+                    const fila = el("div", "fila");
+                    const clave = el("span", "clave"); clave.style.background = s.color; clave.style.opacity = ".35";
+                    fila.appendChild(clave);
+                    fila.appendChild(el("b", null, `${fmtNum(q.lo, cfg.decimales)} – ${fmtNum(q.hi, cfg.decimales)} ${cfg.unidad}`));
+                    fila.appendChild(el("span", null, s.nombre));
+                    tooltip.appendChild(fila);
+                    return;
+                }
+                if (cfg.tipo === "linea") {
+                    punto.setAttribute("cx", x(q.t)); punto.setAttribute("cy", y(q.v));
+                    punto.setAttribute("visibility", "visible");
+                }
+                const fila = el("div", "fila");
+                const clave = el("span", "clave"); clave.style.background = s.color;
+                fila.appendChild(clave);
+                fila.appendChild(el("b", null, `${fmtNum(q.v, cfg.decimales)} ${cfg.unidad}`));
+                fila.appendChild(el("span", null, s.nombre));
+                tooltip.appendChild(fila);
+            });
+
+            tooltip.style.display = "block";
+            const anchoTip = tooltip.offsetWidth;
+            const escalaPx = contenedor.clientWidth / W;
+            let left = px * escalaPx + 14;
+            if (left + anchoTip > contenedor.clientWidth) left = px * escalaPx - anchoTip - 14;
+            tooltip.style.left = `${Math.max(0, left)}px`;
+            tooltip.style.top = "8px";
+        }
+
+        function ocultar() {
+            tooltip.style.display = "none";
+            if (!ultimoRender) return;
+            ultimoRender.cruz.setAttribute("visibility", "hidden");
+            ultimoRender.puntosCruz.forEach((c) => c.setAttribute("visibility", "hidden"));
+            indiceActivo = null;
+        }
+
+        // Teclado: flechas recorren los puntos (mismo detalle que el hover)
+        contenedor.addEventListener("keydown", (ev) => {
+            if (!series.length || !series[0].puntos.length) return;
+            const n = series[0].puntos.length;
+            if (ev.key === "ArrowRight" || ev.key === "ArrowLeft") {
+                ev.preventDefault();
+                const base = indiceActivo === null ? n - 1 : indiceActivo;
+                mostrar(Math.max(0, Math.min(n - 1, base + (ev.key === "ArrowRight" ? 1 : -1))));
+            } else if (ev.key === "Escape") {
+                ocultar();
+            }
         });
-        const municipioTop = Object.entries(porMunicipio).sort((a, b) => b[1] - a[1])[0];
+        contenedor.addEventListener("blur", ocultar);
 
-        document.getElementById("statsIdeam").innerHTML = [
-            statTile(DATA_IDEAM_ESTACIONES.length, "Estaciones en la cuenca"),
-            statTile(Object.keys(porMunicipio).length, "Municipios cubiertos"),
-            statTile(municipioTop ? `${municipioTop[1]} (${municipioTop[0]})` : "—", "Municipio con más estaciones")
-        ].join("");
-
-        document.getElementById("tbodyEstaciones").innerHTML = DATA_IDEAM_ESTACIONES.map((e) =>
-            `<tr><td>${e.codigo}</td><td>${e.nombre}</td><td>${e.municipio}</td></tr>`
-        ).join("");
+        return {
+            datos(nuevasSeries, extra = {}) {
+                series = nuevasSeries.filter((s) => s.puntos && s.puntos.length);
+                Object.assign(cfg, extra);
+                contenedor.classList.remove("recargando");
+                mensaje(null);
+                if (!series.length) {
+                    contenedor.querySelectorAll("svg").forEach((n) => n.remove());
+                    mensaje(extra.vacio || "No hay datos en este periodo.");
+                }
+                dibujar();
+                if (detalles.open) llenarTabla();
+            },
+            cargando() {
+                if (series.length) contenedor.classList.add("recargando");
+                else mensaje("Cargando datos…");
+            },
+            error(texto, reintentar) {
+                contenedor.classList.remove("recargando");
+                series = [];
+                contenedor.querySelectorAll("svg").forEach((n) => n.remove());
+                mensaje(texto, reintentar);
+            },
+            redibujar: dibujar
+        };
     }
+
+    // =================================================================
+    // GRAFICAS
+    // =================================================================
+
+    const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+    const gCaudal = crearGrafica(document.getElementById("graficaCaudal"), { unidad: "m³/s", desdeCero: true });
+    const gNivel = crearGrafica(document.getElementById("graficaNivel"), { unidad: "m", decimales: 2 });
+    const gLluvia = crearGrafica(document.getElementById("graficaLluvia"), { tipo: "barras", unidad: "mm", decimales: 1 });
+    const gAportes = crearGrafica(document.getElementById("graficaAportes"), { unidad: "m³/s", desdeCero: true });
+    const gEmbalse = crearGrafica(document.getElementById("graficaEmbalse"), { unidad: "GWh", decimales: 1 });
+
+    let timerResize = null;
+    window.addEventListener("resize", () => {
+        clearTimeout(timerResize);
+        timerResize = setTimeout(() => {
+            [gCaudal, gNivel, gLluvia, gAportes, gEmbalse].forEach((g) => g.redibujar());
+        }, 150);
+    });
+
+    function tile(id, valor, detalle) {
+        const t = document.getElementById(id);
+        t.classList.remove("cargando");
+        t.querySelector(".valor").textContent = valor;
+        t.querySelector(".detalle").textContent = detalle;
+    }
+
+    function miniStats(id, pares) {
+        const cont = document.getElementById(id);
+        cont.replaceChildren();
+        pares.forEach(([etiqueta, valor]) => {
+            const s = el("span", null, etiqueta + " ");
+            s.appendChild(el("b", null, valor));
+            cont.appendChild(s);
+        });
+    }
+
+    // =================================================================
+    // CAUDAL (GloFAS via Open-Meteo)
+    // =================================================================
+
+    // Solo pronostico (past_days=0): lo observado viene del IDEAM, no
+    // de la simulacion del modelo.
+    function urlCaudal(punto) {
+        return "https://flood-api.open-meteo.com/v1/flood" +
+            `?latitude=${punto.lat}&longitude=${punto.lon}` +
+            // p25/p75 son percentiles de los escenarios (ensamble) del pronostico
+            "&daily=river_discharge,river_discharge_p25,river_discharge_p75" +
+            "&past_days=0&forecast_days=30";
+    }
+
+    function leerCaudal(json) {
+        const d = json.daily;
+        const caudal = [], rango = [];
+        d.time.forEach((f, i) => {
+            const t = parseFecha(f);
+            if (d.river_discharge[i] != null) caudal.push({ t, v: d.river_discharge[i] });
+            const lo = d.river_discharge_p25 && d.river_discharge_p25[i];
+            const hi = d.river_discharge_p75 && d.river_discharge_p75[i];
+            if (lo != null && hi != null) rango.push({ t, lo, hi });
+        });
+        return { caudal, rango };
+    }
+
+    const pico = (pts) => pts.reduce((a, p) => (p.v > a.v ? p : a), pts[0]);
+
+    async function cargarCaudal() {
+        const punto = PUNTOS_RIO.find((p) => p.id === estado.punto);
+        document.getElementById("tituloCaudal").textContent = `Caudal en ${punto.nombre}`;
+        gCaudal.cargando();
+        try {
+            const { caudal, rango } = leerCaudal(await pedirJSON(urlCaudal(punto)));
+            gCaudal.datos([
+                { nombre: "Caudal simulado", color: color("--c-caudal"), puntos: caudal, area: true },
+                { nombre: "Rango probable", color: color("--c-caudal"), puntos: rango, banda: true }
+            ]);
+            const p = caudal.length ? pico(caudal) : null;
+            if (caudal.length) {
+                lineaActualizacion("actualizacionSim", [
+                    ["Simulación del ", fmtDiaAnio.format(caudal[0].t)],
+                    [" al ", fmtDiaAnio.format(caudal[caudal.length - 1].t)],
+                    [` · consultada a las ${horaConsulta()}`]
+                ]);
+            }
+            miniStats("miniCaudal", [
+                ["Hoy:", caudal[0] ? `${fmtNum(caudal[0].v)} m³/s` : "—"],
+                ["En 7 días:", caudal[7] ? `${fmtNum(caudal[7].v)} m³/s` : "—"],
+                ["Pico:", p ? `${fmtNum(p.v)} m³/s (${fmtDia.format(p.t)})` : "—"]
+            ]);
+        } catch (e) {
+            gCaudal.error("No se pudo consultar el pronóstico (Open-Meteo).", cargarCaudal);
+        }
+    }
+
+    // "Actualizado" al estilo del IDEAM: que dato es y cuando se consulto
+    function lineaActualizacion(id, partes) {
+        const p = document.getElementById(id);
+        p.replaceChildren();
+        partes.forEach(([texto, fuerte]) => {
+            p.appendChild(document.createTextNode(texto));
+            if (fuerte) p.appendChild(el("b", null, fuerte));
+        });
+    }
+    const horaConsulta = () => new Intl.DateTimeFormat("es-CO", { hour: "2-digit", minute: "2-digit" }).format(new Date());
+
+    // =================================================================
+    // ESTACIONES IDEAM (datos.gov.co)
+    // =================================================================
+
+    async function consultarNivel(codigo, dias) {
+        const filas = await consultaSocrata(DATASET_NIVEL, {
+            "$select": "fechaobservacion,valorobservado",
+            "$where": `codigoestacion='00${codigo}' AND fechaobservacion>'${isoSinZona(hace(dias))}'`,
+            "$order": "fechaobservacion",
+            "$limit": "50000"
+        });
+        // El IDEAM a veces publica la misma hora dos veces (con distinto
+        // nombre de estacion/municipio): se deja una sola lectura por hora.
+        // Tambien se descartan valores imposibles de sensor (-999, etc.).
+        const porHora = new Map();
+        filas.forEach((f) => {
+            const v = parseFloat(f.valorobservado);
+            if (!Number.isFinite(v) || v < -5 || v > 60) return;
+            porHora.set(f.fechaobservacion, v);
+        });
+        return [...porHora.entries()]
+            .map(([f, v]) => ({ t: parseFecha(f), v }))
+            .sort((a, b) => a.t - b.t);
+    }
+
+    // Nivel diario a partir de las lecturas horarias: promedio, minimo y
+    // maximo de cada dia. Antes se quitan los picos sueltos del sensor
+    // (p. ej. Nueva Colombia a veces reporta 27 m en un rio de 1-2 m):
+    // se descarta toda lectura a mas de 1 m de la mediana de su dia.
+    async function consultarNivelDiario(codigo, dias) {
+        const horas = await consultarNivel(codigo, dias);
+        const porDia = new Map();
+        horas.forEach((p) => {
+            const clave = isoSinZona(p.t);
+            if (!porDia.has(clave)) porDia.set(clave, []);
+            porDia.get(clave).push(p.v);
+        });
+        const dias_ = [];
+        porDia.forEach((vals, clave) => {
+            const orden = vals.slice().sort((a, b) => a - b);
+            const mediana = orden[Math.floor(orden.length / 2)];
+            const buenos = vals.filter((v) => Math.abs(v - mediana) <= 1);
+            if (buenos.length < 3) return;
+            dias_.push({
+                t: parseFecha(clave),
+                v: buenos.reduce((a, v) => a + v, 0) / buenos.length,
+                lo: Math.min(...buenos),
+                hi: Math.max(...buenos)
+            });
+        });
+        return dias_.sort((a, b) => a.t - b.t);
+    }
+
+    async function consultarLluvia(codigo, dias) {
+        const filas = await consultaSocrata(DATASET_LLUVIA, {
+            "$select": "date_trunc_ymd(fechaobservacion) as dia,municipio,sum(valorobservado) as mm",
+            "$where": `codigoestacion='00${codigo}' AND fechaobservacion>'${isoSinZona(hace(dias))}' AND valorobservado>=0`,
+            "$group": "dia,municipio",
+            "$order": "dia",
+            "$limit": "5000"
+        });
+        // Algunas estaciones (p. ej. Los Garzones) aparecen duplicadas con
+        // dos municipios distintos: sumar ambos contaria la lluvia doble,
+        // asi que por dia se toma el mayor de los dos acumulados.
+        const porDia = new Map();
+        filas.forEach((f) => {
+            const v = parseFloat(f.mm);
+            if (!Number.isFinite(v)) return;
+            porDia.set(f.dia, Math.max(porDia.get(f.dia) || 0, v));
+        });
+        return [...porDia.entries()]
+            .map(([f, v]) => ({ t: parseFecha(f), v: Math.round(v * 10) / 10 }))
+            .sort((a, b) => a.t - b.t);
+    }
+
+    // Fecha y hora del ultimo dato publicado por la estacion (el mas
+    // reciente entre nivel y lluvia).
+    async function consultarUltimaLectura(est) {
+        const datasets = [est.nivel && DATASET_NIVEL, est.lluvia && DATASET_LLUVIA].filter(Boolean);
+        const fechas = await Promise.all(datasets.map((ds) =>
+            consultaSocrata(ds, {
+                "$select": "max(fechaobservacion) as ultima",
+                "$where": `codigoestacion='00${est.codigo}'`
+            }).then((r) => (r[0] && r[0].ultima ? parseFecha(r[0].ultima) : null)).catch(() => null)
+        ));
+        const validas = fechas.filter(Boolean);
+        return validas.length ? new Date(Math.max(...validas)) : null;
+    }
+
+    async function actualizarUltimaLectura(est, pedido) {
+        lineaActualizacion("actualizacionIdeam", [["Consultando última lectura de ", est.nombre], ["…"]]);
+        const ultima = await consultarUltimaLectura(est);
+        if (pedido !== pedidoEstacion) return;
+        lineaActualizacion("actualizacionIdeam", ultima
+            ? [["Última lectura de ", est.nombre], [": ", fmtHora.format(ultima)], [` · consultado a las ${horaConsulta()}`]]
+            : [["No se pudo obtener la última lectura de ", est.nombre]]);
+    }
+
+    let pedidoEstacion = 0;
+    async function cargarEstacion() {
+        const est = ESTACIONES_VIVAS.find((e) => e.codigo === estado.estacion);
+        const pedido = ++pedidoEstacion;
+        const dias = estado.dias;
+
+        document.getElementById("unidadNivel").textContent =
+            `m · diario · ${est.nombre} (${est.municipio})`;
+        document.getElementById("unidadLluvia").textContent =
+            `mm por día · ${est.nombre} (${est.municipio})`;
+
+        const tareas = [actualizarUltimaLectura(est, pedido)];
+
+        if (est.nivel) {
+            gNivel.cargando();
+            tareas.push(consultarNivelDiario(est.codigo, dias).then((pts) => {
+                if (pedido !== pedidoEstacion) return;
+                gNivel.datos([
+                    { nombre: "Promedio", color: color("--c-nivel"), puntos: pts },
+                    { nombre: "Mín – máx", color: color("--c-nivel"), puntos: pts, banda: true }
+                ], { vacio: "Sin datos de nivel en este periodo." });
+                if (pts.length) {
+                    const ult = pts[pts.length - 1];
+                    const max = pts.reduce((a, p) => (p.hi > a.hi ? p : a), pts[0]);
+                    const min = pts.reduce((a, p) => (p.lo < a.lo ? p : a), pts[0]);
+                    miniStats("miniNivel", [
+                        ["Último día:", `${fmtNum(ult.v, 2)} m (${fmtDia.format(ult.t)})`],
+                        ["Máximo:", `${fmtNum(max.hi, 2)} m (${fmtDia.format(max.t)})`],
+                        ["Mínimo:", `${fmtNum(min.lo, 2)} m (${fmtDia.format(min.t)})`]
+                    ]);
+                } else miniStats("miniNivel", []);
+            }).catch(() => {
+                if (pedido !== pedidoEstacion) return;
+                gNivel.error("No se pudo consultar el IDEAM (datos.gov.co).", cargarEstacion);
+                miniStats("miniNivel", []);
+            }));
+        } else {
+            gNivel.datos([], { vacio: "Esta estación no mide nivel." });
+            miniStats("miniNivel", []);
+        }
+
+        if (est.lluvia) {
+            gLluvia.cargando();
+            tareas.push(consultarLluvia(est.codigo, dias).then((pts) => {
+                if (pedido !== pedidoEstacion) return;
+                gLluvia.datos([{ nombre: "Lluvia", color: color("--c-lluvia"), puntos: pts }],
+                    { vacio: "Sin datos de lluvia en este periodo." });
+                if (pts.length) {
+                    const total = pts.reduce((a, p) => a + p.v, 0);
+                    const max = pts.reduce((a, p) => (p.v > a.v ? p : a), pts[0]);
+                    const conLluvia = pts.filter((p) => p.v >= 1).length;
+                    miniStats("miniLluvia", [
+                        ["Acumulado:", `${fmtNum(total, 1)} mm`],
+                        ["Día más lluvioso:", `${fmtNum(max.v, 1)} mm (${fmtDia.format(max.t)})`],
+                        ["Días con lluvia:", `${conLluvia}`]
+                    ]);
+                } else miniStats("miniLluvia", []);
+            }).catch(() => {
+                if (pedido !== pedidoEstacion) return;
+                gLluvia.error("No se pudo consultar el IDEAM (datos.gov.co).", cargarEstacion);
+                miniStats("miniLluvia", []);
+            }));
+        } else {
+            gLluvia.datos([], { vacio: "Esta estación no mide lluvia." });
+            miniStats("miniLluvia", []);
+        }
+
+        await Promise.allSettled(tareas);
+    }
+
+    async function cargarResumenNivel() {
+        try {
+            const pts = await consultarNivel("13077060", estado.dias);
+            if (!pts.length) { tile("tileNivel", "—", "Sin lecturas recientes"); return; }
+            const ult = pts[pts.length - 1];
+            tile("tileNivel", `${fmtNum(ult.v, 2)} m`, `Estación Cotoca Abajo (IDEAM) · ${fmtHora.format(ult.t)}`);
+        } catch (e) {
+            tile("tileNivel", "—", "No se pudo consultar el IDEAM");
+        }
+    }
+
+    // =================================================================
+    // URRA (XM, datos estaticos de urra_serie.js)
+    // =================================================================
+
+    function cargarUrra() {
+        if (typeof DATA_URRA === "undefined") {
+            gAportes.error("No se encontraron los datos de Urrá.");
+            gEmbalse.error("No se encontraron los datos de Urrá.");
+            return;
+        }
+        const aportes = DATA_URRA.aportes_caudal.map((p) => ({ t: parseFecha(p.fecha), v: p.valor }));
+        const embalse = DATA_URRA.nivel_embalse.map((p) => ({ t: parseFecha(p.fecha), v: p.valor / 1e6 }));
+        const ultima = new Date(Math.max(+aportes[aportes.length - 1].t, +embalse[embalse.length - 1].t));
+
+        // El filtro de periodo se aplica contando hacia atras desde el
+        // ultimo dato disponible (la serie no es en vivo).
+        const desde = new Date(+ultima - estado.dias * 86400000);
+        gAportes.datos([{ nombre: "Aportes", color: color("--c-caudal"), puntos: aportes.filter((p) => p.t > desde), area: true }]);
+        gEmbalse.datos([{ nombre: "Energía embalsada", color: color("--c-embalse"), puntos: embalse.filter((p) => p.t > desde), area: true }]);
+
+        document.getElementById("notaUrra").textContent =
+            `Fuente: XM. Último dato: ${fmtDiaAnio.format(ultima)}.`;
+
+        const ultEmb = embalse[embalse.length - 1];
+        tile("tileEmbalse", `${fmtNum(ultEmb.v, 1)} GWh`, `XM · dato del ${fmtDiaAnio.format(ultEmb.t)}`);
+    }
+
+    // =================================================================
+    // SELECTORES
+    // =================================================================
+
+    function pintarChips(idCont, items, seleccionado, alElegir) {
+        const cont = document.getElementById(idCont);
+        cont.replaceChildren();
+        items.forEach((it) => {
+            const b = el("button", "chip");
+            b.type = "button";
+            b.dataset.id = it.id;
+            b.setAttribute("aria-pressed", String(it.id === seleccionado));
+            b.appendChild(document.createTextNode(it.nombre));
+            if (it.sub) b.appendChild(el("small", null, it.sub));
+            b.addEventListener("click", () => alElegir(it.id));
+            cont.appendChild(b);
+        });
+    }
+
+    function elegirPunto(id) {
+        estado.punto = id;
+        pintarChips("chipsCaudal", PUNTOS_RIO.map((p) => ({ id: p.id, nombre: p.nombre })), id, elegirPunto);
+        resaltarMapa();
+        cargarCaudal();
+    }
+
+    function elegirEstacion(codigo) {
+        estado.estacion = codigo;
+        pintarChips("chipsEstaciones",
+            ESTACIONES_VIVAS.map((e) => ({
+                id: e.codigo,
+                nombre: e.nombre,
+                sub: [e.nivel && "nivel", e.lluvia && "lluvia"].filter(Boolean).join(" + ")
+            })),
+            codigo, elegirEstacion);
+        resaltarMapa();
+        cargarEstacion();
+    }
+
+    document.querySelectorAll("#filtroPeriodo button").forEach((b) => {
+        b.addEventListener("click", () => {
+            estado.dias = Number(b.dataset.dias);
+            document.querySelectorAll("#filtroPeriodo button").forEach((o) =>
+                o.setAttribute("aria-pressed", String(o === b)));
+            actualizarNotaPeriodo();
+            cargarEstacion();
+            cargarUrra();
+        });
+    });
+
+    function actualizarNotaPeriodo() {
+        document.getElementById("notaPeriodo").textContent =
+            `Desde el ${fmtDiaAnio.format(hace(estado.dias))}`;
+    }
+
+    // =================================================================
+    // MAPA
+    // =================================================================
+
+    // Catalogo Nacional de Estaciones del IDEAM (Datos Abiertos), filtrado
+    // a la zona hidrografica del Sinu. Si datos.gov.co no responde, se usa
+    // la copia local de ideam_estaciones.js.
+    const DATASET_CATALOGO = "hp9r-jxuu";
+    let catalogo = [];
+    let fuenteCatalogo = "";
+
+    // "0013077060" -> "13077060" (el mismo codigo que usan nivel y lluvia)
+    const codigoCorto = (c) => (c.length === 10 && c.startsWith("00") ? c.slice(2) : c);
+
+    async function cargarCatalogo() {
+        try {
+            const filas = await consultaSocrata(DATASET_CATALOGO, {
+                "$select": "codigo,nombre,categoria,tecnologia,estado,municipio,altitud,latitud,longitud,subzona_hidrografica",
+                "$where": "zona_hidrografica='Sinú'",
+                "$limit": "2000"
+            });
+            catalogo = filas
+                .filter((f) => f.latitud && f.longitud)
+                .map((f) => ({
+                    codigo: codigoCorto(f.codigo),
+                    nombre: f.nombre,
+                    categoria: f.categoria,
+                    tecnologia: f.tecnologia,
+                    estado: f.estado,
+                    municipio: f.municipio,
+                    subzona: f.subzona_hidrografica,
+                    altitud: f.altitud != null ? Number(f.altitud) : null,
+                    lat: Number(f.latitud),
+                    lon: Number(f.longitud)
+                }));
+            fuenteCatalogo = "Fuente: Catálogo Nacional de Estaciones del IDEAM (Datos Abiertos Colombia).";
+        } catch (e) {
+            const local = (typeof DATA_IDEAM_ESTACIONES !== "undefined" && DATA_IDEAM_ESTACIONES.features) || [];
+            catalogo = local.map((f) => ({
+                codigo: f.properties.codigo,
+                nombre: f.properties.nombre,
+                categoria: f.properties.categoria,
+                tecnologia: null,
+                estado: f.properties.activa ? "Activa" : "Suspendida",
+                municipio: null,
+                subzona: null,
+                altitud: f.properties.altitud,
+                lat: f.geometry.coordinates[1],
+                lon: f.geometry.coordinates[0]
+            }));
+            fuenteCatalogo = "No se pudo consultar el catálogo del IDEAM; se muestra la copia local.";
+        }
+        document.getElementById("fuenteCatalogo").textContent = fuenteCatalogo;
+
+        const activas = catalogo.filter((e) => e.estado === "Activa").length;
+        tile("tileEstaciones", `${activas} de ${catalogo.length}`,
+            catalogo.length ? "Catálogo Nacional de Estaciones del IDEAM" : "Sin datos del catálogo");
+    }
+
+    const marcadoresPunto = new Map();
+    const marcadoresEstacion = new Map();
+    let mapa = null;
+
+    function iniciarMapa() {
+        if (typeof L === "undefined") return;
+        mapa = L.map("mapa", { scrollWheelZoom: false, zoomControl: true });
+        L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}", {
+            attribution: "Tiles &copy; Esri",
+            maxNativeZoom: 18
+        }).addTo(mapa);
+
+        let limites = null;
+        if (typeof DATA_CUENCA !== "undefined") {
+            const cuenca = L.geoJSON(DATA_CUENCA, {
+                style: { color: "#d7aa00", weight: 2, fillColor: "#f5c400", fillOpacity: 0.06 },
+                interactive: false
+            }).addTo(mapa);
+            limites = cuenca.getBounds();
+        }
+        mapa.fitBounds(limites || [[7.3, -76.6], [9.5, -75.4]], { padding: [10, 10] });
+
+        // Este mapa es solo de lo observado (IDEAM): los puntos de la
+        // simulacion GloFAS se eligen en su propia seccion.
+        const leyenda = L.control({ position: "bottomleft" });
+        leyenda.onAdd = () => {
+            const div = L.DomUtil.create("div", "leyenda-mapa");
+            div.innerHTML =
+                '<div><i style="background:#e0a800"></i>Estación IDEAM con datos recientes</div>' +
+                '<div><i style="background:#9aa0a6"></i>Otras estaciones del catálogo IDEAM</div>';
+            return div;
+        };
+        leyenda.addTo(mapa);
+        resaltarMapa();
+    }
+
+    // Se llama cuando llega el catalogo (es asincrono)
+    function pintarEstacionesMapa() {
+        if (!mapa) return;
+        const porCodigo = new Map(catalogo.map((e) => [e.codigo, e]));
+
+        // Catalogo completo, tenue, como contexto
+        catalogo.forEach((e) => {
+            if (codigosVivos.has(e.codigo)) return;
+            L.circleMarker([e.lat, e.lon], {
+                radius: 3, color: "#fff", weight: 1, fillColor: "#9aa0a6", fillOpacity: 0.8
+            }).bindTooltip(`${e.nombre} · ${e.estado || ""}`, { direction: "top" }).addTo(mapa);
+        });
+
+        // Estaciones en vivo
+        ESTACIONES_VIVAS.forEach((v) => {
+            const e = porCodigo.get(v.codigo);
+            if (!e) return;
+            const m = L.circleMarker([e.lat, e.lon], {
+                radius: 7, color: "#fff", weight: 2, fillColor: "#e0a800", fillOpacity: 1
+            }).bindTooltip(`${v.nombre} · clic para ver sus datos`, { direction: "top" }).addTo(mapa);
+            m.on("click", () => {
+                elegirEstacion(v.codigo);
+                document.getElementById("chipsEstaciones").scrollIntoView({ behavior: "smooth", block: "center" });
+            });
+            marcadoresEstacion.set(v.codigo, m);
+        });
+
+        marcadoresPunto.forEach((m) => m.bringToFront());
+        resaltarMapa();
+    }
+
+    function resaltarMapa() {
+        marcadoresPunto.forEach((m, id) => m.setStyle({
+            radius: id === estado.punto ? 11 : 8,
+            color: id === estado.punto ? "#26292d" : "#fff",
+            weight: id === estado.punto ? 3 : 2
+        }));
+        marcadoresEstacion.forEach((m, id) => m.setStyle({
+            radius: id === estado.estacion ? 10 : 7,
+            color: id === estado.estacion ? "#26292d" : "#fff",
+            weight: id === estado.estacion ? 3 : 2
+        }));
+    }
+
+    // =================================================================
+    // DIRECTORIO
+    // =================================================================
+
+    const codigosVivos = new Set(ESTACIONES_VIVAS.map((e) => e.codigo));
+
+    function llenarSelect(id, valores) {
+        const sel = document.getElementById(id);
+        [...new Set(valores.filter(Boolean))]
+            .sort((a, b) => a.localeCompare(b, "es"))
+            .forEach((c) => { const o = el("option", null, c); o.value = c; sel.appendChild(o); });
+    }
+
+    function iniciarDirectorio() {
+        llenarSelect("filtroCategoria", catalogo.map((e) => e.categoria));
+        llenarSelect("filtroSubzona", catalogo.map((e) => e.subzona));
+        ["buscarEstacion", "filtroCategoria", "filtroSubzona", "soloActivas"].forEach((id) =>
+            document.getElementById(id).addEventListener("input", pintarDirectorio));
+        pintarDirectorio();
+    }
+
+    function claseEstado(estado) {
+        if (estado === "Activa") return "estado activa";
+        if (estado === "En Mantenimiento") return "estado mantenimiento";
+        return "estado";
+    }
+
+    function pintarDirectorio() {
+        const texto = document.getElementById("buscarEstacion").value.trim().toLowerCase();
+        const cat = document.getElementById("filtroCategoria").value;
+        const sub = document.getElementById("filtroSubzona").value;
+        const soloActivas = document.getElementById("soloActivas").checked;
+
+        const filas = catalogo
+            .filter((p) => !texto || p.nombre.toLowerCase().includes(texto) || p.codigo.includes(texto)
+                || (p.municipio || "").toLowerCase().includes(texto))
+            .filter((p) => !cat || p.categoria === cat)
+            .filter((p) => !sub || p.subzona === sub)
+            .filter((p) => !soloActivas || p.estado === "Activa")
+            .sort((a, b) => (codigosVivos.has(b.codigo) - codigosVivos.has(a.codigo)) || a.nombre.localeCompare(b.nombre, "es"));
+
+        const tbody = document.getElementById("tbodyEstaciones");
+        tbody.replaceChildren();
+        filas.forEach((p) => {
+            const tr = el("tr");
+            tr.appendChild(el("td", null, p.codigo));
+            tr.appendChild(el("td", null, p.nombre.replace(/\s*\[\d+\]\s*$/, "")));
+            tr.appendChild(el("td", null, p.categoria || "—"));
+            tr.appendChild(el("td", null, p.tecnologia || "—"));
+            tr.appendChild(el("td", null, p.subzona || "—"));
+            tr.appendChild(el("td", null, p.municipio || "—"));
+            tr.appendChild(el("td", "num", p.altitud != null && !Number.isNaN(p.altitud) ? fmtNum(p.altitud) : "—"));
+            tr.appendChild(el("td", null)).appendChild(el("span", claseEstado(p.estado), p.estado || "—"));
+            const tdAccion = el("td");
+            if (codigosVivos.has(p.codigo)) {
+                const b = el("button", "btn-vivo", "Ver datos");
+                b.type = "button";
+                b.addEventListener("click", () => {
+                    elegirEstacion(p.codigo);
+                    document.getElementById("chipsEstaciones").scrollIntoView({ behavior: "smooth", block: "center" });
+                });
+                tdAccion.appendChild(b);
+            }
+            tr.appendChild(tdAccion);
+            tbody.appendChild(tr);
+        });
+        document.getElementById("conteoEstaciones").textContent =
+            `${filas.length} de ${catalogo.length} estaciones`;
+    }
+
+    // =================================================================
+    // ARRANQUE
+    // =================================================================
+
+    actualizarNotaPeriodo();
+    iniciarMapa();
+    cargarCatalogo().then(() => {
+        pintarEstacionesMapa();
+        iniciarDirectorio();
+    });
+    elegirPunto(estado.punto);
+    elegirEstacion(estado.estacion);
+    cargarUrra();
+    cargarResumenNivel();
 })();
 </script>
 
