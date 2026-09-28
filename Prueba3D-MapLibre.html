@@ -48,6 +48,16 @@
         font: 700 21px/1.1 "Source Sans 3", sans-serif;
         color: #26292d;
     }
+    /* El header esta centrado, asi que el boton va fijo a la derecha */
+    header .btn-inicio {
+        position: absolute; right: 24px; top: 50%; transform: translateY(-50%);
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 9px 16px; border-radius: 8px;
+        background: #f5c400; border: 1px solid #d7aa00;
+        color: #26292d; font-size: 13px; font-weight: 700;
+        text-decoration: none;
+    }
+    header .btn-inicio:hover { background: #ffd633; }
     /* Fondo de estrellas: solo se alcanza a ver cuando el globo esta
        alejado (zoom bajo), porque a nivel ciudad el mapa tapa todo el
        contenedor. Es CSS puro (sin imagen externa) -- puntitos blancos
@@ -162,6 +172,7 @@
         <small>Universidad de los Andes</small>
         <strong>Lab SinergIA</strong>
     </span>
+    <a class="btn-inicio" href="Index.html" aria-label="Ir al inicio">⌂ Inicio</a>
 </header>
 
 <div id="map"></div>

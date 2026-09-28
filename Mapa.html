@@ -2291,20 +2291,6 @@
                     GeoJSON, KML, GPX, CSV, Shapefile y GeoTIFF se procesan en el navegador.
                     Las carpetas File Geodatabase (.gdb) se convierten mediante el servidor local incluido.
                 </p>
-
-                <div class="gdb-tools">
-                    <button class="gdb-btn" type="button" id="btnCapaLandsat">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                            <path d="M4 4h16v16H4Z" /><path d="m4 15 4-4 4 4 4-6 4 4" />
-                        </svg>
-                        Landsat 1985 (resolución web)
-                    </button>
-                </div>
-                <p class="gdb-server-state" id="landsatEstado">
-                    Capa de referencia (88MB, resolución reducida para
-                    caber en el hosting gratis) — se carga por URL, no por
-                    arrastre; necesita que el sitio esté servido (no doble clic).
-                </p>
             </div>
         </section>
 
@@ -5470,71 +5456,6 @@
                     showToast(`${file.name}: ${mensaje}`, esCompresionNoSoportada ? 9000 : undefined);
                 }
             }
-
-            /* ==================================================
-               CAPAS DE REFERENCIA (GeoTIFF por URL, no por arrastre)
-               --------------------------------------------------
-               Para archivos pesados que vienen con el sitio (no los
-               sube cada usuario). Se cargan con parseGeoraster(url):
-               si el .tif es un COG y el sitio esta servido por http(s)
-               (Vercel, GitHub Pages...), el navegador solo pide los
-               pedazos/resolucion que necesita en cada zoom, en vez de
-               bajar el archivo completo. Abriendo el HTML con doble
-               clic (file://) esto no funciona -- fetch() de un archivo
-               local esta bloqueado por Chrome sin importar el tamano.
-               ================================================== */
-
-            let capaLandsat = null;
-
-            async function alternarCapaLandsat() {
-                const boton = document.getElementById("btnCapaLandsat");
-                const estado = document.getElementById("landsatEstado");
-                const textoOriginal = estado.textContent;
-
-                if (capaLandsat) {
-                    map.removeLayer(capaLandsat);
-                    layersControl.removeLayer(capaLandsat);
-                    capaLandsat = null;
-                    boton.classList.remove("gdb-btn-activo");
-                    estado.textContent = textoOriginal;
-                    return;
-                }
-
-                boton.disabled = true;
-                estado.textContent = "Cargando Landsat 1985 (puede tardar unos segundos)…";
-
-                try {
-                    // URL absoluta: georaster/geotiff.js hace las peticiones desde
-                    // un Web Worker, y ahi una ruta relativa no se puede resolver
-                    // contra la pagina (por eso fallaba con "Failed to parse URL").
-                    const urlLandsat = new URL("capas_web/img_1985_Landsat_web.tif?v=2", window.location.href).href;
-                    const georaster = await parseGeoraster(urlLandsat);
-                    capaLandsat = new GeoRasterLayer({
-                        georaster,
-                        pane: "uploadedDataPane",
-                        resolution: 128
-                        // 6 bandas -> se pinta como RGB tal cual, sin rampa de color
-                    });
-                    capaLandsat.addTo(map);
-                    layersControl.addOverlay(capaLandsat, "Landsat 1985 (resolución web)");
-
-                    map.invalidateSize(true);
-                    map.fitBounds(capaLandsat.getBounds(), { padding: [45, 45] });
-
-                    boton.classList.add("gdb-btn-activo");
-                    estado.textContent = "Landsat 1985 cargado.";
-                    showToast("Landsat 1985: capa de referencia cargada.");
-                } catch (error) {
-                    console.error("Error al cargar la capa de referencia Landsat:", error);
-                    estado.textContent =
-                        "No se pudo cargar (revisa que el sitio esté servido por http, no abierto con doble clic). " +
-                        textoOriginal;
-                } finally {
-                    boton.disabled = false;
-                }
-            }
-
-            document.getElementById("btnCapaLandsat").addEventListener("click", alternarCapaLandsat);
 
             /* ==================================================
                FILE GEODATABASE (.GDB)
