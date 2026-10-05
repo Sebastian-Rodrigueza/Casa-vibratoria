@@ -240,7 +240,9 @@
     ];
     const GRUPO_OTRO = { id: "otro", nombre: "Otras", color: "#8a8e93", visible: false };
 
-    const CAJA_BOGOTA = [-74.3080, 4.3820, -74.0100, 4.8335];
+    // Zona donde se pide la imagen satelital: Bogota, Soacha, la Sabana y los
+    // cerros orientales (solo se descargan las partes que se ven en pantalla)
+    const CAJA_BOGOTA = [-74.5500, 4.1500, -73.7500, 5.0500];
 
     // Dibujar a 1x en pantallas de alta resolucion (rendimiento del 3D)
     Object.defineProperty(window, "devicePixelRatio", { get: () => 1 });

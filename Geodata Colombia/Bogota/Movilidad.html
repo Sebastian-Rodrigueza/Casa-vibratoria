@@ -366,7 +366,7 @@
         <div class="cuerpo">
             <label><input type="checkbox" id="chkSatelital" checked> Imagen satelital</label>
             <label><input type="checkbox" id="chkEdificios" checked> Edificios 3D</label>
-            <label><input type="checkbox" id="chkTerreno"> Terreno 3D (pesado)</label>
+            <label><input type="checkbox" id="chkTerreno" autocomplete="off"> Terreno 3D (pesado)</label>
             <button type="button" id="btnGirar" style="margin-top:8px"></button>
         </div>
     </details>
@@ -436,7 +436,9 @@
     const CABINA_VELOCIDAD = 5;    // m/s (aprox. 18 km/h)
 
     // Caja de Bogota (para limitar la imagen satelital)
-    const CAJA_BOGOTA = [-74.3080, 4.3820, -74.0100, 4.8335];
+    // Zona donde se pide la imagen satelital: Bogota, Soacha, la Sabana y los
+    // cerros orientales (solo se descargan las partes que se ven en pantalla)
+    const CAJA_BOGOTA = [-74.5500, 4.1500, -73.7500, 5.0500];
 
     // En pantallas de alta resolucion dibujar a 1x es lo que mas ayuda
     // al rendimiento del 3D (igual que en Prueba3D-MapLibre.html)
@@ -1341,7 +1343,7 @@
         const rumboInicial = rumbo(puntoEnLinea(tramo.linea, 0), puntoEnLinea(tramo.linea, 100));
         const pedido = {};
         viajeCablePendiente = pedido;
-        await ponerTerreno(true);
+        if (map.getTerrain()) await esperarRelieve(map.getCenter().toArray());
         if (viajeCablePendiente !== pedido) return;
 
         // 1) Vista general del cable para que cargue el relieve de toda la zona
@@ -1875,14 +1877,23 @@
         [datos.l1Trazado, datos.l2Trazado].forEach((g) => {
             if (g) lineaPrincipal(g).forEach((p) => caja.extend(p));
         });
-        if (!caja.isEmpty()) map.fitBounds(caja, { padding: { top: 60, bottom: 60, left: 340, right: 60 }, pitch: 50, bearing: 35, duration: 2500 });
+        if (!caja.isEmpty()) verCerca(caja, 50, 35);
     }
 
     function verRedTM() {
-        if (troncalesRed.length) map.fitBounds(cajaDe(troncalesRed), { padding: { top: 60, bottom: 60, left: 340, right: 60 }, pitch: 45, bearing: 20, duration: 2500 });
+        if (troncalesRed.length) verCerca(cajaDe(troncalesRed), 45, 20);
+    }
+
+    // Vista de la red un poco mas cerca que "todo en pantalla" (ACERCAR niveles de zoom mas)
+    const ACERCAR = 0.9;
+    function verCerca(caja, pitch, bearing) {
+        const cam = map.cameraForBounds(caja, { padding: { top: 60, bottom: 60, left: 340, right: 60 }, bearing });
+        if (!cam) return;
+        map.flyTo({ center: cam.center, zoom: cam.zoom + ACERCAR, pitch, bearing, duration: 2500 });
     }
 
     const chkTerreno = document.getElementById("chkTerreno");
+    chkTerreno.checked = false; // el terreno 3D empieza apagado; se prende solo desde la casilla
     // Se cumple cuando hay elevacion real en el punto (o tras maxMs, por si acaso)
     function esperarRelieve(punto, maxMs = 8000) {
         const inicio = performance.now();
@@ -2025,7 +2036,8 @@
             if (!cajaCable) return;
             if (sistemaActivo !== "tm") activarSistema("tm", false);
             detenerTodo();
-            await ponerTerreno(true); // las montanas de Ciudad Bolivar se notan con el terreno
+            // el terreno 3D solo se usa si el usuario lo prendio en "Mapa base y camara"
+            if (map.getTerrain()) await esperarRelieve(map.getCenter().toArray());
             const c = cajaCable.getCenter();
             map.flyTo({ center: [c.lng, c.lat], zoom: 15.6, pitch: 68, bearing: 140, duration: 3500, curve: 1.4 });
             map.once("moveend", () => esperarCable());
