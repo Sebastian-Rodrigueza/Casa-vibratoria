@@ -1,0 +1,2078 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Movilidad de Bogotá 3D | Universidad de los Andes</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Sans+3:wght@500;600;700&display=swap" rel="stylesheet">
+
+<link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css" rel="stylesheet">
+
+<style>
+    html, body { margin: 0; height: 100%; font-family: "Inter", sans-serif; color: #34383d; }
+
+    header {
+        height: 76px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 0 24px;
+        background: rgba(255,255,255,.97);
+        border-bottom: 1px solid #e5e5de;
+        box-shadow: 0 3px 15px rgba(34,36,39,.06);
+        position: relative;
+        z-index: 10;
+    }
+    header .logo-box {
+        height: 44px;
+        display: flex;
+        align-items: center;
+        padding-right: 18px;
+        border-right: 1px solid #e5e5de;
+    }
+    header .logo-box img { max-height: 40px; width: auto; display: block; }
+    header .brand-copy small {
+        display: block;
+        margin-bottom: 2px;
+        color: #898d91;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .07em;
+        text-transform: uppercase;
+    }
+    header .brand-copy strong {
+        display: block;
+        font: 700 21px/1.1 "Source Sans 3", sans-serif;
+        color: #26292d;
+    }
+    header nav { margin-left: auto; display: flex; gap: 8px; }
+    header nav a {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 9px 16px; border-radius: 8px;
+        color: #26292d; font-size: 13px; font-weight: 700;
+        text-decoration: none; border: 1px solid #e5e5de; background: #fff;
+    }
+    header nav a.primario { background: #f5c400; border-color: #d7aa00; }
+    header nav a:hover { background: #fff3ad; }
+
+    #map { position: absolute; top: 76px; left: 0; right: 0; bottom: 0; background: #0d1117; }
+
+    /* Panel izquierdo: capas y recorridos */
+    .panel {
+        position: absolute;
+        top: 90px;
+        left: 12px;
+        z-index: 5;
+        width: 270px;
+        max-height: calc(100% - 120px);
+        overflow-y: auto;
+        background: rgba(255,255,255,.97);
+        border-radius: 14px;
+        box-shadow: 0 6px 20px rgba(0,0,0,.22);
+        padding: 14px;
+        font-size: 13px;
+    }
+    .panel h2 { margin: 0 0 2px; font: 700 19px/1.15 "Source Sans 3", sans-serif; color: #26292d; }
+    .panel .sub { margin: 0 0 12px; color: #6b6f74; font-size: 12px; }
+    .panel h3 {
+        margin: 14px 0 6px; padding-top: 12px; border-top: 1px solid #ecece6;
+        font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #8a8e93;
+    }
+    .panel label { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; }
+    .muestra { width: 14px; height: 14px; border-radius: 3px; flex: none; }
+    .muestra.linea { height: 4px; border-radius: 2px; }
+    .panel button {
+        display: block; width: 100%; text-align: left;
+        padding: 9px 11px; margin-bottom: 6px;
+        background: #f7f7f3; border: 1px solid #e5e5de; border-radius: 9px;
+        font: 600 12.5px "Inter", sans-serif; color: #26292d; cursor: pointer;
+    }
+    .panel button:hover { background: #fff3ad; }
+    .panel button svg, header nav a svg { width: 16px; height: 16px; flex: none; stroke-width: 2; }
+    .panel > button, .cuerpo > button { display: flex; align-items: center; gap: 9px; }
+    .panel button.activo { background: #f5c400; border-color: #d7aa00; }
+    .panel button:disabled { opacity: .6; cursor: default; }
+    .estado { margin-top: 10px; font-size: 11.5px; color: #6b6f74; }
+    .estado.error { color: #b42318; }
+    .nota { margin-top: 10px; font-size: 11px; line-height: 1.5; color: #8a8e93; }
+
+    /* Lista de estaciones */
+    .lista-estaciones button { padding: 6px 10px; margin-bottom: 4px; font-weight: 500; }
+    .lista-estaciones .num {
+        display: inline-block; min-width: 22px; margin-right: 6px;
+        font-weight: 800; color: #b01e17;
+    }
+
+    .panel label .cuenta { margin-left: auto; color: #8a8e93; font-size: 11.5px; }
+    .muestra.punto { border-radius: 50%; }
+    .muestra.linea { height: 4px; border-radius: 2px; }
+    /* Leyenda de troncales: clic para ir a cada una */
+    .troncales { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 4px 0 4px 22px; }
+    .troncales button {
+        display: flex; align-items: center; gap: 6px;
+        padding: 5px 7px; margin: 0;
+        font-weight: 500; font-size: 11.5px;
+    }
+    .troncales .letra {
+        width: 18px; height: 18px; flex: none; border-radius: 4px;
+        display: grid; place-items: center;
+        color: #fff; font-weight: 800; font-size: 11px;
+    }
+
+    /* Buscador de estaciones */
+    .buscador input {
+        width: 100%; box-sizing: border-box;
+        padding: 9px 11px; border: 1px solid #d9d9d2; border-radius: 9px;
+        font: 500 12.5px "Inter", sans-serif;
+    }
+    .resultados button { padding: 6px 10px; margin: 4px 0 0; font-weight: 500; }
+    .resultados small { color: #8a8e93; margin-left: 4px; }
+
+    /* Secciones desplegables: un sistema a la vez */
+    details.sistema, details.extra {
+        margin-top: 10px;
+        border: 1px solid #e5e5de;
+        border-radius: 12px;
+        background: #fff;
+        overflow: hidden;
+    }
+    details.sistema > summary, details.extra > summary {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 11px 12px;
+        cursor: pointer;
+        list-style: none;
+        font-weight: 700;
+        font-size: 13.5px;
+        color: #26292d;
+        background: #f7f7f3;
+    }
+    details.sistema > summary::-webkit-details-marker, details.extra > summary::-webkit-details-marker { display: none; }
+    details.sistema > summary::after, details.extra > summary::after {
+        content: "";
+        margin-left: auto;
+        width: 7px;
+        height: 7px;
+        border-right: 2px solid #8a8e93;
+        border-bottom: 2px solid #8a8e93;
+        transform: rotate(45deg) translateY(-2px);
+        transition: transform .2s;
+    }
+    details[open] > summary::after { transform: rotate(225deg) translateY(-2px); }
+    details.sistema[open] > summary { background: #fff3ad; border-bottom: 1px solid #ecd77a; }
+    details.sistema > summary small { display: block; font-weight: 500; font-size: 11px; color: #6b6f74; }
+    details.sistema > summary .marca {
+        width: 30px; height: 30px; flex: none; border-radius: 8px;
+        display: grid; place-items: center;
+        color: #fff; font-weight: 800; font-size: 14px;
+    }
+    .cuerpo { padding: 10px 12px 12px; }
+    .cuerpo h3:first-child { margin-top: 4px; padding-top: 0; border-top: 0; }
+    details.extra > summary { font-size: 12.5px; }
+
+    /* Sublistas plegables (leyenda de troncales, estaciones del Metro) */
+    details.sub > summary {
+        cursor: pointer;
+        margin: 4px 0 6px 22px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #6b6f74;
+    }
+
+    .panel select.selector {
+        width: 100%;
+        margin: 2px 0 6px;
+        padding: 8px 10px;
+        border: 1px solid #d9d9d2;
+        border-radius: 9px;
+        background: #fff;
+        font: 500 12.5px "Inter", sans-serif;
+        color: #26292d;
+    }
+
+    .panel label.velocidad { margin: 2px 0 10px; font-weight: 600; font-size: 12px; }
+    .panel label.velocidad input { flex: 1; accent-color: #d7aa00; }
+    .panel label.velocidad span { min-width: 26px; text-align: right; font-weight: 800; }
+
+    /* Indicador durante el recorrido: proxima estacion */
+    .hud {
+        position: absolute;
+        bottom: 34px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 6;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 10px 18px;
+        background: rgba(20, 23, 27, .86);
+        color: #fff;
+        border-radius: 999px;
+        box-shadow: 0 6px 20px rgba(0,0,0,.3);
+        font-size: 13px;
+        white-space: nowrap;
+    }
+    .hud[hidden] { display: none; }
+    .hud small { color: #ffe271; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .hud strong { font: 700 17px/1 "Source Sans 3", sans-serif; }
+    .hud .distancia { color: #c9ccd1; }
+
+    .maplibregl-popup-content { font-family: "Inter", sans-serif; font-size: 13px; }
+    .maplibregl-popup-content b { display: block; margin-bottom: 3px; font-size: 14px; }
+
+    @media (max-width: 720px) {
+        header .brand-copy small, header nav a.secundario { display: none; }
+        .panel { width: calc(100% - 48px); max-height: 40%; top: auto; bottom: 12px; }
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <span class="logo-box">
+        <img src="../../Imagenes/logo-uniandes.png" alt="Universidad de los Andes">
+    </span>
+    <span class="brand-copy">
+        <small>Geodata de Bogotá</small>
+        <strong>Metro, TransMilenio, SITP y Cable</strong>
+    </span>
+    <nav>
+        <a class="secundario" href="Index.html"><i data-lucide="arrow-left"></i> Volver</a>
+        <a class="primario" href="../../Index.html" aria-label="Ir al inicio"><i data-lucide="house"></i> Inicio</a>
+    </nav>
+</header>
+
+<div id="map"></div>
+
+<div class="hud" id="hud" hidden>
+    <small>Próxima estación</small>
+    <strong id="hudEstacion">—</strong>
+    <span class="distancia" id="hudDistancia"></span>
+</div>
+
+<aside class="panel">
+    <h2>Movilidad de Bogotá</h2>
+    <p class="sub">Elige un sistema para verlo en el mapa.</p>
+
+    <div class="buscador">
+        <input type="search" id="buscarEstacion" placeholder="Buscar estación (Metro o TransMilenio)…" autocomplete="off">
+        <div class="resultados" id="resultados"></div>
+    </div>
+
+    <!-- ========== METRO ========== -->
+    <details class="sistema" data-sistema="metro" open>
+        <summary>
+            <span class="marca" style="background:#e1251b">M</span>
+            <span>Metro de Bogotá<small>Línea 1 elevada y Línea 2</small></span>
+        </summary>
+        <div class="cuerpo">
+            <button type="button" id="btnDron"></button>
+            <button type="button" id="btnTren"></button>
+            <label class="velocidad">
+                Velocidad
+                <input type="range" id="rngVelocidad" min="0" max="3" step="1" value="1">
+                <span id="txtVelocidad">x1</span>
+            </label>
+            <button type="button" id="btnGeneral"></button>
+
+            <h3>Línea 1</h3>
+            <label><input type="checkbox" data-capas="l1-viaducto,l1-pilas" checked>
+                <span class="muestra" style="background:#d9d4c7"></span> Viaducto 3D</label>
+            <label><input type="checkbox" data-capas="l1-estaciones-3d,l1-estaciones-texto" checked>
+                <span class="muestra" style="background:#e1251b"></span> Estaciones (16)</label>
+            <label><input type="checkbox" data-capas="l1-trazado" checked>
+                <span class="muestra linea" style="background:#e1251b"></span> Trazado</label>
+            <label><input type="checkbox" data-capas="l1-limite">
+                <span class="muestra" style="background:transparent;border:2px dashed #f5c400"></span> Límite de intervención</label>
+
+            <h3>Línea 2</h3>
+            <label><input type="checkbox" data-capas="l2-trazado" checked>
+                <span class="muestra linea" style="background:#2f6fb0"></span> Trazado (subterráneo)</label>
+            <label><input type="checkbox" data-capas="l2-estaciones,l2-estaciones-texto" checked>
+                <span class="muestra" style="background:#2f6fb0"></span> Estaciones (11)</label>
+
+            <details class="sub">
+                <summary>Ir a una estación de la Línea 1</summary>
+                <div class="lista-estaciones" id="listaEstaciones"></div>
+            </details>
+        </div>
+    </details>
+
+    <!-- ========== TRANSMILENIO, SITP Y CABLE ========== -->
+    <details class="sistema" data-sistema="tm">
+        <summary>
+            <span class="marca" style="background:#c8102e">T</span>
+            <span>TransMilenio, SITP y Cable<small>Troncales, rutas zonales y TransMiCable</small></span>
+        </summary>
+        <div class="cuerpo">
+            <button type="button" id="btnRedTM"></button>
+            <button type="button" id="btnCable"></button>
+            <button type="button" id="btnViajeCable"></button>
+
+            <h3>Recorrido en bus</h3>
+            <select id="selRuta" class="selector" disabled aria-label="Ruta troncal">
+                <option>Cargando rutas…</option>
+            </select>
+            <label class="velocidad">
+                Velocidad
+                <input type="range" id="rngVelocidadBus" min="0" max="3" step="1" value="1">
+                <span id="txtVelocidadBus">x1</span>
+            </label>
+            <button type="button" id="btnViajeBus"></button>
+
+            <h3>TransMilenio</h3>
+            <label><input type="checkbox" data-capas="troncales,troncales-borde" checked>
+                <span class="muestra linea" style="background:linear-gradient(90deg,#1f6fd1,#2e9d48,#f08c00,#d62828)"></span>
+                Troncales <span class="cuenta" id="nTroncales"></span></label>
+            <details class="sub">
+                <summary>Ir a una troncal</summary>
+                <div class="troncales" id="leyendaTroncales"></div>
+            </details>
+            <label><input type="checkbox" data-capas="estaciones,estaciones-texto" checked>
+                <span class="muestra punto" style="background:#fff;border:3px solid #c8102e"></span>
+                Estaciones <span class="cuenta" id="nEstaciones"></span></label>
+            <label><input type="checkbox" data-capas="patios,patios-borde">
+                <span class="muestra" style="background:#9aa3ad"></span>
+                Patios y portales <span class="cuenta" id="nPatios"></span></label>
+
+            <h3>SITP zonal</h3>
+            <label><input type="checkbox" id="chkRutas" data-capas="rutas-zonales">
+                <span class="muestra linea" style="background:#2f6fb0"></span>
+                Rutas zonales <span class="cuenta">698</span></label>
+            <label><input type="checkbox" id="chkParaderos" data-capas="paraderos">
+                <span class="muestra punto" style="background:#2f6fb0"></span>
+                Paraderos <span class="cuenta" id="nParaderos">7.358</span></label>
+
+            <h3>TransMiCable</h3>
+            <label><input type="checkbox" data-capas="cable,cabinas" checked>
+                <span class="muestra linea" style="background:#1d2b36"></span>
+                Cable y cabinas</label>
+            <label><input type="checkbox" data-capas="pilonas" checked>
+                <span class="muestra" style="background:#8a96a3"></span>
+                Pilonas <span class="cuenta" id="nPilonas"></span></label>
+            <label><input type="checkbox" data-capas="estaciones-cable,estaciones-cable-texto" checked>
+                <span class="muestra" style="background:#f08c00"></span>
+                Estaciones <span class="cuenta" id="nEstCable"></span></label>
+        </div>
+    </details>
+
+    <!-- ========== MAPA BASE ========== -->
+    <details class="extra">
+        <summary>Mapa base y cámara</summary>
+        <div class="cuerpo">
+            <label><input type="checkbox" id="chkSatelital" checked> Imagen satelital</label>
+            <label><input type="checkbox" id="chkEdificios" checked> Edificios 3D</label>
+            <label><input type="checkbox" id="chkTerreno"> Terreno 3D (pesado)</label>
+            <button type="button" id="btnGirar" style="margin-top:8px"></button>
+        </div>
+    </details>
+
+    <div class="estado" id="estado">Cargando datos…</div>
+    <p class="nota">
+        Fuentes: Empresa Metro de Bogotá (servicio de Catastro Bogotá) y
+        TransMilenio S.A., consultados en vivo. El tren, las cabinas, las
+        pilas, y las alturas del viaducto, las estaciones elevadas y el
+        cable son aproximados, para visualización.
+    </p>
+</aside>
+
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@1.52.0/dist/umd/lucide.min.js"></script>
+<script>
+    // ---------- Configuracion ----------
+    const SERVICIO_METRO =
+        "https://serviciosgis.catastrobogota.gov.co/arcgis/rest/services/movilidad/metrobogota/MapServer";
+
+    // id de cada capa dentro del servicio
+    const CAPAS_SERVICIO = {
+        l1Estaciones: 0,
+        l1Trazado: 1,
+        l1Viaducto: 2,
+        l1Limite: 3,
+        l2Estaciones: 4,
+        l2Trazado: 5
+    };
+
+    // Alturas aproximadas (metros) solo para dibujar el 3D
+    const VIADUCTO_BASE = 11;
+    const VIADUCTO_TOPE = 14;
+    const ESTACION_BASE = 8;
+    const ESTACION_TOPE = 22;
+    const PILA_SEPARACION = 50; // una pila cada 50 m sobre el eje
+    const PILA_LADO = 3;
+
+    // ---------- TransMilenio, SITP y Cable ----------
+    const TM = "https://gis.transmilenio.gov.co/arcgis/rest/services";
+    const SERVICIOS = {
+        troncales: TM + "/Troncal/consulta_trazados_troncales/MapServer/0",
+        estaciones: TM + "/Troncal/consulta_estaciones_troncales/MapServer/0",
+        patios: TM + "/Troncal/consulta_patios_troncales/MapServer/0",
+        paraderos: TM + "/Zonal/consulta_paraderos_zonales/MapServer/0",
+        rutasZonales: TM + "/Zonal/consulta_rutas_zonales/MapServer",
+        cableEstaciones: TM + "/ConsultaSubgerenciaPlanificacionSITP/Consulta_Planificacion_SITP/MapServer/11",
+        rutasTroncales: TM + "/Troncal/consulta_rutas_troncales/MapServer/0",
+        cablePilonas: TM + "/ConsultaSubgerenciaPlanificacionSITP/Consulta_Planificacion_SITP/MapServer/13",
+        cableTrazado: TM + "/ConsultaSubgerenciaPlanificacionSITP/Consulta_Planificacion_SITP/MapServer/14"
+    };
+
+    // Color por letra de troncal (paleta propia, no son los colores oficiales)
+    const COLOR_TRONCAL = {
+        A: "#1f6fd1", B: "#2e9d48", C: "#f08c00", D: "#7b3fbf", E: "#c2185b",
+        F: "#d62828", G: "#0f9fa8", H: "#8d6e3f", J: "#5c6bc0", K: "#e6b800",
+        L: "#6d8c00", M: "#b5179e", Z: "#455a64"
+    };
+
+    // Alturas aproximadas (metros) del TransMiCable, solo para dibujar
+    const PILONA_ALTO = 28;        // altura del cable en cada pilona
+    const CABLE_EN_ESTACION = 10;  // altura del cable al entrar a una estacion
+    const CABLE_SEPARACION = 4;    // los dos cables (ida y vuelta) van a +-4 m del eje
+    const CABLE_PASO = 3;          // separacion de los puntos con que se dibuja el cable
+    const CABLE_FLECHA = 0.02;     // cuanto cuelga el cable en cada vano (2 % del largo)
+    const CABINA_ESPACIO = 110;    // una cabina cada 110 m
+    const CABINA_VELOCIDAD = 5;    // m/s (aprox. 18 km/h)
+
+    // Caja de Bogota (para limitar la imagen satelital)
+    const CAJA_BOGOTA = [-74.3080, 4.3820, -74.0100, 4.8335];
+
+    // En pantallas de alta resolucion dibujar a 1x es lo que mas ayuda
+    // al rendimiento del 3D (igual que en Prueba3D-MapLibre.html)
+    Object.defineProperty(window, "devicePixelRatio", { get: () => 1 });
+
+    const estado = document.getElementById("estado");
+
+    const map = new maplibregl.Map({
+        container: "map",
+        style: "https://tiles.openfreemap.org/styles/liberty",
+        center: [-74.115, 4.628],
+        zoom: 12.3,
+        pitch: 55,
+        bearing: 35,
+        antialias: false
+    });
+
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
+    map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-right");
+
+    // ---------- Utilidades geometricas ----------
+    const M_POR_GRADO = 111320;
+
+    function distanciaM(a, b) {
+        const lat = (a[1] + b[1]) / 2 * Math.PI / 180;
+        const dx = (b[0] - a[0]) * M_POR_GRADO * Math.cos(lat);
+        const dy = (b[1] - a[1]) * M_POR_GRADO;
+        return Math.hypot(dx, dy);
+    }
+
+    function rumbo(a, b) {
+        const lat = (a[1] + b[1]) / 2 * Math.PI / 180;
+        const dx = (b[0] - a[0]) * Math.cos(lat);
+        const dy = b[1] - a[1];
+        return (Math.atan2(dx, dy) * 180 / Math.PI + 360) % 360;
+    }
+
+    // Puntos cada "paso" metros a lo largo de una linea
+    function puntosCada(coords, paso) {
+        const salida = [coords[0]];
+        let falta = paso;
+        for (let i = 1; i < coords.length; i++) {
+            let a = coords[i - 1];
+            const b = coords[i];
+            let tramo = distanciaM(a, b);
+            while (tramo >= falta) {
+                const t = falta / tramo;
+                a = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+                salida.push(a);
+                tramo = distanciaM(a, b);
+                falta = paso;
+            }
+            falta -= tramo;
+        }
+        return salida;
+    }
+
+    function cuadrado(centro, lado) {
+        const dy = lado / 2 / M_POR_GRADO;
+        const dx = lado / 2 / (M_POR_GRADO * Math.cos(centro[1] * Math.PI / 180));
+        const [x, y] = centro;
+        return [[[x - dx, y - dy], [x + dx, y - dy], [x + dx, y + dy], [x - dx, y + dy], [x - dx, y - dy]]];
+    }
+
+    function centroide(poligono) {
+        const anillo = poligono.type === "MultiPolygon" ? poligono.coordinates[0][0] : poligono.coordinates[0];
+        let x = 0, y = 0;
+        anillo.forEach((p) => { x += p[0]; y += p[1]; });
+        return [x / anillo.length, y / anillo.length];
+    }
+
+    function lineaPrincipal(geojson) {
+        const g = geojson.features[0].geometry;
+        if (g.type === "LineString") return g.coordinates;
+        // MultiLineString: se unen las partes en orden
+        return g.coordinates.flat();
+    }
+
+    // "Portal de las Américas-02" -> "Portal de las Américas"
+    function nombreEstacion(refname) {
+        return String(refname || "").replace(/-\d+$/, "").trim();
+    }
+
+    // Desplaza un punto "metros" hacia la derecha de la direccion a->b
+    function desplazar(p, a, b, metros) {
+        const kx = M_POR_GRADO * Math.cos(p[1] * Math.PI / 180);
+        const dx = (b[0] - a[0]) * kx, dy = (b[1] - a[1]) * M_POR_GRADO;
+        const largo = Math.hypot(dx, dy) || 1;
+        return [p[0] + dy / largo * metros / kx, p[1] - dx / largo * metros / M_POR_GRADO];
+    }
+
+    // Linea con distancias acumuladas, para ubicar puntos a "s" metros
+    function medirLinea(coords) {
+        const acumulado = [0];
+        for (let i = 1; i < coords.length; i++) acumulado.push(acumulado[i - 1] + distanciaM(coords[i - 1], coords[i]));
+        return { coords, acumulado, total: acumulado[acumulado.length - 1] };
+    }
+
+    function puntoEnLinea(linea, s) {
+        const { coords, acumulado, total } = linea;
+        s = Math.max(0, Math.min(total, s));
+        let lo = 0, hi = acumulado.length - 1;
+        while (hi - lo > 1) {
+            const mid = (lo + hi) >> 1;
+            if (acumulado[mid] <= s) lo = mid; else hi = mid;
+        }
+        const t = (s - acumulado[lo]) / ((acumulado[hi] - acumulado[lo]) || 1);
+        const a = coords[lo], b = coords[hi];
+        return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+    }
+
+    function cajaDe(features) {
+        const caja = new maplibregl.LngLatBounds();
+        const recorrer = (c) => typeof c[0] === "number" ? caja.extend(c) : c.forEach(recorrer);
+        features.forEach((f) => f.geometry && recorrer(f.geometry.coordinates));
+        return caja;
+    }
+
+    function texto(v) {
+        return v === null || v === undefined || v === "" ? "—" : String(v);
+    }
+
+    function quitarTildes(t) {
+        return String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+    }
+
+    // ---------- Datos en vivo ----------
+    async function pedirCapa(id) {
+        const url = `${SERVICIO_METRO}/${id}/query?where=1%3D1&outFields=*&outSR=4326&f=geojson`;
+        const respuesta = await fetch(url);
+        if (!respuesta.ok) throw new Error("HTTP " + respuesta.status);
+        const datos = await respuesta.json();
+        if (!datos.features) throw new Error("respuesta sin datos");
+        return datos;
+    }
+
+    async function cargarDatos() {
+        const nombres = Object.keys(CAPAS_SERVICIO);
+        const resultados = await Promise.allSettled(nombres.map((n) => pedirCapa(CAPAS_SERVICIO[n])));
+        const datos = {};
+        const fallidas = [];
+        resultados.forEach((r, i) => {
+            if (r.status === "fulfilled") datos[nombres[i]] = r.value;
+            else fallidas.push(nombres[i]);
+        });
+        return { datos, fallidas };
+    }
+
+    async function pedirCapaUrl(url, campos) {
+        const consulta = `${url}/query?where=1%3D1&outFields=${encodeURIComponent(campos || "*")}&outSR=4326&f=geojson`;
+        const respuesta = await fetch(consulta);
+        if (!respuesta.ok) throw new Error("HTTP " + respuesta.status);
+        const datos = await respuesta.json();
+        if (!datos.features) throw new Error("respuesta sin datos");
+        return datos;
+    }
+
+    // ---------- Capas del mapa ----------
+    function agregarCapas(d) {
+        const antesDeEdificios = map.getLayer("building-3d") ? "building-3d" : undefined;
+
+        if (d.l1Limite) {
+            map.addSource("l1-limite", { type: "geojson", data: d.l1Limite });
+            map.addLayer({
+                id: "l1-limite", type: "line", source: "l1-limite",
+                layout: { visibility: "none" },
+                paint: { "line-color": "#f5c400", "line-width": 2, "line-dasharray": [2, 2] }
+            });
+        }
+
+        if (d.l2Trazado) {
+            map.addSource("l2-trazado", { type: "geojson", data: d.l2Trazado });
+            map.addLayer({
+                id: "l2-trazado", type: "line", source: "l2-trazado",
+                layout: { "line-cap": "round" },
+                paint: { "line-color": "#2f6fb0", "line-width": 5, "line-dasharray": [1.5, 1] }
+            });
+        }
+
+        if (d.l2Estaciones) {
+            map.addSource("l2-estaciones", { type: "geojson", data: d.l2Estaciones });
+            map.addLayer({
+                id: "l2-estaciones", type: "fill", source: "l2-estaciones",
+                paint: { "fill-color": "#2f6fb0", "fill-opacity": 0.85, "fill-outline-color": "#ffffff" }
+            });
+            map.addSource("l2-estaciones-punto", {
+                type: "geojson",
+                data: {
+                    type: "FeatureCollection",
+                    features: d.l2Estaciones.features.map((f) => ({
+                        type: "Feature",
+                        properties: { texto: "L2 · Estación " + Number(f.properties.NUMERO) },
+                        geometry: { type: "Point", coordinates: centroide(f.geometry) }
+                    }))
+                }
+            });
+            map.addLayer({
+                id: "l2-estaciones-texto", type: "symbol", source: "l2-estaciones-punto",
+                minzoom: 12,
+                layout: {
+                    "text-field": ["get", "texto"],
+                    "text-font": ["Noto Sans Bold"],
+                    "text-size": 12,
+                    "text-offset": [0, 1.4]
+                },
+                paint: { "text-color": "#ffffff", "text-halo-color": "#1d4f86", "text-halo-width": 2 }
+            });
+        }
+
+        if (d.l1Trazado) {
+            map.addSource("l1-trazado", { type: "geojson", data: d.l1Trazado });
+            map.addLayer({
+                id: "l1-trazado", type: "line", source: "l1-trazado",
+                layout: { "line-cap": "round", "line-join": "round" },
+                paint: { "line-color": "#e1251b", "line-width": 3, "line-opacity": 0.9 }
+            });
+
+            // Pilas del viaducto: una cada PILA_SEPARACION metros sobre el eje
+            const eje = lineaPrincipal(d.l1Trazado);
+            const pilas = puntosCada(eje, PILA_SEPARACION).map((p) => ({
+                type: "Feature", properties: {},
+                geometry: { type: "Polygon", coordinates: cuadrado(p, PILA_LADO) }
+            }));
+            map.addSource("l1-pilas", { type: "geojson", data: { type: "FeatureCollection", features: pilas } });
+            map.addLayer({
+                id: "l1-pilas", type: "fill-extrusion", source: "l1-pilas", minzoom: 13,
+                paint: {
+                    "fill-extrusion-color": "#bdb7a8",
+                    "fill-extrusion-base": 0,
+                    "fill-extrusion-height": VIADUCTO_BASE,
+                    "fill-extrusion-opacity": 0.95
+                }
+            }, antesDeEdificios);
+        }
+
+        if (d.l1Viaducto) {
+            map.addSource("l1-viaducto", { type: "geojson", data: d.l1Viaducto });
+            map.addLayer({
+                id: "l1-viaducto", type: "fill-extrusion", source: "l1-viaducto",
+                paint: {
+                    "fill-extrusion-color": "#d9d4c7",
+                    "fill-extrusion-base": VIADUCTO_BASE,
+                    "fill-extrusion-height": VIADUCTO_TOPE,
+                    "fill-extrusion-opacity": 0.95
+                }
+            }, antesDeEdificios);
+        }
+
+        if (d.l1Estaciones) {
+            map.addSource("l1-estaciones", { type: "geojson", data: d.l1Estaciones });
+            map.addLayer({
+                id: "l1-estaciones-3d", type: "fill-extrusion", source: "l1-estaciones",
+                paint: {
+                    "fill-extrusion-color": "#e1251b",
+                    "fill-extrusion-base": ESTACION_BASE,
+                    "fill-extrusion-height": ESTACION_TOPE,
+                    "fill-extrusion-opacity": 0.9
+                }
+            }, antesDeEdificios);
+            map.addSource("l1-estaciones-punto", {
+                type: "geojson",
+                data: {
+                    type: "FeatureCollection",
+                    features: d.l1Estaciones.features.map((f) => ({
+                        type: "Feature",
+                        properties: { texto: nombreEstacion(f.properties.REFNAME) },
+                        geometry: { type: "Point", coordinates: centroide(f.geometry) }
+                    }))
+                }
+            });
+            map.addLayer({
+                id: "l1-estaciones-texto", type: "symbol", source: "l1-estaciones-punto",
+                minzoom: 11.5,
+                layout: {
+                    "text-field": ["get", "texto"],
+                    "text-font": ["Noto Sans Bold"],
+                    "text-size": 13,
+                    "text-offset": [0, -1.6]
+                },
+                paint: { "text-color": "#ffffff", "text-halo-color": "#8f1610", "text-halo-width": 2 }
+            });
+        }
+    }
+
+    // ---------- Popups ----------
+    function activarPopups() {
+        const popup = (capa, html) => {
+            if (!map.getLayer(capa)) return;
+            map.on("click", capa, (e) => {
+                new maplibregl.Popup().setLngLat(e.lngLat).setHTML(html(e.features[0].properties)).addTo(map);
+            });
+            map.on("mouseenter", capa, () => map.getCanvas().style.cursor = "pointer");
+            map.on("mouseleave", capa, () => map.getCanvas().style.cursor = "");
+        };
+
+        popup("l1-estaciones-3d", (p) =>
+            `<b>${nombreEstacion(p.REFNAME)}</b>Línea 1 · Estación ${Number(p.NUMERO)} · elevada`);
+        popup("l2-estaciones", (p) =>
+            `<b>Línea 2 · Estación ${Number(p.NUMERO)}</b>Estación subterránea`);
+        popup("l1-viaducto", () =>
+            `<b>Viaducto de la Línea 1</b>Estructura elevada del Metro de Bogotá`);
+    }
+
+    // ---------- Lista de estaciones (vuelo a cada una) ----------
+    function pintarListaEstaciones(l1Estaciones, eje) {
+        const lista = document.getElementById("listaEstaciones");
+        const estaciones = l1Estaciones.features
+            .map((f) => ({ numero: Number(f.properties.NUMERO), nombre: nombreEstacion(f.properties.REFNAME), centro: centroide(f.geometry) }))
+            .sort((a, b) => a.numero - b.numero);
+
+        estaciones.forEach((est) => {
+            const boton = document.createElement("button");
+            boton.type = "button";
+            boton.innerHTML = `<span class="num">${est.numero}</span>${est.nombre}`;
+            boton.addEventListener("click", () => {
+                detenerTodo();
+                lista.querySelectorAll("button").forEach((b) => b.classList.remove("activo"));
+                boton.classList.add("activo");
+                map.flyTo({ center: est.centro, zoom: 17, pitch: 65, bearing: rumboEnEje(eje, est.centro) + 70, duration: 3500, curve: 1.4 });
+            });
+            lista.appendChild(boton);
+        });
+    }
+
+    // Rumbo de la via cerca de un punto (para mirar la estacion de lado)
+    function rumboEnEje(eje, punto) {
+        let mejor = 0, dMin = Infinity;
+        for (let i = 0; i < eje.length - 1; i += 5) {
+            const d = distanciaM(eje[i], punto);
+            if (d < dMin) { dMin = d; mejor = i; }
+        }
+        const j = Math.min(mejor + 20, eje.length - 1);
+        return rumbo(eje[mejor], eje[j]);
+    }
+
+    // ---------- TransMilenio ----------
+    function agregarTroncales(datos) {
+        datos.features.forEach((f) => {
+            const letra = String(f.properties.letra_trazado_troncal || "").trim().toUpperCase();
+            f.properties.color = COLOR_TRONCAL[letra] || "#555b62";
+            f.properties.letra = letra;
+        });
+
+        map.addSource("troncales", { type: "geojson", data: datos });
+        map.addLayer({
+            id: "troncales-borde", type: "line", source: "troncales",
+            layout: { "line-cap": "round", "line-join": "round" },
+            paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 10, 4, 15, 10] }
+        });
+        map.addLayer({
+            id: "troncales", type: "line", source: "troncales",
+            layout: { "line-cap": "round", "line-join": "round" },
+            paint: { "line-color": ["get", "color"], "line-width": ["interpolate", ["linear"], ["zoom"], 10, 2.5, 15, 7] }
+        });
+
+        // Leyenda: una entrada por letra, con clic para ir a esa troncal
+        const porLetra = {};
+        datos.features.forEach((f) => {
+            const l = f.properties.letra;
+            if (!l) return;
+            (porLetra[l] = porLetra[l] || { nombre: f.properties.troncal, features: [] }).features.push(f);
+        });
+        const leyenda = document.getElementById("leyendaTroncales");
+        Object.keys(porLetra).sort().forEach((l) => {
+            const b = document.createElement("button");
+            b.type = "button";
+            b.innerHTML = `<span class="letra" style="background:${COLOR_TRONCAL[l] || "#555b62"}">${l}</span>${porLetra[l].nombre}`;
+            b.addEventListener("click", () => {
+                detenerTodo();
+                map.fitBounds(cajaDe(porLetra[l].features), { padding: { top: 80, bottom: 80, left: 340, right: 80 }, pitch: 55, duration: 2200 });
+            });
+            leyenda.appendChild(b);
+        });
+        document.getElementById("nTroncales").textContent = Object.keys(porLetra).length;
+
+        map.on("click", "troncales", (e) => {
+            const p = e.features[0].properties;
+            new maplibregl.Popup().setLngLat(e.lngLat).setHTML(
+                `<b>Troncal ${texto(p.troncal)} (${texto(p.letra)})</b>
+                 Tramo: ${texto(p.nombre_trazado_troncal)}<br>
+                 ${p.fase_trazado_troncal ? "Construcción: " + p.fase_trazado_troncal : ""}`
+            ).addTo(map);
+        });
+    }
+
+    function agregarEstaciones(datos) {
+        map.addSource("estaciones", { type: "geojson", data: datos });
+        map.addLayer({
+            id: "estaciones", type: "circle", source: "estaciones",
+            paint: {
+                "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 3, 15, 8],
+                "circle-color": "#ffffff",
+                "circle-stroke-color": "#c8102e",
+                "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 10, 1.5, 15, 3]
+            }
+        });
+        map.addLayer({
+            id: "estaciones-texto", type: "symbol", source: "estaciones", minzoom: 13.5,
+            layout: {
+                "text-field": ["get", "nombre_estacion"],
+                "text-font": ["Noto Sans Bold"],
+                "text-size": 12,
+                "text-offset": [0, 1.3],
+                "text-anchor": "top"
+            },
+            paint: { "text-color": "#ffffff", "text-halo-color": "#8f1610", "text-halo-width": 2 }
+        });
+        document.getElementById("nEstaciones").textContent = datos.features.length;
+
+        map.on("click", "estaciones", (e) => {
+            const p = e.features[0].properties;
+            const bici = Number(p.capacidad_biciestacion_estacion) > 0
+                ? `<br>Biciestación: ${p.capacidad_biciestacion_estacion} cupos` : "";
+            new maplibregl.Popup().setLngLat(e.lngLat).setHTML(
+                `<b>${texto(p.nombre_estacion)}</b>
+                 Troncal: ${texto(p.troncal_estacion)}<br>
+                 Ubicación: ${texto(p.ubicacion_estacion)}<br>
+                 Vagones: ${texto(p.numero_vagones_estacion)} · Accesos: ${texto(p.numero_accesos_estacion)}${bici}`
+            ).addTo(map);
+        });
+
+    }
+
+    function agregarPatios(datos) {
+        map.addSource("patios", { type: "geojson", data: datos });
+        map.addLayer({
+            id: "patios", type: "fill", source: "patios",
+            layout: { visibility: "none" },
+            paint: { "fill-color": "#9aa3ad", "fill-opacity": 0.55 }
+        });
+        map.addLayer({
+            id: "patios-borde", type: "line", source: "patios",
+            layout: { visibility: "none" },
+            paint: { "line-color": "#4b5560", "line-width": 1.5 }
+        });
+        document.getElementById("nPatios").textContent = datos.features.length;
+
+        map.on("click", "patios", (e) => {
+            const p = e.features[0].properties;
+            new maplibregl.Popup().setLngLat(e.lngLat).setHTML(
+                `<b>${texto(p.nombre_patio_troncal)}</b>
+                 ${p.tipo_patio_troncal ? "Tipo: " + p.tipo_patio_troncal + "<br>" : ""}
+                 Dirección: ${texto(p.direccion_patio_troncal)}`
+            ).addTo(map);
+        });
+    }
+
+    // ---------- SITP zonal ----------
+    // Rutas: 698 lineas pesadas -> se piden como imagen al servidor (rapido)
+    function agregarRutasZonales() {
+        map.addSource("rutas-zonales", {
+            type: "raster",
+            tiles: [SERVICIOS.rutasZonales + "/export?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=256,256&format=png32&transparent=true&f=image"],
+            tileSize: 256,
+            attribution: "TransMilenio S.A."
+        });
+        map.addLayer({
+            id: "rutas-zonales", type: "raster", source: "rutas-zonales",
+            layout: { visibility: "none" },
+            paint: { "raster-opacity": 0.85 }
+        }, "troncales-borde");
+
+    }
+
+    // Paraderos: 7.358 puntos -> se cargan solo cuando se prenden
+    let paraderosCargados = false;
+    async function alternarParaderos(visible) {
+        if (visible && !paraderosCargados) {
+            paraderosCargados = true;
+            estado.textContent = "Cargando paraderos del SITP…";
+            try {
+                const datos = await pedirCapaUrl(SERVICIOS.paraderos, "nombre,via,direccion_bandera,localidad,cenefa");
+                map.addSource("paraderos", { type: "geojson", data: datos });
+                map.addLayer({
+                    id: "paraderos", type: "circle", source: "paraderos", minzoom: 13,
+                    paint: {
+                        "circle-radius": ["interpolate", ["linear"], ["zoom"], 13, 2, 17, 5],
+                        "circle-color": "#2f6fb0",
+                        "circle-stroke-color": "#ffffff",
+                        "circle-stroke-width": 1
+                    }
+                }, map.getLayer("estaciones") ? "estaciones" : undefined);
+                map.on("click", "paraderos", (e) => {
+                    const p = e.features[0].properties;
+                    new maplibregl.Popup().setLngLat(e.lngLat).setHTML(
+                        `<b>${texto(p.nombre)}</b>
+                         Paradero SITP ${texto(p.cenefa)}<br>
+                         ${texto(p.direccion_bandera)} · ${texto(p.localidad)}`
+                    ).addTo(map);
+                });
+                map.on("mouseenter", "paraderos", () => map.getCanvas().style.cursor = "pointer");
+                map.on("mouseleave", "paraderos", () => map.getCanvas().style.cursor = "");
+                document.getElementById("nParaderos").textContent = datos.features.length.toLocaleString("es-CO");
+                estado.textContent = "Paraderos cargados · se ven al acercarse";
+            } catch (err) {
+                paraderosCargados = false;
+                estado.textContent = "No se pudieron cargar los paraderos.";
+                estado.classList.add("error");
+                return;
+            }
+        }
+        aplicarVisibilidad();
+    }
+
+    // ---------- TransMiCable en 3D ----------
+    // El cable va en linea recta entre sus apoyos (estaciones y pilonas),
+    // a una altura absoluta. Con el terreno 3D prendido, la altura de cada
+    // tramo de cable se calcula restando el suelo real (queryTerrainElevation),
+    // asi no queda escalonado siguiendo las laderas.
+    let tramosCable = [];   // [{ linea, soportes, origen, destino }] en orden Tunal -> Mirador
+    let cajaCable = null;
+
+    // Elevacion del terreno en un punto. Sin terreno 3D es 0; con terreno
+    // devuelve null si el relieve de esa zona aun no ha cargado (asi no se
+    // dibuja nada "a nivel del mar", 2.600 m por debajo de Bogota).
+    function suelo(p) {
+        if (!map.getTerrain()) return 0;
+        const e = map.queryTerrainElevation(p);
+        return typeof e === "number" && isFinite(e) && e > 100 ? e : null;
+    }
+
+    // Altura absoluta del cable en la posicion s de un tramo: recta entre
+    // apoyos menos una pequena curva (catenaria aproximada)
+    function alturaCable(tramo, s) {
+        const sop = tramo.soportes;
+        if (s <= sop[0].s) return sop[0].alt;
+        for (let i = 1; i < sop.length; i++) {
+            if (s <= sop[i].s) {
+                const vano = (sop[i].s - sop[i - 1].s) || 1;
+                const t = (s - sop[i - 1].s) / vano;
+                const recta = sop[i - 1].alt + (sop[i].alt - sop[i - 1].alt) * t;
+                return recta - 4 * CABLE_FLECHA * vano * t * (1 - t);
+            }
+        }
+        return sop[sop.length - 1].alt;
+    }
+
+    // Posicion (s) del vertice de la linea mas cercano a un punto
+    function sCercano(linea, p) {
+        let mejor = 0, dMin = Infinity;
+        linea.coords.forEach((c, i) => { const d = distanciaM(c, p); if (d < dMin) { dMin = d; mejor = i; } });
+        return { s: linea.acumulado[mejor], d: dMin };
+    }
+
+    // Arma los tramos en orden (Tunal -> Juan Pablo II -> Manitas -> Mirador)
+    function ordenarTramos(trazado, estacionesCable) {
+        const punto = {};
+        estacionesCable.features.forEach((f) => { punto[quitarTildes(f.properties.nom_est)] = f.geometry.coordinates; });
+
+        let tramos = trazado.features.map((f) => {
+            const g = f.geometry;
+            let coords = g.type === "MultiLineString" ? g.coordinates.flat() : g.coordinates;
+            const origen = quitarTildes(f.properties.origen), destino = quitarTildes(f.properties.destino);
+            // la linea debe empezar en la estacion de origen
+            if (punto[origen] && distanciaM(coords[0], punto[origen]) > distanciaM(coords[coords.length - 1], punto[origen])) {
+                coords = coords.slice().reverse();
+            }
+            return { linea: medirLinea(coords), origen, destino, nombreOrigen: f.properties.origen, nombreDestino: f.properties.destino };
+        });
+
+        // encadenar: empieza el tramo cuyo origen no es destino de ningun otro
+        const destinos = new Set(tramos.map((t) => t.destino));
+        const orden = [];
+        let actual = tramos.find((t) => !destinos.has(t.origen)) || tramos[0];
+        while (actual && orden.length < tramos.length) {
+            orden.push(actual);
+            actual = tramos.find((t) => t.origen === actual.destino && !orden.includes(t));
+        }
+        tramos.forEach((t) => { if (!orden.includes(t)) orden.push(t); });
+        return orden;
+    }
+
+    // ---------- Cable en 3D real (three.js) ----------
+    // Una capa personalizada de MapLibre dibuja cada cable como una linea
+    // 3D continua (un tubo delgado + una linea de 1 px que se ve de lejos).
+    let THREE = null;
+    let origenCable = null, escalaCable = 1;
+
+    const capaCable3D = {
+        id: "cable",
+        type: "custom",
+        renderingMode: "3d",
+        visible: true,
+        onAdd(mapa, gl) {
+            this.camara = new THREE.Camera();
+            this.escena = new THREE.Scene();
+            this.grupo = new THREE.Group();
+            this.escena.add(this.grupo);
+            this.renderer = new THREE.WebGLRenderer({ canvas: mapa.getCanvas(), context: gl, antialias: true });
+            this.renderer.autoClear = false;
+        },
+        render(gl, args) {
+            if (!this.visible || !origenCable) return;
+            const m = new THREE.Matrix4().fromArray(args.defaultProjectionData.mainMatrix);
+            const local = new THREE.Matrix4()
+                .makeTranslation(origenCable.x, origenCable.y, origenCable.z)
+                .scale(new THREE.Vector3(escalaCable, -escalaCable, escalaCable));
+            this.camara.projectionMatrix = m.multiply(local);
+            this.renderer.resetState();
+            this.renderer.render(this.escena, this.camara);
+        }
+    };
+
+    // Punto (lng, lat, altura en m) a coordenadas locales en metros
+    function aLocal(p, alt) {
+        const mc = maplibregl.MercatorCoordinate.fromLngLat(p, 0);
+        return new THREE.Vector3((mc.x - origenCable.x) / escalaCable, -(mc.y - origenCable.y) / escalaCable, alt);
+    }
+
+    // Recalcula los apoyos y el dibujo del cable (al prender/apagar el terreno o al cargar mas relieve)
+    function construirCable() {
+        if (!tramosCable.length) return false;
+
+        // Apoyos: estacion de origen, pilonas del tramo y estacion de destino
+        const nuevos = tramosCable.map((tramo) => {
+            const linea = tramo.linea;
+            return [{ s: 0, p: linea.coords[0], h: CABLE_EN_ESTACION }]
+                .concat(tramo.pilonas.map((p) => ({ s: p.s, p: p.punto, h: PILONA_ALTO })))
+                .concat([{ s: linea.total, p: linea.coords[linea.coords.length - 1], h: CABLE_EN_ESTACION }])
+                .map((x) => { const g = suelo(x.p); return g === null ? null : { s: x.s, alt: g + x.h }; });
+        });
+        if (nuevos.some((lista) => lista.some((x) => x === null))) return false; // relieve sin cargar
+        tramosCable.forEach((tramo, i) => { tramo.soportes = nuevos[i].sort((x, y) => x.s - y.s); });
+
+        if (!THREE || !capaCable3D.grupo || !origenCable) return true;
+
+        const grupo = capaCable3D.grupo;
+        grupo.children.slice().forEach((h) => { grupo.remove(h); h.geometry.dispose(); });
+        const matTubo = new THREE.MeshBasicMaterial({ color: 0x1d2b36 });
+        const matLinea = new THREE.LineBasicMaterial({ color: 0x1d2b36 });
+
+        tramosCable.forEach((tramo) => {
+            const linea = tramo.linea;
+            [-CABLE_SEPARACION, CABLE_SEPARACION].forEach((lado) => {
+                const puntos = [];
+                for (let d = 0; d <= linea.total + 0.01; d += CABLE_PASO) {
+                    const sd = Math.min(d, linea.total);
+                    const a = puntoEnLinea(linea, Math.max(0, sd - 1)), b = puntoEnLinea(linea, Math.min(linea.total, sd + 1));
+                    puntos.push(aLocal(desplazar(puntoEnLinea(linea, sd), a, b, lado), alturaCable(tramo, sd)));
+                }
+                const curva = new THREE.CatmullRomCurve3(puntos);
+                grupo.add(new THREE.Mesh(new THREE.TubeGeometry(curva, puntos.length * 2, 0.22, 5, false), matTubo));
+                grupo.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(puntos), matLinea));
+            });
+        });
+        map.triggerRepaint();
+        return true;
+    }
+
+    // Reintenta dibujar el cable hasta que el relieve de toda la zona este cargado
+    let reintentoCable = null;
+    function intentarConstruirCable(intentos = 12) {
+        clearTimeout(reintentoCable);
+        if (construirCable() || intentos <= 1) return;
+        reintentoCable = setTimeout(() => intentarConstruirCable(intentos - 1), 600);
+    }
+
+    function agregarCable(trazado, pilonas, estacionesCable) {
+        const antes = map.getLayer("building-3d") ? "building-3d" : undefined;
+
+        tramosCable = ordenarTramos(trazado, estacionesCable);
+        cajaCable = cajaDe(trazado.features);
+
+        // Cada pilona se asigna al tramo que pasa mas cerca
+        tramosCable.forEach((t) => { t.pilonas = []; });
+        pilonas.features.forEach((f) => {
+            let mejor = null;
+            tramosCable.forEach((t) => {
+                const c = sCercano(t.linea, f.geometry.coordinates);
+                if (!mejor || c.d < mejor.d) mejor = { tramo: t, s: c.s, d: c.d };
+            });
+            if (mejor && mejor.d < 40) mejor.tramo.pilonas.push({ s: mejor.s, punto: f.geometry.coordinates });
+        });
+
+        // Origen local del cable (centro de la zona) para la capa three.js
+        const centro = cajaCable.getCenter();
+        origenCable = maplibregl.MercatorCoordinate.fromLngLat([centro.lng, centro.lat], 0);
+        escalaCable = origenCable.meterInMercatorCoordinateUnits();
+
+        import("https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.min.js")
+            .then((modulo) => {
+                THREE = modulo;
+                map.addLayer(capaCable3D, antes);
+                aplicarVisibilidad();
+                construirCable();
+            })
+            .catch(() => {
+                estado.textContent = "No se pudo cargar three.js: el cable no se dibuja.";
+                estado.classList.add("error");
+            });
+
+        // Pilonas
+        map.addSource("pilonas", {
+            type: "geojson",
+            data: {
+                type: "FeatureCollection",
+                features: pilonas.features.map((f) => ({
+                    type: "Feature", properties: f.properties,
+                    geometry: { type: "Polygon", coordinates: cuadrado(f.geometry.coordinates, 3.5) }
+                }))
+            }
+        });
+        map.addLayer({
+            id: "pilonas", type: "fill-extrusion", source: "pilonas",
+            paint: {
+                "fill-extrusion-color": "#8a96a3",
+                "fill-extrusion-base": 0,
+                "fill-extrusion-height": PILONA_ALTO + 1.5
+            }
+        }, antes);
+        document.getElementById("nPilonas").textContent = pilonas.features.length;
+
+        // Estaciones del cable (bloques aproximados)
+        map.addSource("estaciones-cable", {
+            type: "geojson",
+            data: {
+                type: "FeatureCollection",
+                features: estacionesCable.features.map((f) => ({
+                    type: "Feature", properties: f.properties,
+                    geometry: { type: "Polygon", coordinates: cuadrado(f.geometry.coordinates, 26) }
+                }))
+            }
+        });
+        map.addLayer({
+            id: "estaciones-cable", type: "fill-extrusion", source: "estaciones-cable",
+            paint: {
+                "fill-extrusion-color": "#f08c00",
+                "fill-extrusion-base": 0,
+                "fill-extrusion-height": CABLE_EN_ESTACION + 4,
+                "fill-extrusion-opacity": 0.9
+            }
+        }, antes);
+        map.addSource("estaciones-cable-punto", { type: "geojson", data: estacionesCable });
+        map.addLayer({
+            id: "estaciones-cable-texto", type: "symbol", source: "estaciones-cable-punto", minzoom: 13,
+            layout: {
+                "text-field": ["get", "nom_est"],
+                "text-font": ["Noto Sans Bold"],
+                "text-size": 13,
+                "text-offset": [0, -2]
+            },
+            paint: { "text-color": "#ffffff", "text-halo-color": "#8a4b00", "text-halo-width": 2 }
+        });
+        document.getElementById("nEstCable").textContent = estacionesCable.features.length;
+
+        map.on("click", "estaciones-cable", (e) => {
+            new maplibregl.Popup().setLngLat(e.lngLat).setHTML(
+                `<b>${texto(e.features[0].properties.nom_est)}</b>Estación de TransMiCable · Ciudad Bolívar`
+            ).addTo(map);
+        });
+
+        // Cabinas que van y vienen, y la cabina del recorrido (amarilla)
+        map.addSource("cabinas", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        map.addLayer({
+            id: "cabinas", type: "fill-extrusion", source: "cabinas",
+            paint: {
+                "fill-extrusion-color": "#e03131",
+                "fill-extrusion-base": ["get", "base"],
+                "fill-extrusion-height": ["get", "alto"]
+            }
+        }, antes);
+        map.addSource("cabina-viaje", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        map.addLayer({
+            id: "cabina-viaje", type: "fill-extrusion", source: "cabina-viaje",
+            paint: {
+                "fill-extrusion-color": "#f5c400",
+                "fill-extrusion-base": ["get", "base"],
+                "fill-extrusion-height": ["get", "alto"]
+            }
+        }, antes);
+
+        construirCable();
+
+        // Cuando cambia el terreno o el zoom se recalcula la altura del cable.
+        // (Se usa "moveend" y no "idle": con las cabinas animadas el mapa
+        // nunca queda en reposo y "idle" no llega.)
+        let claveCable = "";
+        const revisarCable = () => {
+            if (!cableEnPantalla() || map.getZoom() < 13) return;
+            const clave = (map.getTerrain() ? "t" : "p") + Math.round(map.getZoom());
+            if (clave !== claveCable) { claveCable = clave; intentarConstruirCable(); }
+        };
+        map.on("moveend", revisarCable);
+        map.on("terrain", () => { claveCable = ""; revisarCable(); });
+
+        requestAnimationFrame(moverCabinas);
+    }
+
+    // Cabina en la posicion s de un tramo, colgando debajo del cable del lado indicado
+    function cabinaEn(tramo, s, lado, largo) {
+        const linea = tramo.linea;
+        const a = puntoEnLinea(linea, Math.max(0, s - largo / 2)), b = puntoEnLinea(linea, Math.min(linea.total, s + largo / 2));
+        const centro = puntoEnLinea(linea, s);
+        const g = suelo(centro);
+        if (g === null) return null;
+        const base = alturaCable(tramo, s) - g - 4.2;
+        return {
+            type: "Feature", properties: { base, alto: base + 2.9 },
+            geometry: { type: "Polygon", coordinates: rectangulo(desplazar(a, a, b, lado), desplazar(b, a, b, lado), 2.3) }
+        };
+    }
+
+    function geometriaCabinas(tiempoSeg) {
+        const features = [];
+        const avance = tiempoSeg * CABINA_VELOCIDAD;
+        tramosCable.forEach((tramo) => {
+            if (!tramo.soportes) return;
+            const total = tramo.linea.total;
+            for (let s0 = 0; s0 < total; s0 += CABINA_ESPACIO) {
+                // Ida por un cable, vuelta por el otro
+                [[1, CABLE_SEPARACION], [-1, -CABLE_SEPARACION]].forEach(([sentido, lado]) => {
+                    let s = (s0 + sentido * avance) % total;
+                    if (s < 0) s += total;
+                    const cabina = cabinaEn(tramo, s, lado, 2.6);
+                    if (cabina) features.push(cabina);
+                });
+            }
+        });
+        return { type: "FeatureCollection", features };
+    }
+
+    function cableEnPantalla() {
+        if (!cajaCable) return false;
+        const v = map.getBounds();
+        return !(cajaCable.getEast() < v.getWest() || cajaCable.getWest() > v.getEast() ||
+                 cajaCable.getNorth() < v.getSouth() || cajaCable.getSouth() > v.getNorth());
+    }
+
+    // Solo se animan cuando se ven (cerca y con la capa prendida), para no gastar
+    function moverCabinas(tiempo) {
+        const fuente = map.getSource("cabinas");
+        const visible = map.getLayer("cabinas") && map.getLayoutProperty("cabinas", "visibility") !== "none";
+        if (fuente && visible && map.getZoom() >= 13 && cableEnPantalla()) {
+            fuente.setData(geometriaCabinas(tiempo / 1000));
+        }
+        requestAnimationFrame(moverCabinas);
+    }
+
+    // ---------- Recorrido en cabina (Tunal -> Mirador del Paraiso) ----------
+    const CABINA_VIAJE_VELOCIDAD = 70; // m/s (mucho mas rapido que el real, para la visita)
+    const PARADA_ESTACION = 1.5;       // segundos detenido en las estaciones intermedias
+    let viajeCable = null;             // { tramo, s, ultimo, espera, rumboCam }
+
+    function actualizarHudCable() {
+        const tramo = tramosCable[viajeCable.tramo];
+        const falta = tramo.linea.total - viajeCable.s;
+        document.getElementById("hudEstacion").textContent = texto(tramo.nombreDestino);
+        document.getElementById("hudDistancia").textContent =
+            falta >= 1000 ? (falta / 1000).toFixed(1).replace(".", ",") + " km" : Math.round(falta) + " m";
+    }
+
+    function cuadroCable(tiempo) {
+        if (!viajeCable) return;
+        const dt = viajeCable.ultimo === null ? 0 : Math.min(0.1, (tiempo - viajeCable.ultimo) / 1000);
+        viajeCable.ultimo = tiempo;
+        let tramo = tramosCable[viajeCable.tramo];
+
+        if (viajeCable.espera > 0) {
+            viajeCable.espera -= dt;
+        } else {
+            viajeCable.s += CABINA_VIAJE_VELOCIDAD * dt;
+            if (viajeCable.s >= tramo.linea.total) {
+                if (viajeCable.tramo >= tramosCable.length - 1) {
+                    detenerViajeCable(true);
+                    return;
+                }
+                viajeCable.tramo++;
+                viajeCable.s = 0;
+                viajeCable.espera = PARADA_ESTACION;
+                tramo = tramosCable[viajeCable.tramo];
+            }
+        }
+
+        viajeCable.recalculo += dt;
+        if (viajeCable.recalculo > 2) { viajeCable.recalculo = 0; construirCable(); }
+
+        const s = viajeCable.s;
+        const miCabina = cabinaEn(tramo, s, CABLE_SEPARACION, 3.2);
+        map.getSource("cabina-viaje").setData({ type: "FeatureCollection", features: miCabina ? [miCabina] : [] });
+
+        const linea = tramo.linea;
+        const objetivo = rumbo(puntoEnLinea(linea, s - 20), puntoEnLinea(linea, s + 80));
+        viajeCable.rumboCam = viajeCable.rumboCam + difAngulo(viajeCable.rumboCam, objetivo) * 0.08;
+        // La camara mira a la cabina a su misma altura (no al suelo)
+        map.jumpTo({
+            center: puntoEnLinea(linea, s + 6), zoom: 19.4, pitch: 66,
+            bearing: viajeCable.rumboCam, elevation: alturaCable(tramo, s) - 3
+        });
+        actualizarHudCable();
+        requestAnimationFrame(cuadroCable);
+    }
+
+    async function iniciarViajeCable() {
+        if (!tramosCable.length) return;
+        if (sistemaActivo !== "tm") activarSistema("tm", false);
+        detenerTodo();
+        ponerBoton(btnViajeCable, "square", "Detener");
+        btnViajeCable.classList.add("activo");
+        hud.hidden = false;
+
+        const tramo = tramosCable[0];
+        const rumboInicial = rumbo(puntoEnLinea(tramo.linea, 0), puntoEnLinea(tramo.linea, 100));
+        const pedido = {};
+        viajeCablePendiente = pedido;
+        await ponerTerreno(true);
+        if (viajeCablePendiente !== pedido) return;
+
+        // 1) Vista general del cable para que cargue el relieve de toda la zona
+        const c = cajaCable.getCenter();
+        map.flyTo({ center: [c.lng, c.lat], zoom: 15.2, pitch: 55, bearing: rumboInicial, duration: 2500 });
+        map.once("moveend", async () => {
+            if (viajeCablePendiente !== pedido) return;
+            // 2) Con el relieve cargado se calculan las alturas y se baja a la cabina
+            const listo = await esperarCable();
+            if (viajeCablePendiente !== pedido) return;
+            if (!listo) {
+                detenerViajeCable();
+                estado.textContent = "El relieve no terminó de cargar. Intenta de nuevo el recorrido.";
+                return;
+            }
+            map.setCenterClampedToGround(false);
+            map.easeTo({
+                center: puntoEnLinea(tramo.linea, 6), zoom: 19.4, pitch: 66, bearing: rumboInicial,
+                elevation: alturaCable(tramo, 0) - 3, duration: 2200
+            });
+            map.once("moveend", () => {
+                if (viajeCablePendiente !== pedido) return;
+                viajeCablePendiente = null;
+                viajeCable = { tramo: 0, s: 0, ultimo: null, espera: 1, rumboCam: rumboInicial, recalculo: 0 };
+                requestAnimationFrame(cuadroCable);
+            });
+        });
+    }
+
+    let viajeCablePendiente = null;
+
+    function detenerViajeCable(llego) {
+        const estaba = viajeCable || viajeCablePendiente;
+        viajeCable = null;
+        viajeCablePendiente = null;
+        map.setCenterClampedToGround(true);
+        ponerBoton(btnViajeCable, "cable-car", "Recorrido en cabina");
+        btnViajeCable.classList.remove("activo");
+        if (map.getSource("cabina-viaje")) map.getSource("cabina-viaje").setData({ type: "FeatureCollection", features: [] });
+        if (!estaba) return;
+        if (llego) setTimeout(() => { if (!viajeCable && !modoActivo) hud.hidden = true; }, 3000);
+        else hud.hidden = true;
+    }
+
+    // ---------- Buscador de estaciones (Metro y TransMilenio) ----------
+    function prepararBuscador(lista) {
+        const entrada = document.getElementById("buscarEstacion");
+        const resultados = document.getElementById("resultados");
+        lista.forEach((e) => { e.clave = quitarTildes(e.nombre); });
+
+        entrada.addEventListener("input", () => {
+            const q = quitarTildes(entrada.value.trim());
+            resultados.innerHTML = "";
+            if (q.length < 2) return;
+            lista.filter((e) => e.clave.includes(q)).slice(0, 8).forEach((e) => {
+                const b = document.createElement("button");
+                b.type = "button";
+                b.innerHTML = `${e.nombre}<small>${e.detalle}</small>`;
+                b.addEventListener("click", () => {
+                    if (sistemaActivo !== e.sistema) activarSistema(e.sistema, false);
+                    detenerTodo();
+                    map.flyTo({ center: e.centro, zoom: 17, pitch: 62, duration: 3000, curve: 1.4 });
+                });
+                resultados.appendChild(b);
+            });
+        });
+    }
+
+    // ---------- Recorrido en bus por una ruta troncal de TransMilenio ----------
+    // Usa la ruta oficial completa (por ejemplo H75: Portal Norte -> Portal Usme).
+    // Un bus articulado avanza por la ruta y la camara lo sigue de cerca.
+    const BUS_VELOCIDAD = 45;   // m/s base (mucho mas rapido que el real, para la visita)
+    const BUS_CUERPO = 9;       // largo de cada cuerpo del articulado (m, aprox.)
+    const BUS_ANCHO = 2.6;
+    const BUS_ALTO = 3.3;
+    // Rutas largas norte-sur que se muestran primero en la lista
+    const RUTAS_DESTACADAS = ["H75", "B75", "H13", "B13", "H17", "C17", "G11", "B11"];
+
+    let estacionesTM = [];      // para "proxima estacion" (se llena al cargar las estaciones)
+    let viajeBus = null;        // { linea, s, ultimo, rumboCam, estaciones, codigo }
+    let viajeBusPendiente = null;
+    const btnViajeBus = document.getElementById("btnViajeBus");
+    const selRuta = document.getElementById("selRuta");
+    const rngVelocidadBus = document.getElementById("rngVelocidadBus");
+
+    rngVelocidadBus.addEventListener("input", () => {
+        document.getElementById("txtVelocidadBus").textContent = "x" + (VELOCIDADES[Number(rngVelocidadBus.value)] || 1);
+    });
+
+    // Lista de rutas (solo atributos, sin geometria: es liviana)
+    async function cargarListaRutas() {
+        const url = SERVICIOS.rutasTroncales + "/query?where=1%3D1&returnGeometry=false&outFields=" +
+            encodeURIComponent("route_name_ruta_troncal,origen_ruta_troncal,destino_ruta_troncal,longitud_ruta_troncal,tipo_operacion") + "&f=json";
+        const datos = await (await fetch(url)).json();
+        const rutas = (datos.features || []).map((f) => f.attributes)
+            .filter((a) => a.tipo_operacion !== "Ciclovia" && a.route_name_ruta_troncal);
+        const opcion = (a) => {
+            const o = document.createElement("option");
+            o.value = a.route_name_ruta_troncal;
+            o.textContent = `${a.route_name_ruta_troncal} · ${a.origen_ruta_troncal} → ${a.destino_ruta_troncal}`;
+            return o;
+        };
+        selRuta.innerHTML = "";
+        const g1 = document.createElement("optgroup");
+        g1.label = "Norte – Sur";
+        RUTAS_DESTACADAS.forEach((c) => { const a = rutas.find((r) => r.route_name_ruta_troncal === c); if (a) g1.appendChild(opcion(a)); });
+        const g2 = document.createElement("optgroup");
+        g2.label = "Todas las rutas";
+        rutas.filter((a) => !RUTAS_DESTACADAS.includes(a.route_name_ruta_troncal))
+            .sort((a, b) => a.route_name_ruta_troncal.localeCompare(b.route_name_ruta_troncal, "es", { numeric: true }))
+            .forEach((a) => g2.appendChild(opcion(a)));
+        selRuta.appendChild(g1);
+        selRuta.appendChild(g2);
+        selRuta.disabled = false;
+    }
+
+    async function cargarRuta(codigo) {
+        const url = SERVICIOS.rutasTroncales + "/query?where=" + encodeURIComponent(`route_name_ruta_troncal='${codigo}'`) +
+            "&outFields=" + encodeURIComponent("route_name_ruta_troncal,origen_ruta_troncal,destino_ruta_troncal") + "&outSR=4326&f=geojson";
+        const datos = await (await fetch(url)).json();
+        const f = datos.features && datos.features[0];
+        if (!f) throw new Error("ruta sin geometria");
+        const g = f.geometry;
+        return { coords: g.type === "MultiLineString" ? g.coordinates.flat() : g.coordinates, props: f.properties };
+    }
+
+    // Distancia a lo largo de la linea del punto mas cercano (proyeccion sobre cada segmento)
+    function proyectar(linea, p) {
+        const kx = M_POR_GRADO * Math.cos(p[1] * Math.PI / 180);
+        let mejor = { s: 0, d: Infinity };
+        for (let i = 1; i < linea.coords.length; i++) {
+            const a = linea.coords[i - 1], b = linea.coords[i];
+            const ax = (b[0] - a[0]) * kx, ay = (b[1] - a[1]) * M_POR_GRADO;
+            const px = (p[0] - a[0]) * kx, py = (p[1] - a[1]) * M_POR_GRADO;
+            const largo2 = ax * ax + ay * ay || 1;
+            const t = Math.max(0, Math.min(1, (px * ax + py * ay) / largo2));
+            const d = Math.hypot(px - ax * t, py - ay * t);
+            if (d < mejor.d) mejor = { s: linea.acumulado[i - 1] + Math.sqrt(largo2) * t, d };
+        }
+        return mejor;
+    }
+
+    function geometriaBus(linea, s) {
+        const features = [];
+        [0, BUS_CUERPO + 0.8].forEach((atras) => {
+            const frente = s - atras, cola = frente - BUS_CUERPO;
+            if (cola < 0) return;
+            features.push({
+                type: "Feature", properties: {},
+                geometry: { type: "Polygon", coordinates: rectangulo(puntoEnLinea(linea, frente), puntoEnLinea(linea, cola), BUS_ANCHO) }
+            });
+        });
+        return { type: "FeatureCollection", features };
+    }
+
+    function actualizarHudBus() {
+        const proxima = viajeBus.estaciones.find((e) => e.s > viajeBus.s + 15);
+        if (!proxima) {
+            document.getElementById("hudEstacion").textContent = "Llegando a " + viajeBus.destino;
+            document.getElementById("hudDistancia").textContent = "";
+            return;
+        }
+        const falta = proxima.s - viajeBus.s;
+        document.getElementById("hudEstacion").textContent = proxima.nombre;
+        document.getElementById("hudDistancia").textContent =
+            falta >= 1000 ? (falta / 1000).toFixed(1).replace(".", ",") + " km" : Math.round(falta) + " m";
+    }
+
+    function cuadroBus(tiempo) {
+        if (!viajeBus) return;
+        const dt = viajeBus.ultimo === null ? 0 : Math.min(0.1, (tiempo - viajeBus.ultimo) / 1000);
+        viajeBus.ultimo = tiempo;
+        viajeBus.s += BUS_VELOCIDAD * (VELOCIDADES[Number(rngVelocidadBus.value)] || 1) * dt;
+
+        const linea = viajeBus.linea;
+        if (viajeBus.s >= linea.total) {
+            viajeBus.s = linea.total;
+            map.getSource("bus").setData(geometriaBus(linea, viajeBus.s));
+            actualizarHudBus();
+            detenerViajeBus(true);
+            return;
+        }
+        map.getSource("bus").setData(geometriaBus(linea, viajeBus.s));
+
+        const objetivo = rumbo(puntoEnLinea(linea, viajeBus.s - 15), puntoEnLinea(linea, viajeBus.s + 60));
+        viajeBus.rumboCam = viajeBus.rumboCam + difAngulo(viajeBus.rumboCam, objetivo) * 0.18;
+        // la camara apunta a la mitad del bus
+        map.jumpTo({ center: puntoEnLinea(linea, viajeBus.s - BUS_CUERPO), zoom: 19.2, pitch: 66, bearing: viajeBus.rumboCam });
+        actualizarHudBus();
+        requestAnimationFrame(cuadroBus);
+    }
+
+    async function iniciarViajeBus() {
+        const codigo = selRuta.value;
+        if (!codigo) return;
+        if (sistemaActivo !== "tm") activarSistema("tm", false);
+        detenerTodo();
+        const pedido = {};
+        viajeBusPendiente = pedido;
+        ponerBoton(btnViajeBus, "square", "Detener");
+        btnViajeBus.classList.add("activo");
+        estado.textContent = "Cargando la ruta " + codigo + "…";
+
+        let ruta;
+        try {
+            ruta = await cargarRuta(codigo);
+        } catch (err) {
+            if (viajeBusPendiente === pedido) detenerViajeBus();
+            estado.textContent = "No se pudo cargar la ruta " + codigo + ".";
+            return;
+        }
+        if (viajeBusPendiente !== pedido) return;
+        estado.textContent = "Ruta " + codigo + ": " + ruta.props.origen_ruta_troncal + " → " + ruta.props.destino_ruta_troncal;
+
+        const linea = medirLinea(ruta.coords);
+        // Estaciones por las que pasa la ruta (a menos de 70 m), en orden de recorrido
+        const estaciones = estacionesTM
+            .map((e) => { const pr = proyectar(linea, e.centro); return { nombre: e.nombre, s: pr.s, d: pr.d }; })
+            .filter((e) => e.d < 70)
+            .sort((a, b) => a.s - b.s);
+
+        const inicio = BUS_CUERPO * 2 + 1;
+        map.getSource("bus").setData(geometriaBus(linea, inicio));
+        aplicarVisibilidad();
+        hud.hidden = false;
+        const rumboInicial = rumbo(puntoEnLinea(linea, 0), puntoEnLinea(linea, 80));
+        map.flyTo({ center: puntoEnLinea(linea, inicio - BUS_CUERPO), zoom: 19.2, pitch: 66, bearing: rumboInicial, duration: 3000, curve: 1.5 });
+        map.once("moveend", () => {
+            if (viajeBusPendiente !== pedido) return;
+            viajeBusPendiente = null;
+            viajeBus = { linea, s: inicio, ultimo: null, rumboCam: rumboInicial, estaciones, destino: ruta.props.destino_ruta_troncal };
+            requestAnimationFrame(cuadroBus);
+        });
+    }
+
+    function detenerViajeBus(llego) {
+        const estaba = viajeBus || viajeBusPendiente;
+        viajeBus = null;
+        viajeBusPendiente = null;
+        ponerBoton(btnViajeBus, "bus-front", "Recorrido en bus");
+        btnViajeBus.classList.remove("activo");
+        if (!estaba) return;
+        if (llego) setTimeout(() => { if (!viajeBus && !modoActivo && !viajeCable) hud.hidden = true; }, 3000);
+        else hud.hidden = true;
+    }
+
+    // ---------- Camara ----------
+    let girando = false, ultimoTiempo = null;
+    const btnGirar = document.getElementById("btnGirar");
+    const btnDron = document.getElementById("btnDron");
+    const btnTren = document.getElementById("btnTren");
+    const rngVelocidad = document.getElementById("rngVelocidad");
+    const txtVelocidad = document.getElementById("txtVelocidad");
+    const hud = document.getElementById("hud");
+
+    function girar(tiempo) {
+        if (!girando) { ultimoTiempo = null; return; }
+        if (ultimoTiempo !== null) map.setBearing(map.getBearing() + 10 * (tiempo - ultimoTiempo) / 1000);
+        ultimoTiempo = tiempo;
+        requestAnimationFrame(girar);
+    }
+
+    function alternarGiro(forzar) {
+        girando = typeof forzar === "boolean" ? forzar : !girando;
+        btnGirar.classList.toggle("activo", girando);
+        ponerBoton(btnGirar, girando ? "pause" : "rotate-cw", girando ? "Detener giro" : "Girar cámara");
+        if (girando) requestAnimationFrame(girar);
+    }
+
+    btnGirar.addEventListener("click", () => { detenerViaje(); detenerViajeCable(); alternarGiro(); });
+
+    // Boton con icono (Lucide) y texto
+    function ponerBoton(boton, icono, textoBoton) {
+        boton.innerHTML = `<i data-lucide="${icono}"></i><span>${textoBoton}</span>`;
+        if (window.lucide) lucide.createIcons();
+    }
+    const btnViajeCable = document.getElementById("btnViajeCable");
+
+    // ---------- Viaje por la Linea 1 (dron o tren) ----------
+    // Un tren avanza por el eje de la Linea 1 (Portal de las Americas ->
+    // Calle 72) y la camara lo sigue cuadro a cuadro. Los dos modos solo
+    // cambian donde va la camara y que tan rapido avanza.
+    const MODOS = {
+        dron: { zoom: 17.7, pitch: 72, metrosPorSeg: 300, adelante: 60, mirarAtras: 80, mirarAdelante: 350, suavizado: 0.06, boton: btnDron, icono: "drone", texto: "Vuelo de dron sobre la Línea 1" },
+        tren: { zoom: 18.9, pitch: 68, metrosPorSeg: 70, adelante: -12, mirarAtras: 15, mirarAdelante: 70, suavizado: 0.18, boton: btnTren, icono: "train-front", texto: "Viaje en el tren" }
+    };
+    const VELOCIDADES = [0.5, 1, 2, 3];
+
+    // Tren: 6 vagones (medidas aproximadas, para visualizacion)
+    const VAGONES = 6, VAGON_LARGO = 21, VAGON_ESPACIO = 2.5, VAGON_ANCHO = 2.9, VAGON_ALTO = 3.8;
+
+    const LARGO_TREN = VAGONES * (VAGON_LARGO + VAGON_ESPACIO);
+
+    let viaje = null; // { modo, s, ultimo, rumboCam }
+    let ruta = null, acumulado = null, total = 0, estacionesRuta = [];
+
+    function multiplicador() {
+        return VELOCIDADES[Number(rngVelocidad.value)] || 1;
+    }
+    rngVelocidad.addEventListener("input", () => { txtVelocidad.textContent = "x" + multiplicador(); });
+
+    // Punto a "s" metros desde el inicio de la ruta
+    function puntoEn(s) {
+        s = Math.max(0, Math.min(total, s));
+        let lo = 0, hi = acumulado.length - 1;
+        while (hi - lo > 1) {
+            const mid = (lo + hi) >> 1;
+            if (acumulado[mid] <= s) lo = mid; else hi = mid;
+        }
+        const tramo = acumulado[hi] - acumulado[lo] || 1;
+        const t = (s - acumulado[lo]) / tramo;
+        const a = ruta[lo], b = ruta[hi];
+        return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+    }
+
+    // Rectangulo de un vagon entre dos puntos del eje
+    function rectangulo(p1, p2, ancho) {
+        const kx = M_POR_GRADO * Math.cos(p1[1] * Math.PI / 180);
+        const dx = (p2[0] - p1[0]) * kx, dy = (p2[1] - p1[1]) * M_POR_GRADO;
+        const largo = Math.hypot(dx, dy) || 1;
+        const ox = -dy / largo * ancho / 2 / kx, oy = dx / largo * ancho / 2 / M_POR_GRADO;
+        return [[[p1[0] + ox, p1[1] + oy], [p2[0] + ox, p2[1] + oy], [p2[0] - ox, p2[1] - oy], [p1[0] - ox, p1[1] - oy], [p1[0] + ox, p1[1] + oy]]];
+    }
+
+    function geometriaTren(s) {
+        const features = [];
+        for (let k = 0; k < VAGONES; k++) {
+            const frente = s - k * (VAGON_LARGO + VAGON_ESPACIO);
+            const cola = frente - VAGON_LARGO;
+            if (cola < 0) break;
+            features.push({
+                type: "Feature", properties: {},
+                geometry: { type: "Polygon", coordinates: rectangulo(puntoEn(frente), puntoEn(cola), VAGON_ANCHO) }
+            });
+        }
+        return { type: "FeatureCollection", features };
+    }
+
+    // Diferencia de angulos en -180..180 (para suavizar el giro de la camara)
+    function difAngulo(a, b) {
+        return ((b - a + 540) % 360) - 180;
+    }
+
+    function actualizarHud(s) {
+        const proxima = estacionesRuta.find((e) => e.s > s + 20);
+        if (!proxima) {
+            document.getElementById("hudEstacion").textContent = "Fin del recorrido";
+            document.getElementById("hudDistancia").textContent = "";
+            return;
+        }
+        const falta = proxima.s - s;
+        document.getElementById("hudEstacion").textContent = proxima.nombre;
+        document.getElementById("hudDistancia").textContent =
+            falta >= 1000 ? (falta / 1000).toFixed(1).replace(".", ",") + " km" : Math.round(falta) + " m";
+    }
+
+    function cuadro(tiempo) {
+        if (!viaje) return;
+        const m = MODOS[viaje.modo];
+        if (viaje.ultimo !== null) {
+            const dt = Math.min(0.1, (tiempo - viaje.ultimo) / 1000);
+            viaje.s += m.metrosPorSeg * multiplicador() * dt;
+        }
+        viaje.ultimo = tiempo;
+
+        if (viaje.s >= total) {
+            viaje.s = total;
+            map.getSource("tren").setData(geometriaTren(viaje.s));
+            actualizarHud(viaje.s);
+            detenerViaje(true);
+            return;
+        }
+
+        map.getSource("tren").setData(geometriaTren(viaje.s));
+
+        const objetivo = rumbo(puntoEn(viaje.s - m.mirarAtras), puntoEn(viaje.s + m.mirarAdelante));
+        viaje.rumboCam = viaje.rumboCam + difAngulo(viaje.rumboCam, objetivo) * m.suavizado;
+
+        // La camara apunta al tren a la altura del viaducto (no al suelo), asi
+        // el tren queda siempre en el centro de la pantalla
+        const camara = { center: puntoEn(viaje.s + m.adelante), zoom: m.zoom, pitch: m.pitch, bearing: viaje.rumboCam };
+        const elev = alturaCamaraTren(viaje.s + m.adelante);
+        if (elev !== null) camara.elevation = elev;
+        map.jumpTo(camara);
+        actualizarHud(viaje.s);
+        requestAnimationFrame(cuadro);
+    }
+
+    // Donde quedo el ultimo viaje (para seguir desde ahi al cambiar de modo)
+    let ultimaPosicion = 0;
+
+    // Altura (absoluta) a la que mira la camara: el techo del viaducto mas
+    // medio vagon. null si con terreno 3D el relieve aun no ha cargado.
+    function alturaCamaraTren(s) {
+        const g = suelo(puntoEn(s));
+        return g === null ? null : g + VIADUCTO_TOPE + VAGON_ALTO / 2;
+    }
+
+    function iniciarViaje(modo) {
+        if (!ruta) return;
+        if (sistemaActivo !== "metro") activarSistema("metro", false);
+        const inicio = ultimaPosicion > LARGO_TREN && ultimaPosicion < total - 50 ? ultimaPosicion : LARGO_TREN;
+        detenerViaje();
+        alternarGiro(false);
+        const m = MODOS[modo];
+        modoActivo = modo;
+        m.boton.classList.add("activo");
+        ponerBoton(m.boton, "square", "Detener");
+        hud.hidden = false;
+        actualizarHud(inicio);
+
+        // En el tren las estaciones se vuelven translucidas para ver pasar el tren por dentro
+        if (map.getLayer("l1-estaciones-3d")) {
+            map.setPaintProperty("l1-estaciones-3d", "fill-extrusion-opacity", modo === "tren" ? 0.45 : 0.9);
+        }
+
+        map.getSource("tren").setData(geometriaTren(inicio));
+        const rumboInicial = rumbo(puntoEn(inicio - m.mirarAtras), puntoEn(inicio + m.mirarAdelante));
+        const pedido = {};
+        viajePendiente = pedido;
+        map.setCenterClampedToGround(false);
+        const vuelo = { center: puntoEn(inicio + m.adelante), zoom: m.zoom, pitch: m.pitch, bearing: rumboInicial, duration: 2200 };
+        const elevInicial = alturaCamaraTren(inicio + m.adelante);
+        if (elevInicial !== null) vuelo.elevation = elevInicial;
+        map.flyTo(vuelo);
+        map.once("moveend", () => {
+            // si mientras volaba se detuvo o se pidio otro modo, no arranca
+            if (viajePendiente !== pedido) return;
+            viajePendiente = null;
+            viaje = { modo, s: inicio, ultimo: null, rumboCam: rumboInicial };
+            requestAnimationFrame(cuadro);
+        });
+    }
+
+    let viajePendiente = null;
+    let modoActivo = null;
+
+    function detenerViaje(llego) {
+        Object.values(MODOS).forEach((m) => {
+            m.boton.classList.remove("activo");
+            ponerBoton(m.boton, m.icono, m.texto);
+        });
+        if (map.getLayer("l1-estaciones-3d")) map.setPaintProperty("l1-estaciones-3d", "fill-extrusion-opacity", 0.9);
+        if (viaje) ultimaPosicion = llego ? 0 : viaje.s;
+        if (viaje || viajePendiente) map.setCenterClampedToGround(true);
+        viaje = null;
+        viajePendiente = null;
+        modoActivo = null;
+        if (llego) setTimeout(() => { if (!viaje) hud.hidden = true; }, 3000);
+        else hud.hidden = true;
+    }
+
+    function detenerTodo() {
+        alternarGiro(false);
+        detenerViaje();
+        detenerViajeCable();
+        detenerViajeBus();
+    }
+
+    // Si el usuario toma el mapa con el mouse, se detiene todo
+    map.on("dragstart", () => { if (girando) alternarGiro(false); if (modoActivo) detenerViaje(); if (viajeCable || viajeCablePendiente) detenerViajeCable(); if (viajeBus || viajeBusPendiente) detenerViajeBus(); });
+
+    function prepararViaje(eje, l1Estaciones) {
+        // La ruta arranca en el extremo occidental (Portal de las Americas)
+        ruta = eje[0][0] < eje[eje.length - 1][0] ? eje : eje.slice().reverse();
+        acumulado = [0];
+        for (let i = 1; i < ruta.length; i++) acumulado.push(acumulado[i - 1] + distanciaM(ruta[i - 1], ruta[i]));
+        total = acumulado[acumulado.length - 1];
+
+        // Posicion de cada estacion a lo largo de la ruta (vertice mas cercano)
+        if (l1Estaciones) {
+            estacionesRuta = l1Estaciones.features.map((f) => {
+                const c = centroide(f.geometry);
+                let mejor = 0, dMin = Infinity;
+                ruta.forEach((p, i) => { const d = distanciaM(p, c); if (d < dMin) { dMin = d; mejor = i; } });
+                return { nombre: nombreEstacion(f.properties.REFNAME), s: acumulado[mejor] };
+            }).sort((a, b) => a.s - b.s);
+        }
+
+        map.addSource("tren", { type: "geojson", data: geometriaTren(LARGO_TREN) });
+        map.addLayer({
+            id: "tren", type: "fill-extrusion", source: "tren",
+            paint: {
+                "fill-extrusion-color": "#c8102e",
+                "fill-extrusion-base": VIADUCTO_TOPE,
+                "fill-extrusion-height": VIADUCTO_TOPE + VAGON_ALTO,
+                "fill-extrusion-opacity": 1
+            }
+        }, map.getLayer("building-3d") ? "building-3d" : undefined);
+
+        btnDron.addEventListener("click", () => modoActivo === "dron" ? detenerViaje() : iniciarViaje("dron"));
+        btnTren.addEventListener("click", () => modoActivo === "tren" ? detenerViaje() : iniciarViaje("tren"));
+    }
+
+    let troncalesRed = [];
+    let datosMetro = {};
+
+    // ---------- Sistema activo (Metro o TransMilenio) ----------
+    // Solo se ven las capas del sistema abierto en el panel, para que el
+    // mapa no quede saturado. Cada casilla guarda sus capas en data-capas.
+    let sistemaActivo = "metro";
+
+    function aplicarVisibilidad() {
+        document.querySelectorAll("[data-capas]").forEach((chk) => {
+            const sistema = chk.closest("[data-sistema]").dataset.sistema;
+            const visible = sistema === sistemaActivo && chk.checked;
+            chk.dataset.capas.split(",").forEach((id) => {
+                if (id === "cable") { capaCable3D.visible = visible; map.triggerRepaint(); return; }
+                if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
+            });
+        });
+        if (map.getLayer("tren")) map.setLayoutProperty("tren", "visibility", sistemaActivo === "metro" ? "visible" : "none");
+        if (map.getLayer("bus")) map.setLayoutProperty("bus", "visibility", sistemaActivo === "tm" ? "visible" : "none");
+    }
+
+    function activarSistema(sistema, mover) {
+        sistemaActivo = sistema;
+        document.querySelectorAll("details.sistema").forEach((d) => {
+            d.open = d.dataset.sistema === sistema;
+        });
+        detenerTodo();
+        aplicarVisibilidad();
+        if (mover !== false) {
+            if (sistema === "metro") verGeneral(datosMetro);
+            else verRedTM();
+        }
+    }
+
+    function verGeneral(datos) {
+        const caja = new maplibregl.LngLatBounds();
+        [datos.l1Trazado, datos.l2Trazado].forEach((g) => {
+            if (g) lineaPrincipal(g).forEach((p) => caja.extend(p));
+        });
+        if (!caja.isEmpty()) map.fitBounds(caja, { padding: { top: 60, bottom: 60, left: 340, right: 60 }, pitch: 50, bearing: 35, duration: 2500 });
+    }
+
+    function verRedTM() {
+        if (troncalesRed.length) map.fitBounds(cajaDe(troncalesRed), { padding: { top: 60, bottom: 60, left: 340, right: 60 }, pitch: 45, bearing: 20, duration: 2500 });
+    }
+
+    const chkTerreno = document.getElementById("chkTerreno");
+    // Se cumple cuando hay elevacion real en el punto (o tras maxMs, por si acaso)
+    function esperarRelieve(punto, maxMs = 8000) {
+        const inicio = performance.now();
+        return new Promise((listo) => {
+            (function revisar() {
+                if (suelo(punto) !== null || performance.now() - inicio > maxMs) { listo(); return; }
+                setTimeout(revisar, 300);
+            })();
+        });
+    }
+
+    // Se cumple cuando el cable se pudo calcular con el relieve (true) o se agota el tiempo (false)
+    function esperarCable(maxMs = 10000) {
+        const inicio = performance.now();
+        return new Promise((listo) => {
+            (function revisar() {
+                if (construirCable()) { listo(true); return; }
+                if (performance.now() - inicio > maxMs) { listo(false); return; }
+                setTimeout(revisar, 400);
+            })();
+        });
+    }
+
+    function ponerTerreno(activo) {
+        chkTerreno.checked = activo;
+        const yaEstaba = !!map.getTerrain();
+        map.setTerrain(activo ? { source: "terreno", exaggeration: 1.0 } : null);
+        if (!activo || yaEstaba) return Promise.resolve();
+        // esperar a que cargue el relieve (si no, la camara queda bajo las montanas)
+        return esperarRelieve(map.getCenter().toArray());
+    }
+
+    ponerBoton(btnDron, "drone", "Vuelo de dron sobre la Línea 1");
+    ponerBoton(btnTren, "train-front", "Viaje en el tren");
+    ponerBoton(btnGirar, "rotate-cw", "Girar cámara");
+    ponerBoton(btnViajeCable, "cable-car", "Recorrido en cabina");
+    ponerBoton(btnViajeBus, "bus-front", "Recorrido en bus");
+    ponerBoton(document.getElementById("btnGeneral"), "map", "Ver el Metro completo");
+    ponerBoton(document.getElementById("btnRedTM"), "map", "Ver toda la red");
+    ponerBoton(document.getElementById("btnCable"), "mountain", "TransMiCable en 3D");
+
+    // ---------- Inicio ----------
+    map.on("load", async () => {
+        map.setSky({
+            "sky-color": "#87ceeb",
+            "sky-horizon-blend": 0.5,
+            "horizon-color": "#ffffff",
+            "horizon-fog-blend": 0.6,
+            "fog-color": "#d8e6ec",
+            "fog-ground-blend": 0.5
+        });
+        map.setLight({ anchor: "map", color: "#fff2d9", intensity: 0.55, position: [1.6, 200, 40] });
+
+        // Terreno real (apagado por defecto: es lo mas pesado de dibujar)
+        map.addSource("terreno", {
+            type: "raster-dem",
+            tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
+            encoding: "terrarium",
+            tileSize: 256,
+            maxzoom: 15
+        });
+        chkTerreno.addEventListener("change", () => ponerTerreno(chkTerreno.checked));
+
+        // Imagen satelital (Esri World Imagery) debajo de los edificios 3D
+        map.addSource("satelital", {
+            type: "raster",
+            tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+            tileSize: 256,
+            maxzoom: 19,
+            bounds: CAJA_BOGOTA,
+            attribution: "Esri World Imagery"
+        });
+        map.addLayer({ id: "satelital", type: "raster", source: "satelital" },
+            map.getLayer("building-3d") ? "building-3d" : undefined);
+
+        document.getElementById("chkSatelital").addEventListener("change", (e) => {
+            map.setLayoutProperty("satelital", "visibility", e.target.checked ? "visible" : "none");
+        });
+        document.getElementById("chkEdificios").addEventListener("change", (e) => {
+            if (map.getLayer("building-3d")) {
+                map.setLayoutProperty("building-3d", "visibility", e.target.checked ? "visible" : "none");
+            }
+        });
+
+        // Datos de TransMilenio y del Metro en paralelo
+        const nombresTM = ["troncales", "estaciones", "patios", "cableTrazado", "cablePilonas", "cableEstaciones"];
+        const [resTM, resMetro] = await Promise.all([
+            Promise.allSettled(nombresTM.map((n) => pedirCapaUrl(SERVICIOS[n]))),
+            cargarDatos()
+        ]);
+        const tmDatos = {};
+        const fallidas = resMetro.fallidas.map((n) => "Metro " + n);
+        resTM.forEach((r, i) => {
+            if (r.status === "fulfilled") tmDatos[nombresTM[i]] = r.value;
+            else fallidas.push(nombresTM[i]);
+        });
+        const datos = resMetro.datos;
+
+        if (tmDatos.troncales) { agregarTroncales(tmDatos.troncales); troncalesRed = tmDatos.troncales.features; }
+        if (tmDatos.patios) agregarPatios(tmDatos.patios);
+        if (tmDatos.troncales) agregarRutasZonales();
+        if (tmDatos.estaciones) {
+            agregarEstaciones(tmDatos.estaciones);
+            estacionesTM = tmDatos.estaciones.features.map((f) => ({ nombre: f.properties.nombre_estacion, centro: f.geometry.coordinates }));
+        }
+
+        // Bus del recorrido (articulado, rojo TransMilenio)
+        map.addSource("bus", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        map.addLayer({
+            id: "bus", type: "fill-extrusion", source: "bus",
+            paint: { "fill-extrusion-color": "#c8102e", "fill-extrusion-base": 0.3, "fill-extrusion-height": BUS_ALTO }
+        }, map.getLayer("building-3d") ? "building-3d" : undefined);
+        cargarListaRutas().catch(() => { selRuta.innerHTML = "<option>No se pudieron cargar las rutas</option>"; });
+        btnViajeBus.addEventListener("click", () => (viajeBus || viajeBusPendiente) ? detenerViajeBus() : iniciarViajeBus());
+        if (tmDatos.cableTrazado && tmDatos.cablePilonas && tmDatos.cableEstaciones) {
+            agregarCable(tmDatos.cableTrazado, tmDatos.cablePilonas, tmDatos.cableEstaciones);
+        }
+        ["troncales", "estaciones", "patios", "estaciones-cable"].forEach((id) => {
+            if (!map.getLayer(id)) return;
+            map.on("mouseenter", id, () => map.getCanvas().style.cursor = "pointer");
+            map.on("mouseleave", id, () => map.getCanvas().style.cursor = "");
+        });
+
+        agregarCapas(datos);
+        activarPopups();
+
+        // Buscador con las estaciones de las dos redes
+        const listaBuscador = [];
+        if (datos.l1Estaciones) datos.l1Estaciones.features.forEach((f) => listaBuscador.push({
+            nombre: nombreEstacion(f.properties.REFNAME), detalle: "Metro L1", centro: centroide(f.geometry), sistema: "metro"
+        }));
+        if (tmDatos.estaciones) tmDatos.estaciones.features.forEach((f) => listaBuscador.push({
+            nombre: f.properties.nombre_estacion, detalle: "TransMilenio · " + texto(f.properties.troncal_estacion), centro: f.geometry.coordinates, sistema: "tm"
+        }));
+        prepararBuscador(listaBuscador);
+
+        document.getElementById("chkParaderos").addEventListener("change", (e) => alternarParaderos(e.target.checked));
+
+        document.getElementById("btnCable").addEventListener("click", async () => {
+            if (!cajaCable) return;
+            if (sistemaActivo !== "tm") activarSistema("tm", false);
+            detenerTodo();
+            await ponerTerreno(true); // las montanas de Ciudad Bolivar se notan con el terreno
+            const c = cajaCable.getCenter();
+            map.flyTo({ center: [c.lng, c.lat], zoom: 15.6, pitch: 68, bearing: 140, duration: 3500, curve: 1.4 });
+            map.once("moveend", () => esperarCable());
+        });
+
+        document.querySelectorAll("[data-capas]").forEach((chk) => {
+            if (chk.id === "chkParaderos") return; // los paraderos se descargan al prenderlos
+            chk.addEventListener("change", aplicarVisibilidad);
+        });
+
+        // Abrir una seccion activa ese sistema (y cierra la otra)
+        document.querySelectorAll("details.sistema > summary").forEach((sum) => {
+            sum.addEventListener("click", (e) => {
+                e.preventDefault();
+                const d = sum.parentElement;
+                if (d.open) { d.open = false; return; } // cerrar sin cambiar el mapa
+                activarSistema(d.dataset.sistema);
+            });
+        });
+
+        if (datos.l1Trazado) {
+            const eje = lineaPrincipal(datos.l1Trazado);
+            prepararViaje(eje, datos.l1Estaciones);
+            if (datos.l1Estaciones) pintarListaEstaciones(datos.l1Estaciones, eje);
+        } else {
+            btnDron.disabled = true;
+            btnTren.disabled = true;
+        }
+
+        datosMetro = datos;
+        btnViajeCable.addEventListener("click", () => (viajeCable || viajeCablePendiente) ? detenerViajeCable() : iniciarViajeCable());
+        document.getElementById("btnGeneral").addEventListener("click", () => { detenerTodo(); verGeneral(datos); });
+        document.getElementById("btnRedTM").addEventListener("click", () => { detenerTodo(); verRedTM(); });
+
+        if (fallidas.length === Object.keys(CAPAS_SERVICIO).length + nombresTM.length) {
+            estado.textContent = "No se pudo conectar con los servicios. Intenta recargar.";
+            estado.classList.add("error");
+        } else if (fallidas.length) {
+            estado.textContent = "Algunas capas no cargaron: " + fallidas.join(", ");
+            estado.classList.add("error");
+        } else {
+            estado.textContent = "Datos cargados · " + new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+        }
+
+        activarSistema("metro");
+    });
+</script>
+
+</body>
+</html>

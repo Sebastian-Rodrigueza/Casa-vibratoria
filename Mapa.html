@@ -2514,41 +2514,69 @@
             }
 
             // En Vercel, /api/* lo atiende api/index.py (mismo dominio).
-            // En local se sigue usando el api.py viejo en el puerto 5000
-            // (si lo tienes corriendo), para no romper ese flujo.
+            // En local: servidor_mapa_gdb.py (puerto 5500) tambien trae el
+            // proxy; con otro servidor se usa el api.py viejo del puerto 5000.
+            const esLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
             const ARCGIS_PROXY =
-                (location.hostname === "localhost" || location.hostname === "127.0.0.1")
-                    ? "http://localhost:5000/api/arcgis-proxy"
-                    : "/api/arcgis-proxy";
+                !esLocal || location.port === "5500"
+                    ? "/api/arcgis-proxy"
+                    : "http://localhost:5000/api/arcgis-proxy";
+
+            // Muchos servidores ArcGIS (Catastro, SDP, TransMilenio, Ambiente...)
+            // permiten consultarlos directo desde el navegador (CORS). Se intenta
+            // directo primero y, si el servidor lo bloquea, se usa el proxy.
+            // Se recuerda por servidor para no repetir el intento fallido.
+            const accesoDirectoArcgis = {};
+
+            function pedirArcgis(base, baseUrl, queryString, options) {
+                const params = new URLSearchParams(queryString || "");
+                const urlGet = base === null
+                    ? `${baseUrl}${queryString ? "?" + queryString : ""}`
+                    : `${base}?${new URLSearchParams([["url", baseUrl], ...params]).toString()}`;
+
+                // Si la URL es muy larga (muchos objectIds), usa POST en vez de
+                // GET, para evitar el límite de longitud de URL (errores 502).
+                if (urlGet.length > 1800) {
+                    return fetch(
+                        base === null ? baseUrl : `${base}?url=${encodeURIComponent(baseUrl)}`,
+                        {
+                            method: "POST",
+                            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                            body: params.toString()
+                        }
+                    );
+                }
+                return fetch(urlGet, options);
+            }
 
             async function fetchArcgisJson(url, options = {}) {
                 const [baseUrl, queryString] = String(url).split("?");
 
-                const proxyParams = new URLSearchParams(queryString || "");
-                proxyParams.set("url", baseUrl);
+                let servidor = "";
+                try { servidor = new URL(baseUrl).host; } catch (e) { /* url relativa */ }
 
-                const proxyUrl = `${ARCGIS_PROXY}?${proxyParams.toString()}`;
+                let response = null;
 
-                let response;
+                if (servidor && accesoDirectoArcgis[servidor] !== false) {
+                    try {
+                        response = await pedirArcgis(null, baseUrl, queryString, options);
+                        accesoDirectoArcgis[servidor] = true;
+                    } catch (errorDirecto) {
+                        // Bloqueado por CORS (o sin red): se prueba por el proxy
+                        if (accesoDirectoArcgis[servidor] === true) throw errorDirecto;
+                        accesoDirectoArcgis[servidor] = false;
+                    }
+                }
 
-                // Si la URL resultante es muy larga (muchos objectIds), usa POST
-                // en vez de GET, para evitar el límite de longitud de URL que
-                // causa errores 502 en el servidor de destino.
-                if (proxyUrl.length > 1800) {
-                    const paramsSinUrl = new URLSearchParams(queryString || "");
-
-                    response = await fetch(
-                        `${ARCGIS_PROXY}?url=${encodeURIComponent(baseUrl)}`,
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/x-www-form-urlencoded"
-                            },
-                            body: paramsSinUrl.toString()
-                        }
-                    );
-                } else {
-                    response = await fetch(proxyUrl, options);
+                if (!response) {
+                    try {
+                        response = await pedirArcgis(ARCGIS_PROXY, baseUrl, queryString, options);
+                    } catch (errorProxy) {
+                        throw new Error(
+                            "Este servidor ArcGIS no permite consultas directas y el proxy no respondió. " +
+                            (esLocal ? "Abre el sitio con INICIAR_MAPA_GDB.bat (servidor del puerto 5500)." : "")
+                        );
+                    }
                 }
 
                 if (!response.ok) {

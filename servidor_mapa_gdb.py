@@ -183,6 +183,38 @@ def index():
     return send_from_directory(BASE_DIR, HTML_NAME)
 
 
+@app.route("/api/arcgis-proxy", methods=["GET", "POST"])
+def arcgis_proxy():
+    """Mismo proxy que api/index.py en Vercel, para probar Mapa.html en local
+    con servidores ArcGIS que no permiten consultas directas (CORS)."""
+    import urllib.error
+    import urllib.parse
+    import urllib.request
+
+    destino = request.args.get("url", "").strip()
+    if not re.match(r"^https?://", destino):
+        return jsonify({"error": "Falta el parametro url"}), 400
+
+    cabeceras = {"User-Agent": "Mozilla/5.0 (CIAM Geodata)", "Accept": "application/json"}
+    try:
+        if request.method == "POST":
+            params = {k: v for k, v in request.form.items() if k != "url"}
+            pedido = urllib.request.Request(destino, data=urllib.parse.urlencode(params).encode(),
+                                            headers=cabeceras, method="POST")
+        else:
+            params = {k: v for k, v in request.args.items() if k != "url"}
+            separador = "&" if "?" in destino else "?"
+            pedido = urllib.request.Request(destino + separador + urllib.parse.urlencode(params), headers=cabeceras)
+        with urllib.request.urlopen(pedido, timeout=30) as respuesta:
+            return jsonify(json.loads(respuesta.read().decode("utf-8")))
+    except urllib.error.HTTPError as e:
+        return jsonify({"error": f"El servidor ArcGIS respondio {e.code}"}), 502
+    except (urllib.error.URLError, TimeoutError) as e:
+        return jsonify({"error": f"No fue posible consultar ArcGIS: {e}"}), 502
+    except ValueError:
+        return jsonify({"error": "ArcGIS no devolvio un JSON valido"}), 502
+
+
 @app.get("/api/gdb/status")
 def gdb_status():
     if not OGRINFO or not OGR2OGR:

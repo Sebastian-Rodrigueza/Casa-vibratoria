@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <meta name="theme-color" content="#ffffff">
+
+    <meta name="description"
+          content="Visores de infraestructura y datos abiertos de Bogotá">
+
+    <title>
+        Geodata de Bogotá | Universidad de los Andes
+    </title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+
+    <link rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Sans+3:wght@600;700;800&display=swap"
+          rel="stylesheet">
+
+    <!-- Ruta correcta al CSS ubicado en Geodata Colombia/css/Index.css -->
+    <link rel="stylesheet" href="../css/Index.css">
+
+    <style>
+        /* Recuadros de texto de la misma altura en todas las tarjetas,
+           con el boton siempre abajo */
+        .viewer-content {
+            min-height: 330px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .viewer-content .viewer-button {
+            align-self: flex-start;
+            margin-top: auto;
+        }
+
+        .viewer-tags {
+            margin-bottom: 22px;
+        }
+
+        /* Tarjeta de movilidad: los dos logos (Metro y TransMilenio/SITP)
+           completos en el espacio libre de arriba */
+        .viewer-card > img.viewer-logo {
+            inset: 22px auto auto auto;
+            width: auto;
+            height: 124px;
+            max-width: 42%;
+            object-fit: contain;
+        }
+
+        .viewer-card > img.viewer-logo.izq {
+            left: 96px;
+        }
+
+        .viewer-card > img.viewer-logo.der {
+            right: 24px;
+        }
+
+        .viewer-card-logo {
+            background: #ffffff;
+        }
+
+        .viewer-card-logo .viewer-overlay {
+            background: none;
+        }
+
+        /* numero oscuro para que se lea sobre el fondo blanco */
+        .viewer-card-logo .viewer-number {
+            color: #3a3d42;
+            text-shadow: none;
+        }
+    </style>
+
+    <link rel="stylesheet" href="../../agente1/agente-panel.css">
+</head>
+
+<body>
+
+    <header class="topbar">
+
+        <div class="topbar-inner">
+
+            <div class="brand">
+
+                <span class="logo-box">
+
+                    <img src="../../Imagenes/logo-uniandes.png"
+                         alt="Universidad de los Andes">
+
+                </span>
+
+                <span class="brand-copy">
+
+                    <small>
+                        Universidad de los Andes · CIAM
+                    </small>
+
+                    <strong>
+                        Geodata de Bogotá
+                    </strong>
+
+                </span>
+
+            </div>
+
+            <nav class="navigation">
+
+                <a href="../Index.html">
+                    Volver
+                </a>
+
+                <a href="../../Index.html">
+                    Inicio
+                </a>
+
+                <button class="nav-primary"
+                        type="button"
+                        data-action="explorar">
+                    Explorar
+                </button>
+
+            </nav>
+
+        </div>
+
+    </header>
+
+    <main>
+
+        <section class="page-heading">
+
+            <small>
+                Información urbana
+            </small>
+
+            <h1>
+                Geodata de Bogotá
+            </h1>
+
+            <p>
+                Infraestructura de transporte, obras y datos abiertos
+                de la ciudad.
+            </p>
+
+        </section>
+
+        <section class="viewer-grid">
+
+            <!-- Movilidad: Metro, TransMilenio, SITP y Cable -->
+
+            <article class="viewer-card viewer-card-logo"
+                     data-viewer="Metro, TransMilenio, SITP y Cable"
+                     data-url="Movilidad.html"
+                     tabindex="0">
+
+                <img class="viewer-logo izq" src="../../Imagenes/metro.png"
+                     alt="Metro de Bogotá">
+
+                <img class="viewer-logo der" src="../../Imagenes/trasmisitp.jpg"
+                     alt="TransMilenio y SITP">
+
+                <div class="viewer-overlay"></div>
+
+                <span class="viewer-number">
+                    01
+                </span>
+
+                <div class="viewer-icon">
+
+                    <svg viewBox="0 0 24 24">
+
+                        <rect x="5" y="4" width="14" height="13" rx="2"></rect>
+
+                        <path d="M5 11h14M8 21l1.5-4M16 21l-1.5-4"></path>
+
+                    </svg>
+
+                </div>
+
+                <div class="viewer-content">
+
+                    <span class="viewer-kicker">
+                        Movilidad
+                    </span>
+
+                    <h2>
+                        Metro, TransMilenio, SITP y Cable
+                    </h2>
+
+                    <p>
+                        Metro en 3D con viaducto y tren, troncales y estaciones
+                        de TransMilenio, rutas y paraderos del SITP y
+                        TransMiCable.
+                    </p>
+
+                    <div class="viewer-tags">
+
+                        <span>Metro</span>
+                        <span>TransMilenio</span>
+                        <span>SITP</span>
+                        <span>TransMiCable</span>
+
+                    </div>
+
+                    <button class="viewer-button"
+                            type="button"
+                            data-name="Metro, TransMilenio, SITP y Cable"
+                            data-url="Movilidad.html">
+
+                        Abrir visor
+
+                        <svg viewBox="0 0 24 24">
+
+                            <path d="M5 12h14M13 6l6 6-6 6"></path>
+
+                        </svg>
+
+                    </button>
+
+                </div>
+
+            </article>
+
+            <!-- Obras en construcción -->
+
+            <article class="viewer-card"
+                     data-viewer="Obras en construcción"
+                     data-url="Obras.html"
+                     tabindex="0">
+
+                <img src="../../Imagenes/idu.png"
+                     alt="Obras en construcción">
+
+                <div class="viewer-overlay"></div>
+
+                <span class="viewer-number">
+                    02
+                </span>
+
+                <div class="viewer-icon">
+
+                    <svg viewBox="0 0 24 24">
+
+                        <path d="M3 21h18M6 21V10l6-6 6 6v11"></path>
+
+                        <path d="M10 21v-6h4v6"></path>
+
+                    </svg>
+
+                </div>
+
+                <div class="viewer-content">
+
+                    <span class="viewer-kicker">
+                        IDU
+                    </span>
+
+                    <h2>
+                        Obras en construcción
+                    </h2>
+
+                    <p>
+                        Proyectos del IDU con etapa, contrato y porcentaje de avance.
+                    </p>
+
+                    <div class="viewer-tags">
+
+                        <span>Proyectos IDU</span>
+                        <span>Avance</span>
+                        <span>Puentes</span>
+                        <span>Malla vial</span>
+
+                    </div>
+
+                    <button class="viewer-button"
+                            type="button"
+                            data-name="Obras en construcción"
+                            data-url="Obras.html">
+
+                        Abrir visor
+
+                        <svg viewBox="0 0 24 24">
+
+                            <path d="M5 12h14M13 6l6 6-6 6"></path>
+
+                        </svg>
+
+                    </button>
+
+                </div>
+
+            </article>
+
+            <!-- Datos Bogotá -->
+
+            <article class="viewer-card"
+                     data-viewer="Datos Bogotá"
+                     data-url="Datos.html"
+                     tabindex="0">
+
+                <img src="../../Imagenes/datosbogota.webp"
+                     alt="Datos Bogotá">
+
+                <div class="viewer-overlay"></div>
+
+                <span class="viewer-number">
+                    03
+                </span>
+
+                <div class="viewer-icon">
+
+                    <svg viewBox="0 0 24 24">
+
+                        <ellipse cx="12" cy="6" rx="7" ry="3"></ellipse>
+
+                        <path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"></path>
+
+                    </svg>
+
+                </div>
+
+                <div class="viewer-content">
+
+                    <span class="viewer-kicker">
+                        Datos abiertos
+                    </span>
+
+                    <h2>
+                        Datos Bogotá
+                    </h2>
+
+                    <p>
+                        Ordenamiento territorial, desarrollo económico y otras capas de Datos Abiertos Bogotá.
+                    </p>
+
+                    <div class="viewer-tags">
+
+                        <span>POT</span>
+                        <span>Desarrollo económico</span>
+                        <span>Datos abiertos</span>
+
+                    </div>
+
+                    <button class="viewer-button"
+                            type="button"
+                            data-name="Datos Bogotá"
+                            data-url="Datos.html">
+
+                        Abrir visor
+
+                        <svg viewBox="0 0 24 24">
+
+                            <path d="M5 12h14M13 6l6 6-6 6"></path>
+
+                        </svg>
+
+                    </button>
+
+                </div>
+
+            </article>
+
+        </section>
+
+    </main>
+
+    <footer>
+
+        <div class="footer-inner">
+
+            <div>
+
+                <strong>
+                    Geodata de Bogotá
+                </strong>
+
+                <span>
+                    Laboratorio Digital CIAM
+                </span>
+
+            </div>
+
+            <span>
+                © 2026 Universidad de los Andes
+            </span>
+
+        </div>
+
+    </footer>
+
+    <div class="toast"
+         id="toast">
+        <span id="toastText"></span>
+    </div>
+
+    <script>
+        document.addEventListener(
+            "DOMContentLoaded",
+            function () {
+
+                const toast =
+                    document.getElementById("toast");
+
+                const toastText =
+                    document.getElementById("toastText");
+
+                const explorar =
+                    document.querySelector(
+                        "[data-action='explorar']"
+                    );
+
+                let toastTimer = null;
+
+                function mostrarMensaje(nombre) {
+
+                    if (!toast || !toastText) {
+                        return;
+                    }
+
+                    toastText.textContent =
+                        nombre +
+                        ": visor preparado, sin navegación por ahora.";
+
+                    toast.classList.add("visible");
+
+                    if (toastTimer) {
+                        clearTimeout(toastTimer);
+                    }
+
+                    toastTimer = setTimeout(
+                        function () {
+                            toast.classList.remove("visible");
+                        },
+                        2600
+                    );
+                }
+
+                function abrirVisor(elemento, nombre) {
+
+                    const url =
+                        elemento.getAttribute("data-url");
+
+                    if (url) {
+                        window.location.href = url;
+                        return;
+                    }
+
+                    mostrarMensaje(nombre);
+                }
+
+                document
+                    .querySelectorAll(".viewer-button")
+                    .forEach(function (boton) {
+
+                        boton.addEventListener(
+                            "click",
+                            function (event) {
+
+                                event.preventDefault();
+                                event.stopPropagation();
+
+                                abrirVisor(
+                                    boton,
+                                    boton.dataset.name
+                                );
+                            }
+                        );
+                    });
+
+                document
+                    .querySelectorAll(".viewer-card")
+                    .forEach(function (tarjeta) {
+
+                        tarjeta.addEventListener(
+                            "click",
+                            function (event) {
+
+                                if (
+                                    event.target.closest(
+                                        ".viewer-button"
+                                    )
+                                ) {
+                                    return;
+                                }
+
+                                abrirVisor(
+                                    tarjeta,
+                                    tarjeta.dataset.viewer
+                                );
+                            }
+                        );
+
+                        tarjeta.addEventListener(
+                            "keydown",
+                            function (event) {
+
+                                if (
+                                    event.key === "Enter"
+                                    || event.key === " "
+                                ) {
+
+                                    event.preventDefault();
+
+                                    abrirVisor(
+                                        tarjeta,
+                                        tarjeta.dataset.viewer
+                                    );
+                                }
+                            }
+                        );
+                    });
+
+                if (explorar) {
+
+                    explorar.addEventListener(
+                        "click",
+                        function () {
+                            document
+                                .querySelector(".viewer-grid")
+                                .scrollIntoView({ behavior: "smooth" });
+                        }
+                    );
+                }
+            }
+        );
+    </script>
+
+    <!-- ==========================================
+         AGENTE IA · BOTÓN FLOTANTE Y PANEL DE CHAT (ICDE)
+         Mismo bloque que en Index.html, para que el agente
+         esté disponible en todas las páginas del sitio.
+    =========================================== -->
+
+    <button class="agent-launcher" id="agentLauncher" type="button" aria-label="Abrir asistente ICDE">
+        <svg class="agent-launcher-icon-open" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 4h16v11H8l-4 4V4Z"></path>
+            <path d="M8 9h8M8 12h5"></path>
+        </svg>
+        <svg class="agent-launcher-icon-close" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18"></path>
+        </svg>
+    </button>
+
+    <section class="agent-panel" id="agentPanel" aria-label="Asistente ICDE">
+        <header class="agent-panel-head">
+            <div class="agent-panel-title">
+                <span class="agent-panel-icon">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 4h16v11H8l-4 4V4Z"></path>
+                        <path d="M8 9h8M8 12h5"></path>
+                    </svg>
+                </span>
+                <div>
+                    <small>Laboratorio Digital CIAM</small>
+                    <h2>Asistente ICDE</h2>
+                </div>
+            </div>
+            <button class="agent-panel-close" id="agentPanelClose" type="button" aria-label="Cerrar asistente">×</button>
+        </header>
+
+        <div class="agent-panel-log" id="agentPanelLog">
+            <div class="agent-bubble agent-bubble-bot">
+                Hola, soy el asistente del portal ICDE. Cuéntame qué
+                información geográfica necesitas y busco en el catálogo
+                los datasets que más te sirvan.
+            </div>
+        </div>
+
+        <form class="agent-panel-input" id="agentForm">
+            <input type="text" id="agentInput" placeholder="Escribe qué información necesitas…" disabled aria-label="Mensaje para el asistente" autocomplete="off">
+            <button type="submit" disabled>Enviar</button>
+        </form>
+    </section>
+
+    <script src="../../agente1/agente.js"></script>
+
+</body>
+</html>

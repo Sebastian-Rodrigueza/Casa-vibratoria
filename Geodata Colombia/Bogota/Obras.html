@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Obras del IDU 3D | Universidad de los Andes</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Sans+3:wght@500;600;700&display=swap" rel="stylesheet">
+
+<link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css" rel="stylesheet">
+
+<style>
+    html, body { margin: 0; height: 100%; font-family: "Inter", sans-serif; color: #34383d; }
+
+    header {
+        height: 76px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 0 24px;
+        background: rgba(255,255,255,.97);
+        border-bottom: 1px solid #e5e5de;
+        box-shadow: 0 3px 15px rgba(34,36,39,.06);
+        position: relative;
+        z-index: 10;
+    }
+    header .logo-box {
+        height: 44px;
+        display: flex;
+        align-items: center;
+        padding-right: 18px;
+        border-right: 1px solid #e5e5de;
+    }
+    header .logo-box img { max-height: 40px; width: auto; display: block; }
+    header .brand-copy small {
+        display: block; margin-bottom: 2px;
+        color: #898d91; font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+    }
+    header .brand-copy strong { display: block; font: 700 21px/1.1 "Source Sans 3", sans-serif; color: #26292d; }
+    header nav { margin-left: auto; display: flex; gap: 8px; }
+    header nav a {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 9px 16px; border-radius: 8px;
+        color: #26292d; font-size: 13px; font-weight: 700;
+        text-decoration: none; border: 1px solid #e5e5de; background: #fff;
+    }
+    header nav a.primario { background: #f5c400; border-color: #d7aa00; }
+    header nav a:hover { background: #fff3ad; }
+    header nav a svg { width: 16px; height: 16px; }
+
+    #map { position: absolute; top: 76px; left: 0; right: 0; bottom: 0; background: #0d1117; }
+
+    /* Panel izquierdo */
+    .panel {
+        position: absolute; top: 90px; left: 12px; z-index: 5;
+        width: 300px; max-height: calc(100% - 120px); overflow-y: auto;
+        background: rgba(255,255,255,.97);
+        border-radius: 14px; box-shadow: 0 6px 20px rgba(0,0,0,.22);
+        padding: 14px; font-size: 13px;
+    }
+    .panel h2 { margin: 0 0 2px; font: 700 19px/1.15 "Source Sans 3", sans-serif; color: #26292d; }
+    .panel .sub { margin: 0 0 12px; color: #6b6f74; font-size: 12px; }
+    .panel h3 {
+        margin: 14px 0 6px; padding-top: 12px; border-top: 1px solid #ecece6;
+        font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #8a8e93;
+    }
+    .panel label { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; }
+    .panel label .cuenta { margin-left: auto; color: #8a8e93; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+    .muestra { width: 14px; height: 14px; border-radius: 3px; flex: none; }
+    .panel > button {
+        display: flex; align-items: center; gap: 9px; width: 100%; text-align: left;
+        padding: 9px 11px; margin-bottom: 6px;
+        background: #f7f7f3; border: 1px solid #e5e5de; border-radius: 9px;
+        font: 600 12.5px "Inter", sans-serif; color: #26292d; cursor: pointer;
+    }
+    .panel > button:hover { background: #fff3ad; }
+    .panel > button.activo { background: #f5c400; border-color: #d7aa00; }
+    .panel button svg { width: 16px; height: 16px; flex: none; }
+    .panel input[type="search"] {
+        width: 100%; box-sizing: border-box; margin-bottom: 8px;
+        padding: 9px 11px; border: 1px solid #d9d9d2; border-radius: 9px;
+        font: 500 12.5px "Inter", sans-serif;
+    }
+    .estado { margin-top: 10px; font-size: 11.5px; color: #6b6f74; }
+    .estado.error { color: #b42318; }
+    .nota { margin-top: 10px; font-size: 11px; line-height: 1.5; color: #8a8e93; }
+
+    /* Lista de obras */
+    .lista { display: flex; flex-direction: column; gap: 4px; }
+    .lista button {
+        display: block; width: 100%; text-align: left;
+        padding: 8px 10px; background: #f7f7f3; border: 1px solid #e5e5de; border-radius: 9px;
+        font: 500 12px/1.35 "Inter", sans-serif; color: #26292d; cursor: pointer;
+    }
+    .lista button:hover { background: #fff3ad; }
+    .lista button.activo { border-color: #d7aa00; background: #fff7cc; }
+    .lista .fila { display: flex; align-items: center; gap: 8px; margin-top: 5px; font-size: 11px; color: #6b6f74; }
+    .lista .fila b { min-width: 34px; text-align: right; color: #26292d; font-variant-numeric: tabular-nums; }
+    .vacio { color: #8a8e93; font-size: 12px; padding: 4px 0; }
+
+    /* Barra de avance (pista de la misma familia de color que el relleno) */
+    .barra { flex: 1; height: 6px; border-radius: 3px; background: #fde7c4; overflow: hidden; }
+    .barra span { display: block; height: 100%; border-radius: 3px; background: #e07b00; }
+
+    /* Ficha del proyecto (derecha) */
+    .ficha {
+        position: absolute; top: 90px; right: 56px; z-index: 6;
+        width: 330px; max-height: calc(100% - 120px); overflow-y: auto;
+        background: #fff; border-radius: 14px; box-shadow: 0 8px 26px rgba(0,0,0,.26);
+        padding: 16px; font-size: 13px;
+    }
+    .ficha[hidden] { display: none; }
+    .ficha .cerrar {
+        position: absolute; top: 10px; right: 10px;
+        width: 30px; height: 30px; display: grid; place-items: center;
+        border: 0; border-radius: 8px; background: #f2f2ee; cursor: pointer;
+    }
+    .ficha .cerrar svg { width: 16px; height: 16px; }
+    .ficha .etapa {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 4px 9px; border-radius: 999px; background: #f2f2ee;
+        font-size: 11px; font-weight: 700;
+    }
+    .ficha .etapa i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+    .ficha h4 { margin: 10px 30px 4px 0; font: 700 18px/1.2 "Source Sans 3", sans-serif; color: #26292d; }
+    .ficha .contrato { color: #6b6f74; font-size: 12px; }
+    .ficha .medida { margin-top: 14px; }
+    .ficha .medida .titulo { display: flex; justify-content: space-between; font-size: 12px; color: #6b6f74; margin-bottom: 5px; }
+    .ficha .medida .titulo b { color: #26292d; font-size: 15px; }
+    .ficha .medida .barra { height: 9px; border-radius: 5px; }
+    .ficha .programado .barra { background: #e3e6ea; }
+    .ficha .programado .barra span { background: #8a96a3; }
+    .ficha .variacion { margin-top: 10px; font-size: 12.5px; }
+    .ficha .variacion.atrasada b { color: #b42318; }
+    .ficha .variacion.al-dia b { color: #2b7a3d; }
+    .ficha dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 14px 0 0; font-size: 12px; }
+    .ficha dt { color: #8a8e93; }
+    .ficha dd { margin: 0; color: #26292d; }
+    .ficha a.enlace {
+        display: inline-flex; align-items: center; gap: 6px; margin-top: 14px;
+        padding: 8px 12px; border-radius: 8px; background: #f5c400; border: 1px solid #d7aa00;
+        color: #26292d; font-weight: 700; font-size: 12.5px; text-decoration: none;
+    }
+    .ficha a.enlace svg { width: 15px; height: 15px; }
+    .ficha .aviso { margin-top: 12px; font-size: 11px; color: #8a8e93; }
+
+    /* Indicador del recorrido */
+    .hud {
+        position: absolute; bottom: 34px; left: 50%; transform: translateX(-50%); z-index: 6;
+        padding: 10px 18px; background: rgba(20,23,27,.86); color: #fff;
+        border-radius: 999px; box-shadow: 0 6px 20px rgba(0,0,0,.3); font-size: 13px; white-space: nowrap;
+    }
+    .hud[hidden] { display: none; }
+    .hud small { color: #ffe271; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; margin-right: 10px; }
+
+    .maplibregl-popup-content { font-family: "Inter", sans-serif; font-size: 12.5px; }
+
+    @media (max-width: 720px) {
+        header .brand-copy small, header nav a.secundario { display: none; }
+        .panel { width: calc(100% - 48px); max-height: 38%; top: auto; bottom: 12px; }
+        .ficha { left: 12px; right: 12px; width: auto; max-height: 45%; }
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <span class="logo-box">
+        <img src="../../Imagenes/logo-uniandes.png" alt="Universidad de los Andes">
+    </span>
+    <span class="brand-copy">
+        <small>Geodata de Bogotá</small>
+        <strong>Obras del IDU</strong>
+    </span>
+    <nav>
+        <a class="secundario" href="Index.html"><i data-lucide="arrow-left"></i> Volver</a>
+        <a class="primario" href="../../Index.html" aria-label="Ir al inicio"><i data-lucide="house"></i> Inicio</a>
+    </nav>
+</header>
+
+<div id="map"></div>
+
+<aside class="panel">
+    <h2>Obras del IDU</h2>
+    <p class="sub">Proyectos del Instituto de Desarrollo Urbano en Bogotá.</p>
+
+    <button type="button" id="btnRecorrido"></button>
+    <button type="button" id="btnTodo"></button>
+
+    <h3>Etapa</h3>
+    <div id="filtros"></div>
+
+    <h3>Vista</h3>
+    <label><input type="checkbox" id="chk3d" checked> Altura según avance ejecutado</label>
+    <label><input type="checkbox" id="chkSatelital" checked> Imagen satelital</label>
+    <label><input type="checkbox" id="chkEdificios" checked> Edificios 3D</label>
+
+    <h3>Buscar</h3>
+    <input type="search" id="buscar" placeholder="Nombre o contrato (ej. Av. 68, IDU-1601)…" autocomplete="off">
+
+    <h3 id="tituloLista">En construcción</h3>
+    <div class="lista" id="lista"></div>
+
+    <div class="estado" id="estado">Cargando proyectos del IDU…</div>
+    <p class="nota">
+        Fuente: Instituto de Desarrollo Urbano (IDU), visor de proyectos,
+        consultado en vivo. Etapa, avance y fechas son los que reporta
+        el IDU en cada ficha; algunas fichas no están actualizadas.
+        La altura en 3D solo representa el porcentaje de avance.
+    </p>
+</aside>
+
+<article class="ficha" id="ficha" hidden></article>
+
+<div class="hud" id="hud" hidden><small>Recorrido</small><span id="hudTexto"></span></div>
+
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@1.52.0/dist/umd/lucide.min.js"></script>
+<script>
+    // ---------- Configuracion ----------
+    const SERVICIO_IDU =
+        "https://webidu.idu.gov.co/servergis1/rest/services/ProyectoGeneralIDU/ProyectosGeneralIDU/FeatureServer/0";
+    const CAMPOS = "OBJECTID,NOMBRE,CONTRATO,ETAPA,AVANCE_PROGRAMADO,AVANCE_EJECUTADO,VARIACION,URL," +
+        "T_FECHAREPORTE,T_FEC_INI_PLANEA_PROYECTO,T_FEC_ENTREGA_PLANEA_PROYECTO,T_FEC_INI_PLANEA_ETAPA,T_FEC_FIN_PLANEA_ETAPA";
+
+    // Las etapas del IDU agrupadas en 5 grupos (con su color)
+    const GRUPOS = [
+        { id: "construccion", nombre: "En construcción", color: "#e07b00", visible: true,
+          etapas: (e) => /^(Construcción|Diseños y Construcción)$/i.test(e) },
+        { id: "estudios", nombre: "Estudios y diseños", color: "#2f6fb0", visible: true,
+          etapas: (e) => /^(Estudios y Diseños|Factibilidad|Prefactibilidad|Perfil|Preliminares)$/i.test(e) },
+        { id: "conservacion", nombre: "Conservación", color: "#0f9fa8", visible: true,
+          etapas: (e) => /^Conservación$/i.test(e) },
+        { id: "terminado", nombre: "Terminadas", color: "#5f8f62", visible: false,
+          etapas: (e) => /^Terminado/i.test(e) },
+        { id: "caducado", nombre: "Caducadas", color: "#8a8e93", visible: false,
+          etapas: (e) => /^Caducado/i.test(e) }
+    ];
+    const GRUPO_OTRO = { id: "otro", nombre: "Otras", color: "#8a8e93", visible: false };
+
+    const CAJA_BOGOTA = [-74.3080, 4.3820, -74.0100, 4.8335];
+
+    // Dibujar a 1x en pantallas de alta resolucion (rendimiento del 3D)
+    Object.defineProperty(window, "devicePixelRatio", { get: () => 1 });
+
+    const estado = document.getElementById("estado");
+    const ficha = document.getElementById("ficha");
+
+    const map = new maplibregl.Map({
+        container: "map",
+        style: "https://tiles.openfreemap.org/styles/liberty",
+        center: [-74.1, 4.63],
+        zoom: 11.2,
+        pitch: 50,
+        bearing: 15,
+        antialias: false
+    });
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
+    map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-right");
+
+    // ---------- Utilidades ----------
+    function texto(v) {
+        return v === null || v === undefined || v === "" ? "—" : String(v);
+    }
+    function quitarTildes(t) {
+        return String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+    }
+    // "2019-12-05" -> "05/12/2019" (las fichas traen los dos formatos)
+    function fecha(v) {
+        if (!v) return "—";
+        const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);
+        return m ? `${m[3]}/${m[2]}/${m[1]}` : String(v);
+    }
+    function porcentaje(v) {
+        const n = Number(v);
+        return isFinite(n) ? Math.max(0, Math.min(100, n)) : 0;
+    }
+    function cajaDe(features) {
+        const caja = new maplibregl.LngLatBounds();
+        const recorrer = (c) => typeof c[0] === "number" ? caja.extend(c) : c.forEach(recorrer);
+        features.forEach((f) => f.geometry && recorrer(f.geometry.coordinates));
+        return caja;
+    }
+    function ponerBoton(boton, icono, textoBoton) {
+        boton.innerHTML = `<i data-lucide="${icono}"></i><span>${textoBoton}</span>`;
+        if (window.lucide) lucide.createIcons();
+    }
+    function grupoDe(etapa) {
+        return GRUPOS.find((g) => g.etapas(etapa || "")) || GRUPO_OTRO;
+    }
+
+    // ---------- Datos en vivo ----------
+    // El servidor del IDU falla si se piden todas las geometrias completas
+    // (son muy detalladas): se piden simplificadas (~5 m) y en 3 partes.
+    async function pedirParte(offset, cantidad) {
+        const url = `${SERVICIO_IDU}/query?where=1%3D1&outFields=${encodeURIComponent(CAMPOS)}` +
+            `&orderByFields=OBJECTID&resultOffset=${offset}&resultRecordCount=${cantidad}` +
+            `&outSR=4326&geometryPrecision=6&maxAllowableOffset=0.00005&f=geojson`;
+        const r = await fetch(url);
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        const d = await r.json();
+        if (!d.features) throw new Error("respuesta sin datos");
+        return d.features;
+    }
+
+    async function cargarProyectos() {
+        const conteo = await (await fetch(`${SERVICIO_IDU}/query?where=1%3D1&returnCountOnly=true&f=json`)).json();
+        const total = conteo.count || 700;
+        const tamano = Math.ceil(total / 3);
+        const partes = await Promise.all([0, 1, 2].map((i) => pedirParte(i * tamano, tamano)));
+        return partes.flat();
+    }
+
+    // ---------- Capas ----------
+    let proyectos = [];   // features con propiedades calculadas
+    let visibles = new Set(GRUPOS.filter((g) => g.visible).map((g) => g.id));
+    let busqueda = "";
+    let seleccionado = null;
+
+    function prepararProyectos(features) {
+        proyectos = features.filter((f) => f.geometry).map((f) => {
+            const p = f.properties;
+            const g = grupoDe(p.ETAPA);
+            p.grupo = g.id;
+            p.color = g.color;
+            p.avance = porcentaje(p.AVANCE_EJECUTADO);
+            // altura solo como representacion del avance: 4 m minimo, hasta ~64 m al 100 %
+            p.altura = 4 + p.avance * 0.6;
+            p.clave = quitarTildes(`${p.NOMBRE} ${p.CONTRATO}`);
+            return f;
+        });
+    }
+
+    function filtrados() {
+        return proyectos.filter((f) =>
+            visibles.has(f.properties.grupo) && (!busqueda || f.properties.clave.includes(busqueda)));
+    }
+
+    function agregarCapas() {
+        const antes = map.getLayer("building-3d") ? "building-3d" : undefined;
+        map.addSource("obras", { type: "geojson", data: { type: "FeatureCollection", features: [] }, promoteId: "OBJECTID" });
+
+        map.addLayer({
+            id: "obras-relleno", type: "fill", source: "obras",
+            paint: { "fill-color": ["get", "color"], "fill-opacity": 0.35 }
+        }, antes);
+        map.addLayer({
+            id: "obras-3d", type: "fill-extrusion", source: "obras",
+            paint: {
+                "fill-extrusion-color": ["get", "color"],
+                "fill-extrusion-base": 0,
+                "fill-extrusion-height": ["get", "altura"],
+                "fill-extrusion-opacity": 0.6
+            }
+        }, antes);
+        map.addLayer({
+            id: "obras-borde", type: "line", source: "obras",
+            paint: {
+                "line-color": ["get", "color"],
+                "line-width": ["case", ["boolean", ["feature-state", "sel"], false], 4, 1.5]
+            }
+        });
+
+        ["obras-relleno", "obras-3d"].forEach((id) => {
+            map.on("click", id, (e) => mostrarFicha(e.features[0].properties.OBJECTID, false));
+            map.on("mouseenter", id, () => map.getCanvas().style.cursor = "pointer");
+            map.on("mouseleave", id, () => map.getCanvas().style.cursor = "");
+        });
+    }
+
+    function refrescar() {
+        const lista = filtrados();
+        if (map.getSource("obras")) map.getSource("obras").setData({ type: "FeatureCollection", features: lista });
+        pintarLista(lista);
+    }
+
+    // ---------- Filtros por etapa ----------
+    function pintarFiltros() {
+        const caja = document.getElementById("filtros");
+        caja.innerHTML = "";
+        GRUPOS.forEach((g) => {
+            const n = proyectos.filter((f) => f.properties.grupo === g.id).length;
+            const l = document.createElement("label");
+            l.innerHTML = `<input type="checkbox" ${visibles.has(g.id) ? "checked" : ""}>
+                <span class="muestra" style="background:${g.color}"></span> ${g.nombre}
+                <span class="cuenta">${n}</span>`;
+            l.querySelector("input").addEventListener("change", (e) => {
+                if (e.target.checked) visibles.add(g.id); else visibles.delete(g.id);
+                refrescar();
+            });
+            caja.appendChild(l);
+        });
+    }
+
+    // ---------- Lista ----------
+    function pintarLista(lista) {
+        const cont = document.getElementById("lista");
+        const titulo = document.getElementById("tituloLista");
+        // Sin busqueda: obras en construccion (las mas avanzadas primero). Con busqueda: resultados.
+        const items = busqueda
+            ? lista.slice(0, 30)
+            : lista.filter((f) => f.properties.grupo === "construccion");
+        items.sort((a, b) => b.properties.avance - a.properties.avance);
+        titulo.textContent = busqueda ? `Resultados (${lista.length})` : `En construcción (${items.length})`;
+        cont.innerHTML = "";
+        if (!items.length) {
+            cont.innerHTML = `<div class="vacio">${busqueda ? "Sin resultados." : "Activa la etapa “En construcción” para ver la lista."}</div>`;
+            return;
+        }
+        items.forEach((f) => {
+            const p = f.properties;
+            const b = document.createElement("button");
+            b.type = "button";
+            b.dataset.id = p.OBJECTID;
+            if (seleccionado === p.OBJECTID) b.classList.add("activo");
+            b.innerHTML = `${p.NOMBRE}
+                <div class="fila"><b>${Math.round(p.avance)} %</b><div class="barra"><span style="width:${p.avance}%"></span></div></div>`;
+            b.addEventListener("click", () => { detenerRecorrido(); mostrarFicha(p.OBJECTID, true); });
+            cont.appendChild(b);
+        });
+    }
+
+    // ---------- Ficha ----------
+    function mostrarFicha(id, volar) {
+        const f = proyectos.find((x) => x.properties.OBJECTID === Number(id));
+        if (!f) return;
+        const p = f.properties;
+        const g = grupoDe(p.ETAPA);
+
+        if (seleccionado !== null) map.setFeatureState({ source: "obras", id: seleccionado }, { sel: false });
+        seleccionado = p.OBJECTID;
+        map.setFeatureState({ source: "obras", id: seleccionado }, { sel: true });
+        document.querySelectorAll(".lista button").forEach((b) => b.classList.toggle("activo", Number(b.dataset.id) === seleccionado));
+
+        const prog = porcentaje(p.AVANCE_PROGRAMADO);
+        const ejec = p.avance;
+        const varNum = Number(p.VARIACION);
+        const conAvance = g.id === "construccion" || g.id === "conservacion" || prog > 0 || ejec > 0;
+        const variacion = isFinite(varNum) && conAvance
+            ? `<div class="variacion ${varNum < 0 ? "atrasada" : "al-dia"}">Variación: <b>${varNum > 0 ? "+" : ""}${varNum} puntos</b> ${varNum < 0 ? "(atrasada frente a lo programado)" : "(al día o adelantada)"}</div>`
+            : "";
+
+        ficha.innerHTML = `
+            <button class="cerrar" type="button" aria-label="Cerrar"><i data-lucide="x"></i></button>
+            <span class="etapa"><i style="background:${g.color}"></i>${texto(p.ETAPA)}</span>
+            <h4>${texto(p.NOMBRE)}</h4>
+            <div class="contrato">Contrato ${texto(p.CONTRATO)}</div>
+            ${conAvance ? `
+            <div class="medida">
+                <div class="titulo">Avance ejecutado <b>${Math.round(ejec)} %</b></div>
+                <div class="barra"><span style="width:${ejec}%"></span></div>
+            </div>
+            <div class="medida programado">
+                <div class="titulo">Avance programado <b>${Math.round(prog)} %</b></div>
+                <div class="barra"><span style="width:${prog}%"></span></div>
+            </div>
+            ${variacion}` : ""}
+            <dl>
+                <dt>Inicio del proyecto</dt><dd>${fecha(p.T_FEC_INI_PLANEA_PROYECTO)}</dd>
+                <dt>Entrega planeada</dt><dd>${fecha(p.T_FEC_ENTREGA_PLANEA_PROYECTO)}</dd>
+                <dt>Fin de la etapa</dt><dd>${fecha(p.T_FEC_FIN_PLANEA_ETAPA)}</dd>
+                <dt>Fecha de reporte</dt><dd>${p.T_FECHAREPORTE ? fecha(p.T_FECHAREPORTE) : "Sin fecha en la ficha"}</dd>
+            </dl>
+            ${p.URL ? `<a class="enlace" href="${p.URL}" target="_blank" rel="noopener"><i data-lucide="external-link"></i> Ver ficha en el IDU</a>` : ""}
+            <p class="aviso">Datos tal como los publica el IDU en su visor de proyectos.</p>`;
+        ficha.hidden = false;
+        ficha.querySelector(".cerrar").addEventListener("click", cerrarFicha);
+        if (window.lucide) lucide.createIcons();
+
+        if (volar) {
+            map.fitBounds(cajaDe([f]), {
+                padding: { top: 90, bottom: 90, left: 340, right: 420 },
+                pitch: 55, bearing: map.getBearing(), maxZoom: 17, duration: 2200
+            });
+        }
+    }
+
+    function cerrarFicha() {
+        ficha.hidden = true;
+        if (seleccionado !== null) map.setFeatureState({ source: "obras", id: seleccionado }, { sel: false });
+        seleccionado = null;
+        document.querySelectorAll(".lista button").forEach((b) => b.classList.remove("activo"));
+    }
+
+    // ---------- Recorrido por las obras en construccion ----------
+    // La camara vuela de obra en obra (de la mas avanzada a la menos) y
+    // muestra su ficha unos segundos.
+    const btnRecorrido = document.getElementById("btnRecorrido");
+    const hud = document.getElementById("hud");
+    const PAUSA_OBRA = 5000;
+    let recorrido = null;   // { lista, i, temporizador }
+
+    function siguienteObra() {
+        if (!recorrido) return;
+        if (recorrido.i >= recorrido.lista.length) { detenerRecorrido(); return; }
+        const f = recorrido.lista[recorrido.i];
+        document.getElementById("hudTexto").textContent =
+            `Obra ${recorrido.i + 1} de ${recorrido.lista.length} · ${f.properties.NOMBRE}`;
+        mostrarFicha(f.properties.OBJECTID, true);
+        recorrido.i++;
+        map.once("moveend", () => {
+            if (!recorrido) return;
+            // un pequeno giro mientras se muestra la obra
+            map.easeTo({ bearing: map.getBearing() + 25, duration: PAUSA_OBRA, easing: (t) => t });
+            recorrido.temporizador = setTimeout(siguienteObra, PAUSA_OBRA);
+        });
+    }
+
+    function iniciarRecorrido() {
+        // asegura que la etapa "En construccion" este visible
+        if (!visibles.has("construccion")) { visibles.add("construccion"); pintarFiltros(); refrescar(); }
+        const lista = proyectos
+            .filter((f) => f.properties.grupo === "construccion")
+            .sort((a, b) => b.properties.avance - a.properties.avance);
+        if (!lista.length) return;
+        recorrido = { lista, i: 0, temporizador: null };
+        ponerBoton(btnRecorrido, "square", "Detener recorrido");
+        btnRecorrido.classList.add("activo");
+        hud.hidden = false;
+        siguienteObra();
+    }
+
+    function detenerRecorrido() {
+        if (!recorrido) return;
+        clearTimeout(recorrido.temporizador);
+        recorrido = null;
+        map.stop();
+        hud.hidden = true;
+        ponerBoton(btnRecorrido, "route", "Recorrido por las obras en construcción");
+        btnRecorrido.classList.remove("activo");
+    }
+
+    btnRecorrido.addEventListener("click", () => recorrido ? detenerRecorrido() : iniciarRecorrido());
+    map.on("dragstart", detenerRecorrido);
+
+    function verTodo() {
+        const lista = filtrados();
+        if (lista.length) map.fitBounds(cajaDe(lista), { padding: { top: 60, bottom: 60, left: 340, right: 60 }, pitch: 50, bearing: 15, duration: 2200 });
+    }
+
+    // ---------- Inicio ----------
+    ponerBoton(btnRecorrido, "route", "Recorrido por las obras en construcción");
+    ponerBoton(document.getElementById("btnTodo"), "map", "Ver todas las obras");
+    if (window.lucide) lucide.createIcons();
+
+    map.on("load", async () => {
+        map.setSky({
+            "sky-color": "#87ceeb", "sky-horizon-blend": 0.5, "horizon-color": "#ffffff",
+            "horizon-fog-blend": 0.6, "fog-color": "#d8e6ec", "fog-ground-blend": 0.5
+        });
+        map.setLight({ anchor: "map", color: "#fff2d9", intensity: 0.55, position: [1.6, 200, 40] });
+
+        map.addSource("satelital", {
+            type: "raster",
+            tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+            tileSize: 256, maxzoom: 19, bounds: CAJA_BOGOTA, attribution: "Esri World Imagery"
+        });
+        map.addLayer({ id: "satelital", type: "raster", source: "satelital" },
+            map.getLayer("building-3d") ? "building-3d" : undefined);
+
+        document.getElementById("chkSatelital").addEventListener("change", (e) => {
+            map.setLayoutProperty("satelital", "visibility", e.target.checked ? "visible" : "none");
+        });
+        document.getElementById("chkEdificios").addEventListener("change", (e) => {
+            if (map.getLayer("building-3d")) map.setLayoutProperty("building-3d", "visibility", e.target.checked ? "visible" : "none");
+        });
+
+        agregarCapas();
+        document.getElementById("chk3d").addEventListener("change", (e) => {
+            map.setLayoutProperty("obras-3d", "visibility", e.target.checked ? "visible" : "none");
+            map.setLayoutProperty("obras-relleno", "visibility", e.target.checked ? "none" : "visible");
+        });
+        map.setLayoutProperty("obras-relleno", "visibility", "none");
+
+        document.getElementById("btnTodo").addEventListener("click", () => { detenerRecorrido(); verTodo(); });
+        document.getElementById("buscar").addEventListener("input", (e) => {
+            busqueda = quitarTildes(e.target.value.trim());
+            refrescar();
+        });
+
+        try {
+            prepararProyectos(await cargarProyectos());
+        } catch (err) {
+            estado.textContent = "No se pudo conectar con el servidor del IDU. Intenta recargar.";
+            estado.classList.add("error");
+            return;
+        }
+
+        pintarFiltros();
+        refrescar();
+        verTodo();
+        estado.textContent = `${proyectos.length} proyectos cargados · ` +
+            new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+    });
+</script>
+
+</body>
+</html>

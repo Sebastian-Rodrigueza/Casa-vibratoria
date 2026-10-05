@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <meta name="description"
+          content="Catálogo de datos geográficos de Datos Abiertos Bogotá para abrir en el mapa del Laboratorio Digital CIAM">
+
+    <title>
+        Datos Bogotá | Universidad de los Andes
+    </title>
+
+    <link rel="preconnect"
+          href="https://fonts.googleapis.com">
+
+    <link rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Sans+3:wght@600;700;800&display=swap"
+          rel="stylesheet">
+
+    <style>
+
+        /* Mismo diseno que Geodata Colombia > ICDE */
+        :root {
+            --white: #ffffff;
+            --cream: #fffdf5;
+            --beige: #fdf7e9;
+            --soft: #f7f7f3;
+            --yellow: #f5c400;
+            --yellow-dark: #d4a900;
+            --yellow-soft: #fff3b0;
+            --text: #282b2f;
+            --muted: #6f7479;
+            --line: #e5e4dc;
+            --shadow: 0 18px 44px rgba(38, 40, 43, 0.14);
+            --font-body: "Inter", "Segoe UI", sans-serif;
+            --font-display: "Source Sans 3", "Segoe UI", sans-serif;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: var(--text);
+            background: radial-gradient(circle at 10% 8%, rgba(245, 196, 0, 0.10), transparent 25%),
+                        linear-gradient(180deg, var(--cream) 0%, var(--beige) 100vh);
+            font-family: var(--font-body);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        button, a, input, select { font: inherit; }
+
+        .page { min-height: 100vh; display: flex; flex-direction: column; }
+
+        /* ---------- Encabezado ---------- */
+        .topbar {
+            position: sticky; top: 0; z-index: 20;
+            min-height: 74px;
+            display: flex; align-items: center; justify-content: space-between; gap: 20px;
+            padding: 14px 6vw;
+            background: rgba(255, 255, 255, 0.96);
+            border-bottom: 1px solid var(--line);
+            box-shadow: 0 2px 12px rgba(30, 32, 35, 0.05);
+            backdrop-filter: blur(12px);
+        }
+        .brand { min-width: 0; display: flex; align-items: center; gap: 14px; }
+        .brand-mark {
+            width: 44px; height: 44px; flex: none;
+            display: grid; place-items: center;
+            background: var(--yellow); border-radius: 12px;
+            font-weight: 800; letter-spacing: -0.04em;
+        }
+        .brand-text small {
+            display: block; margin-bottom: 2px;
+            color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+        }
+        .brand-text h1 { margin: 0; font: 700 20px / 1.1 var(--font-display); }
+        .back-link {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 14px;
+            color: var(--text); background: var(--white);
+            border: 1px solid var(--line); border-radius: 9px;
+            text-decoration: none; font-size: 13px; font-weight: 600;
+            transition: 0.18s ease;
+        }
+        .back-link:hover { background: var(--yellow-soft); border-color: var(--yellow-dark); }
+
+        /* ---------- Presentacion y buscador ---------- */
+        .hero {
+            width: min(1180px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 60px 0 10px;
+            text-align: center;
+        }
+        .eyebrow {
+            display: inline-flex; align-items: center; gap: 8px;
+            margin-bottom: 16px; padding: 7px 11px;
+            color: #6f5900; background: var(--yellow-soft);
+            border: 1px solid #ead46b; border-radius: 999px;
+            font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+        }
+        .eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--yellow-dark); }
+        .hero h2 {
+            max-width: 850px; margin: 0 auto 16px;
+            font: 700 clamp(34px, 5vw, 56px) / 1.05 var(--font-display);
+            letter-spacing: -0.025em;
+        }
+        .hero p { max-width: 760px; margin: 0 auto; color: var(--muted); font-size: 16px; line-height: 1.7; }
+
+        .buscador-principal {
+            display: flex; gap: 10px;
+            max-width: 680px; margin: 28px auto 0;
+        }
+        .buscador-principal input {
+            flex: 1; min-width: 0;
+            padding: 14px 16px;
+            border: 1px solid var(--line); border-radius: 12px;
+            background: var(--white); box-shadow: 0 8px 22px rgba(38, 40, 43, 0.08);
+            font-size: 15px;
+        }
+        .buscador-principal input:focus { outline: 2px solid var(--yellow); border-color: var(--yellow-dark); }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            min-height: 44px; padding: 10px 18px;
+            color: var(--text); background: var(--yellow);
+            border: 1px solid var(--yellow-dark); border-radius: 10px;
+            font-size: 13px; font-weight: 700; text-decoration: none; cursor: pointer;
+            transition: background-color 0.18s ease, transform 0.18s ease;
+        }
+        .btn:hover { background: #ffd526; transform: translateY(-1px); }
+        .btn.sec { background: var(--white); border-color: var(--line); }
+        .btn.sec:hover { background: var(--yellow-soft); border-color: var(--yellow-dark); }
+        .btn svg { width: 16px; height: 16px; }
+
+        /* ---------- Tarjetas de categorias ---------- */
+        .themes {
+            width: min(1180px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 40px 0 88px;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 28px;
+        }
+        .theme-card {
+            position: relative;
+            display: flex; flex-direction: column; align-items: center;
+            min-width: 0; padding: 28px 22px 30px; overflow: hidden;
+            background: rgba(255, 255, 255, 0.97);
+            border: 1px solid var(--line); border-radius: 24px;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .theme-card::before { content: ""; position: absolute; inset: 0 0 auto; height: 6px; background: var(--yellow); }
+        .theme-card:hover { transform: translateY(-5px); box-shadow: 0 24px 50px rgba(38, 40, 43, 0.18); }
+
+        .circle-image {
+            width: 170px; aspect-ratio: 1;
+            margin: 10px auto 22px;
+            display: grid; place-items: center;
+            background: var(--white);
+            border: 8px solid var(--white); outline: 2px solid var(--yellow);
+            border-radius: 50%;
+            box-shadow: 0 14px 36px rgba(27, 34, 40, 0.16);
+        }
+        .circle-image img { width: 62%; height: 62%; object-fit: contain; transition: transform 0.35s ease; }
+        .theme-card:hover .circle-image img { transform: scale(1.06); }
+        .circle-image .inicial { font: 800 52px/1 var(--font-display); color: #22394f; }
+
+        .theme-number {
+            margin-bottom: 8px;
+            color: var(--yellow-dark); font-size: 11px; font-weight: 700;
+            letter-spacing: 0.10em; text-transform: uppercase; text-align: center;
+        }
+        .theme-card h3 { margin: 0 0 10px; font: 700 26px / 1.05 var(--font-display); text-align: center; }
+        .theme-card p { margin: 0 0 22px; color: var(--muted); text-align: center; font-size: 13px; line-height: 1.6; }
+        .theme-card .btn { margin-top: auto; min-width: 165px; }
+
+        /* ---------- Resultados ---------- */
+        .resultados {
+            width: min(1180px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 36px 0 88px;
+        }
+        .resultados[hidden], .themes[hidden] { display: none; }
+        .cabecera-resultados { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px; }
+        .cabecera-resultados h2 { margin: 6px 0 0; font: 700 34px/1.1 var(--font-display); }
+        .cabecera-resultados .cuenta { color: var(--muted); font-size: 14px; margin-top: 6px; }
+        .volver-categorias {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 0; border: 0; background: none; cursor: pointer;
+            color: #6f5900; font-size: 13px; font-weight: 700;
+        }
+        .volver-categorias svg { width: 15px; height: 15px; }
+
+        .controles {
+            display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+            margin: 22px 0 18px; padding: 14px;
+            background: var(--white); border: 1px solid var(--line); border-radius: 14px;
+        }
+        .controles input[type="search"], .controles select {
+            padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--white); font-size: 13px;
+        }
+        .controles input[type="search"] { flex: 1 1 260px; }
+        .controles select { flex: 0 1 300px; max-width: 100%; }
+        .controles label { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+        .lista-datasets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+        .dataset {
+            display: flex; flex-direction: column;
+            padding: 20px;
+            background: var(--white); border: 1px solid var(--line); border-radius: 16px;
+            box-shadow: 0 8px 22px rgba(38, 40, 43, 0.06);
+        }
+        .dataset .entidad { color: #6f5900; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+        .dataset h3 { margin: 6px 0 8px; font: 700 20px/1.2 var(--font-display); }
+        .dataset p { margin: 0 0 12px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+        .dataset .formatos { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+        .dataset .formatos span {
+            padding: 3px 8px; border-radius: 999px;
+            background: var(--soft); border: 1px solid var(--line);
+            font-size: 10.5px; font-weight: 700; color: #4a4e53;
+        }
+        .dataset .formatos span.mapa { background: var(--yellow-soft); border-color: #ead46b; color: #6f5900; }
+        .dataset .pie { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: auto; }
+        .dataset .fecha { margin-left: auto; color: var(--muted); font-size: 11.5px; }
+        .dataset .btn { min-height: 38px; padding: 8px 14px; font-size: 12.5px; }
+        .dataset .sin-mapa { color: var(--muted); font-size: 12px; }
+
+        .mas { display: flex; justify-content: center; margin-top: 26px; }
+        .vacio { padding: 40px; text-align: center; color: var(--muted); background: var(--white); border: 1px dashed var(--line); border-radius: 16px; }
+
+        .footer {
+            margin-top: auto; padding: 22px 24px;
+            color: var(--muted); background: var(--white); border-top: 1px solid var(--line);
+            text-align: center; font-size: 11px;
+        }
+
+        @media (max-width: 1000px) {
+            .themes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .lista-datasets { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 700px) {
+            .topbar { padding: 12px 16px; }
+            .brand-text small { display: none; }
+            .brand-text h1 { font-size: 17px; }
+            .themes { grid-template-columns: 1fr; max-width: 520px; }
+            .buscador-principal { flex-direction: column; }
+            .back-link span { display: none; }
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="page">
+
+        <!-- ==========================================
+             ENCABEZADO
+        ========================================== -->
+
+        <header class="topbar">
+
+            <div class="brand">
+                <div class="brand-mark">DB</div>
+                <div class="brand-text">
+                    <small>Universidad de los Andes · CIAM</small>
+                    <h1>Datos Abiertos Bogotá</h1>
+                </div>
+            </div>
+
+            <a class="back-link" href="Index.html" aria-label="Volver a Geodata de Bogotá">
+                <i data-lucide="arrow-left"></i>
+                <span>Volver a Geodata de Bogotá</span>
+            </a>
+
+        </header>
+
+        <main>
+
+            <!-- ==========================================
+                 PRESENTACION
+            ========================================== -->
+
+            <section class="hero">
+
+                <span class="eyebrow">Datos abiertos de la ciudad</span>
+
+                <h2>Información geográfica de Bogotá</h2>
+
+                <p id="resumen">
+                    Conjuntos de datos geográficos publicados por las entidades
+                    del Distrito en Datos Abiertos Bogotá.
+                </p>
+
+                <form class="buscador-principal" id="formBuscar">
+                    <input type="search" id="buscarTodo"
+                           placeholder="Buscar en todo el catálogo (ej. colegios, ciclorrutas, POT)…"
+                           autocomplete="off" aria-label="Buscar conjunto de datos">
+                    <button class="btn" type="submit"><i data-lucide="search"></i> Buscar</button>
+                </form>
+
+            </section>
+
+            <!-- ==========================================
+                 CATEGORIAS
+            ========================================== -->
+
+            <section class="themes" id="categorias"></section>
+
+            <!-- ==========================================
+                 RESULTADOS
+            ========================================== -->
+
+            <section class="resultados" id="resultados" hidden>
+
+                <div class="cabecera-resultados">
+                    <div>
+                        <button class="volver-categorias" type="button" id="btnCategorias">
+                            <i data-lucide="arrow-left"></i> Todas las categorías
+                        </button>
+                        <h2 id="tituloResultados">Resultados</h2>
+                        <div class="cuenta" id="cuentaResultados"></div>
+                    </div>
+                </div>
+
+                <div class="controles">
+                    <input type="search" id="filtroTexto" placeholder="Filtrar por nombre, entidad o descripción…" autocomplete="off">
+                    <select id="filtroEntidad" aria-label="Entidad"></select>
+                    <label><input type="checkbox" id="soloMapa" checked> Solo los que se abren en el mapa</label>
+                </div>
+
+                <div class="lista-datasets" id="listaDatasets"></div>
+                <div class="mas" id="mas"></div>
+
+            </section>
+
+        </main>
+
+        <footer class="footer" id="pie">
+            Fuente: Datos Abiertos Bogotá (datosabiertos.bogota.gov.co) · Laboratorio Digital CIAM · Universidad de los Andes
+        </footer>
+
+    </div>
+
+    <!-- Catalogo descargado con datos/actualizar_catalogo.py -->
+    <script src="datos/catalogo_bogota.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@1.52.0/dist/umd/lucide.min.js"></script>
+
+    <script>
+        (() => {
+            "use strict";
+
+            const CAT = DATA_CATALOGO_BOGOTA;
+            const MAPA_HTML = "../../Mapa.html";
+            const POR_PAGINA = 24;
+
+            const secCategorias = document.getElementById("categorias");
+            const secResultados = document.getElementById("resultados");
+            const lista = document.getElementById("listaDatasets");
+            const filtroTexto = document.getElementById("filtroTexto");
+            const filtroEntidad = document.getElementById("filtroEntidad");
+            const soloMapa = document.getElementById("soloMapa");
+
+            // Estado de la vista de resultados
+            let categoria = null;   // id de la categoria, o null = todo el catalogo
+            let mostrados = POR_PAGINA;
+
+            function iconos() {
+                if (window.lucide) lucide.createIcons();
+            }
+            function quitarTildes(t) {
+                return String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+            }
+            function escapar(t) {
+                return String(t || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+            }
+            function fecha(iso) {
+                const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+                return m ? `${m[3]}/${m[2]}/${m[1]}` : "";
+            }
+            function numero(n) {
+                return Number(n).toLocaleString("es-CO");
+            }
+
+            // texto de busqueda de cada conjunto (una sola vez)
+            CAT.datasets.forEach((d) => { d.clave = quitarTildes(`${d.t} ${d.e} ${d.d} ${d.id}`); });
+
+            // ---------- Resumen ----------
+            const conMapa = CAT.datasets.filter((d) => d.s).length;
+            document.getElementById("resumen").textContent =
+                `${numero(CAT.datasets.length)} conjuntos de datos geográficos publicados por las entidades del Distrito; ` +
+                `${numero(conMapa)} se pueden abrir directamente en nuestro mapa.`;
+            document.getElementById("pie").textContent =
+                `Fuente: ${CAT.fuente} · Catálogo actualizado el ${fecha(CAT.actualizado)} · Laboratorio Digital CIAM · Universidad de los Andes`;
+
+            // ---------- Tarjetas de categorias ----------
+            function pintarCategorias() {
+                secCategorias.innerHTML = "";
+                CAT.categorias.forEach((c, i) => {
+                    const tarjeta = document.createElement("article");
+                    tarjeta.className = "theme-card";
+                    const imagen = c.icono
+                        ? `<img src="../../Imagenes/DatosBogota/${escapar(c.icono)}" alt="">`
+                        : `<span class="inicial">${escapar(c.nombre.charAt(0))}</span>`;
+                    tarjeta.innerHTML = `
+                        <div class="circle-image">${imagen}</div>
+                        <span class="theme-number">${String(i + 1).padStart(2, "0")} · ${numero(c.n)} conjuntos</span>
+                        <h3>${escapar(c.nombre)}</h3>
+                        <p>${numero(c.nMapa)} se pueden abrir en el mapa</p>
+                        <button class="btn" type="button">Explorar</button>`;
+                    tarjeta.querySelector("button").addEventListener("click", () => abrir(c.id, ""));
+                    secCategorias.appendChild(tarjeta);
+                });
+            }
+
+            // ---------- Navegacion (con #hash, para que funcione el boton atras) ----------
+            function abrir(idCategoria, texto) {
+                const p = new URLSearchParams();
+                if (idCategoria) p.set("c", idCategoria);
+                if (texto) p.set("q", texto);
+                location.hash = p.toString() || "todo";
+            }
+
+            function leerHash() {
+                const h = location.hash.replace(/^#/, "");
+                if (!h) {
+                    secResultados.hidden = true;
+                    secCategorias.hidden = false;
+                    return;
+                }
+                const p = new URLSearchParams(h === "todo" ? "" : h);
+                categoria = p.get("c");
+                filtroTexto.value = p.get("q") || "";
+                mostrados = POR_PAGINA;
+                prepararEntidades();
+                secCategorias.hidden = true;
+                secResultados.hidden = false;
+                const c = CAT.categorias.find((x) => x.id === categoria);
+                document.getElementById("tituloResultados").textContent =
+                    c ? c.nombre : (filtroTexto.value ? `Resultados para “${filtroTexto.value}”` : "Todo el catálogo");
+                pintarResultados();
+                secResultados.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+
+            function deCategoria() {
+                return categoria ? CAT.datasets.filter((d) => d.g.includes(categoria)) : CAT.datasets;
+            }
+
+            function prepararEntidades() {
+                const conteo = {};
+                deCategoria().forEach((d) => { if (d.e) conteo[d.e] = (conteo[d.e] || 0) + 1; });
+                filtroEntidad.innerHTML = `<option value="">Todas las entidades</option>` +
+                    Object.keys(conteo).sort((a, b) => a.localeCompare(b, "es"))
+                        .map((e) => `<option value="${escapar(e)}">${escapar(e)} (${conteo[e]})</option>`).join("");
+            }
+
+            function filtrados() {
+                const q = quitarTildes(filtroTexto.value.trim());
+                const palabras = q.split(/\s+/).filter(Boolean);
+                const entidad = filtroEntidad.value;
+                return deCategoria().filter((d) =>
+                    (!soloMapa.checked || d.s) &&
+                    (!entidad || d.e === entidad) &&
+                    palabras.every((w) => d.clave.includes(w)));
+            }
+
+            // ---------- Resultados ----------
+            function urlMapa(d) {
+                const p = new URLSearchParams();
+                p.set("servicio", d.s);
+                p.set("nombre", d.t);
+                return MAPA_HTML + "?" + p.toString();
+            }
+
+            function pintarResultados() {
+                const todos = filtrados();
+                document.getElementById("cuentaResultados").textContent =
+                    `${numero(todos.length)} conjunto${todos.length === 1 ? "" : "s"} de datos`;
+                lista.innerHTML = "";
+
+                if (!todos.length) {
+                    lista.innerHTML = `<div class="vacio">No hay conjuntos con esos filtros.${soloMapa.checked ? " Prueba quitando “Solo los que se abren en el mapa”." : ""}</div>`;
+                    document.getElementById("mas").innerHTML = "";
+                    return;
+                }
+
+                todos.slice(0, mostrados).forEach((d) => {
+                    const art = document.createElement("article");
+                    art.className = "dataset";
+                    const formatos = d.f.map((f) =>
+                        `<span class="${/ESRI REST|ARCGIS/.test(f) ? "mapa" : ""}">${escapar(f)}</span>`).join("");
+                    art.innerHTML = `
+                        <span class="entidad">${escapar(d.e || "Entidad no indicada")}</span>
+                        <h3>${escapar(d.t)}</h3>
+                        ${d.d ? `<p>${escapar(d.d)}</p>` : ""}
+                        <div class="formatos">${formatos}</div>
+                        <div class="pie">
+                            ${d.s
+                                ? `<a class="btn" href="${escapar(urlMapa(d))}"><i data-lucide="map"></i> Abrir en el mapa</a>`
+                                : `<span class="sin-mapa">Sin servicio para el mapa (solo descarga)</span>`}
+                            <a class="btn sec" href="${escapar(CAT.ficha + d.id)}" target="_blank" rel="noopener">
+                                <i data-lucide="external-link"></i> Ver en Datos Abiertos
+                            </a>
+                            ${d.m ? `<span class="fecha">Actualizado ${fecha(d.m)}</span>` : ""}
+                        </div>`;
+                    lista.appendChild(art);
+                });
+
+                const mas = document.getElementById("mas");
+                mas.innerHTML = "";
+                if (todos.length > mostrados) {
+                    const b = document.createElement("button");
+                    b.className = "btn sec";
+                    b.type = "button";
+                    b.textContent = `Ver más (${numero(todos.length - mostrados)} restantes)`;
+                    b.addEventListener("click", () => { mostrados += POR_PAGINA; pintarResultados(); });
+                    mas.appendChild(b);
+                }
+                iconos();
+            }
+
+            // ---------- Eventos ----------
+            document.getElementById("formBuscar").addEventListener("submit", (e) => {
+                e.preventDefault();
+                abrir(null, document.getElementById("buscarTodo").value.trim());
+            });
+            document.getElementById("btnCategorias").addEventListener("click", () => {
+                history.pushState("", document.title, location.pathname);
+                leerHash();
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            });
+            filtroTexto.addEventListener("input", () => { mostrados = POR_PAGINA; pintarResultados(); });
+            filtroEntidad.addEventListener("change", () => { mostrados = POR_PAGINA; pintarResultados(); });
+            soloMapa.addEventListener("change", () => { mostrados = POR_PAGINA; pintarResultados(); });
+            window.addEventListener("hashchange", leerHash);
+
+            pintarCategorias();
+            leerHash();
+            iconos();
+        })();
+    </script>
+
+</body>
+
+</html>
