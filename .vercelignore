@@ -25,6 +25,12 @@ Sinu (2)/
 # (bajar resolucion para quedar bajo 100MB, o usar otro storage).
 capas_pesadas/
 
+# Landsat 1985 (92 MB): ya ninguna pagina lo usa (se quito el boton de
+# Mapa.html). Sacarlo baja cada despliegue de ~199 MB a ~106 MB, porque
+# Vercel guarda todas las versiones y cuentan para el limite de 10 GB.
+# (DEM_web.tif SI se usa en RioSinu.html, no quitarlo.)
+/capas_web/img_1985_Landsat_web.tif
+
 # Proyectos aparte que no usa ningun html del sitio
 # (ojo: agente1/ SI se usa -- Index.html carga agente1/agente.js y
 # agente1/agente-panel.css para el widget "Asistente ICDE", no tocar)
