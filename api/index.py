@@ -439,6 +439,366 @@ def agente_consultar():
     })
 
 
+# =====================================================================
+# TRANSMILENIO - DEMANDA POR ESTACION (datos abiertos, sin guardar nada)
+# =====================================================================
+# TransMilenio publica cada dia un archivo con las entradas y salidas de
+# cada estacion troncal cada 15 minutos, en un almacenamiento publico de
+# Google. No tiene API ni permite leerlo desde el navegador (CORS), asi
+# que esta ruta lo descarga, lo resume por estacion y por hora y devuelve
+# un JSON pequeno. Vercel guarda la respuesta en su cache (CDN), asi que
+# cada fecha se descarga una sola vez y no se guarda nada de nuestro lado.
+
+TM_ALMACEN = "https://storage.googleapis.com/validaciones_tmsa"
+TM_LISTADO = "https://storage.googleapis.com/storage/v1/b/validaciones_tmsa/o"
+
+
+def _codigo_y_nombre(texto):
+    """'(10000)Portal 20 de Julio' -> ('10000', 'Portal 20 de Julio')"""
+    m = re.match(r"\s*\((\w+)\)\s*(.*)", texto or "")
+    return (m.group(1), m.group(2).strip()) if m else ("", (texto or "").strip())
+
+
+def _con_cache(respuesta, segundos):
+    # max-age=0: el navegador no guarda copia (siempre pregunta); s-maxage: la cache
+    # de Vercel si la guarda, que es la que ahorra descargas a TransMilenio
+    respuesta.headers["Cache-Control"] = f"public, max-age=0, s-maxage={segundos}, stale-while-revalidate=86400"
+    return respuesta
+
+
+@app.route("/api/transmilenio/fechas")
+def transmilenio_fechas():
+    """Fechas con archivo de salidas disponible (las mas recientes primero)."""
+    try:
+        fechas, token = [], None
+        while True:
+            params = {"prefix": "Salidas/salidas", "fields": "items(name),nextPageToken", "maxResults": 1000}
+            if token:
+                params["pageToken"] = token
+            datos = req_lib.get(TM_LISTADO, params=params, timeout=20).json()
+            for item in datos.get("items", []):
+                m = re.search(r"salidas(\d{4})(\d{2})(\d{2})\.zip$", item["name"])
+                if m:
+                    fechas.append(f"{m.group(1)}-{m.group(2)}-{m.group(3)}")
+            token = datos.get("nextPageToken")
+            if not token:
+                break
+        fechas.sort(reverse=True)
+        return _con_cache(jsonify({"ok": True, "fechas": fechas}), 6 * 3600)
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"No se pudo consultar el listado de TransMilenio: {e}"}), 502
+
+
+@app.route("/api/transmilenio/salidas")
+def transmilenio_salidas():
+    """Entradas y salidas por estacion y por hora de un dia (?fecha=AAAA-MM-DD)."""
+    import csv
+    import io
+    import zipfile
+
+    fecha = request.args.get("fecha", "").strip()
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", fecha):
+        return jsonify({"ok": False, "error": "Falta ?fecha=AAAA-MM-DD"}), 400
+
+    url = f"{TM_ALMACEN}/Salidas/salidas{fecha.replace('-', '')}.zip"
+    try:
+        r = req_lib.get(url, timeout=25)
+    except req_lib.exceptions.RequestException as e:
+        return jsonify({"ok": False, "error": f"No se pudo descargar el archivo de TransMilenio: {e}"}), 502
+    if r.status_code == 404:
+        return _con_cache(jsonify({"ok": False, "error": f"TransMilenio no tiene datos para {fecha}"}), 3600), 404
+    if r.status_code != 200:
+        return jsonify({"ok": False, "error": f"TransMilenio respondio {r.status_code}"}), 502
+
+    estaciones = {}
+    por_hora_entradas = [0] * 24
+    por_hora_salidas = [0] * 24
+    por_franja_salidas = [0] * 96  # cada 15 minutos
+    por_franja_entradas = [0] * 96
+
+    with zipfile.ZipFile(io.BytesIO(r.content)) as z:
+        nombre = next(n for n in z.namelist() if n.lower().endswith(".csv"))
+        with z.open(nombre) as f:
+            # el archivo mezcla UTF-8 y Latin-1 segun la fila: se decodifica linea por linea
+            def lineas():
+                for cruda in f:
+                    try:
+                        yield cruda.decode("utf-8-sig")
+                    except UnicodeDecodeError:
+                        yield cruda.decode("latin-1")
+            lector = csv.DictReader(lineas())
+            for fila in lector:
+                try:
+                    hh, mm = int(fila["Tiempo"][:2]), int(fila["Tiempo"][3:5])
+                    ent = int(fila.get("Entradas_E") or 0)
+                    sal = int(fila.get("Salidas_S") or 0)
+                except (ValueError, KeyError, TypeError):
+                    continue
+                if not (ent or sal) or hh > 23:
+                    continue
+                codigo, nombre_est = _codigo_y_nombre(fila.get("Estacion"))
+                est = estaciones.get(codigo)
+                if est is None:
+                    _, linea = _codigo_y_nombre(fila.get("Linea"))
+                    est = estaciones[codigo] = {
+                        "codigo": codigo, "nombre": nombre_est, "linea": linea,
+                        "entradas": 0, "salidas": 0, "salidas_hora": [0] * 24, "entradas_hora": [0] * 24,
+                    }
+                est["entradas"] += ent
+                est["salidas"] += sal
+                est["salidas_hora"][hh] += sal
+                est["entradas_hora"][hh] += ent
+                por_hora_entradas[hh] += ent
+                por_hora_salidas[hh] += sal
+                por_franja_salidas[hh * 4 + mm // 15] += sal
+                por_franja_entradas[hh * 4 + mm // 15] += ent
+
+    lista = sorted(estaciones.values(), key=lambda e: -e["salidas"])
+    return _con_cache(jsonify({
+        "ok": True,
+        "fecha": fecha,
+        "fuente": "TransMilenio S.A. - Salidas del sistema troncal (datos abiertos)",
+        "total_entradas": sum(por_hora_entradas),
+        "total_salidas": sum(por_hora_salidas),
+        "por_hora": {"entradas": por_hora_entradas, "salidas": por_hora_salidas},
+        "salidas_cada_15_min": por_franja_salidas,
+        "entradas_cada_15_min": por_franja_entradas,
+        "estaciones": lista,
+    }), 7 * 24 * 3600)  # un dia pasado no cambia: cache de una semana
+
+
+# =====================================================================
+# TRANSMILENIO - COMPARACION DE RUTAS TRONCALES (GTFS, sin guardar nada)
+# =====================================================================
+# TransMilenio publica cada dia su GTFS (horarios PROGRAMADOS) en un zip de
+# ~120 MB. No se descarga entero: se leen solo los archivos pequenos del
+# zip (rutas, viajes, calendario) con descargas parciales, y el de horarios
+# (stop_times, ~560 MB descomprimido) se recorre en flujo quedandose solo
+# con los viajes de las rutas pedidas. Tarda unos segundos y Vercel guarda
+# la respuesta en su cache.
+
+GTFS_ALMACEN = "https://storage.googleapis.com/gtfs-estaticos"
+GTFS_LISTADO = "https://storage.googleapis.com/storage/v1/b/gtfs-estaticos/o"
+
+
+class _ZipRemoto:
+    """Lee archivos sueltos de un zip publicado en la web con peticiones Range."""
+
+    def __init__(self, url):
+        import struct
+        self.url = url
+        tam = int(req_lib.head(url, timeout=20).headers["Content-Length"])
+        cola = self._rango(tam - 65536, tam - 1)
+        i = cola.rfind(b"PK\x05\x06")
+        _, tam_dir, ini_dir = struct.unpack("<HII", cola[i + 10:i + 20])
+        directorio = self._rango(ini_dir, ini_dir + tam_dir - 1)
+        self.archivos, p = {}, 0
+        while p < len(directorio):
+            comp, = struct.unpack("<I", directorio[p + 20:p + 24])
+            ln, le, lc = struct.unpack("<HHH", directorio[p + 28:p + 34])
+            local, = struct.unpack("<I", directorio[p + 42:p + 46])
+            self.archivos[directorio[p + 46:p + 46 + ln].decode()] = (local, comp)
+            p += 46 + ln + le + lc
+
+    def _rango(self, a, b, stream=False):
+        r = req_lib.get(self.url, headers={"Range": f"bytes={a}-{b}"}, timeout=60, stream=stream)
+        r.raise_for_status()
+        return r if stream else r.content
+
+    def _datos(self, nombre, stream=False):
+        import struct
+        local, comp = self.archivos[nombre]
+        cab = self._rango(local, local + 29)
+        ln, le = struct.unpack("<HH", cab[26:30])
+        ini = local + 30 + ln + le
+        return self._rango(ini, ini + comp - 1, stream=stream)
+
+    def leer(self, nombre):
+        import zlib
+        return zlib.decompress(self._datos(nombre), -15).decode("utf-8-sig")
+
+    def lineas(self, nombre):
+        """Recorre un archivo grande del zip linea por linea, sin cargarlo entero."""
+        import zlib
+        d = zlib.decompressobj(-15)
+        resto = b""
+        for bloque in self._datos(nombre, stream=True).iter_content(1 << 20):
+            partes = (resto + d.decompress(bloque)).split(b"\n")
+            resto = partes.pop()
+            for linea in partes:
+                yield linea
+        if resto:
+            yield resto
+
+
+def _segundos(hhmmss):
+    h, m, s = (int(x) for x in hhmmss.split(":"))
+    return h * 3600 + m * 60 + s  # el GTFS usa horas >24 para viajes despues de medianoche
+
+
+def _palabras(texto):
+    """Palabras significativas de un nombre, sin tildes ni abreviaturas de una letra."""
+    import unicodedata
+    t = unicodedata.normalize("NFD", texto or "").encode("ascii", "ignore").decode().lower()
+    return [p for p in re.findall(r"[a-z0-9]+", t) if len(p) > 2 and p not in ("portal", "por", "las", "los", "del")]
+
+
+def _gtfs_mas_reciente():
+    datos = req_lib.get(GTFS_LISTADO, params={"prefix": "GTFS_", "fields": "items(name)", "maxResults": 1000}, timeout=20).json()
+    nombres = sorted(i["name"] for i in datos.get("items", []) if re.fullmatch(r"GTFS_\d{8}\.zip", i["name"]))
+    return nombres[-1]
+
+
+@app.route("/api/transmilenio/rutas")
+def transmilenio_rutas():
+    """Comparacion de rutas troncales (?codigos=H75,B75,H13): viajes, tiempos y velocidad programados."""
+    import csv
+    import io
+    import statistics
+
+    codigos = [c.strip().upper() for c in request.args.get("codigos", "").split(",") if c.strip()][:4]
+    if not codigos:
+        return jsonify({"ok": False, "error": "Falta ?codigos=H75,B75"}), 400
+    # destino de cada ruta segun el servicio del mapa (ayuda a elegir la variante correcta del GTFS)
+    destinos = request.args.get("destinos", "").split("|")
+
+    try:
+        archivo = _gtfs_mas_reciente()
+        z = _ZipRemoto(f"{GTFS_ALMACEN}/{archivo}")
+
+        # rutas troncales (agencia 1). El servicio del mapa y el GTFS no siempre usan
+        # el mismo codigo (ej. "G12GS" en el mapa es "G12" hacia G. Santander en el GTFS)
+        troncales = [r for r in csv.DictReader(io.StringIO(z.leer("routes.txt"))) if r.get("agency_id") == "1"]
+        ruta_a_codigo = {}
+        for n, codigo in enumerate(codigos):
+            candidatas = [r for r in troncales if r.get("route_short_name", "").upper() == codigo]
+            if not candidatas:
+                base = re.match(r"[A-Z]+\d+", codigo)
+                candidatas = [r for r in troncales if base and r.get("route_short_name", "").upper() == base.group(0)]
+            destino = destinos[n] if n < len(destinos) else ""
+            if len(candidatas) > 1 and destino:
+                # variante cuyo nombre largo se parece mas al destino ("G. Santander" ~ "GENERAL SANTANDER")
+                palabras = set(_palabras(destino))
+                puntaje = lambda r: len(palabras & set(_palabras(r.get("route_long_name", ""))))
+                mejor = max(puntaje(r) for r in candidatas)
+                if mejor:
+                    candidatas = [r for r in candidatas if puntaje(r) == mejor]
+            for r in candidatas:
+                ruta_a_codigo.setdefault(r["route_id"], codigo)
+
+        # tipos de dia de cada servicio (uno puede funcionar habil, sabado y domingo a la vez)
+        tipo_servicio = {}
+        for c in csv.DictReader(io.StringIO(z.leer("calendar.txt"))):
+            tipo_servicio[c["service_id"]] = {d for d, col in (("habil", "monday"), ("sabado", "saturday"), ("domingo", "sunday"))
+                                              if c.get(col) == "1"}
+
+        viajes = {}
+        for t in csv.DictReader(io.StringIO(z.leer("trips.txt"))):
+            if t["route_id"] in ruta_a_codigo:
+                viajes[t["trip_id"]] = {"codigo": ruta_a_codigo[t["route_id"]],
+                                        "dias": tipo_servicio.get(t["service_id"], set()),
+                                        "destino": t.get("trip_headsign", ""),
+                                        "ini": None, "fin": None, "paradas": 0, "dist": 0.0, "filas": []}
+
+        # horarios: solo las filas de esos viajes
+        claves = {k.encode() for k in viajes}
+        encabezado = None
+        for linea in z.lineas("stop_times.txt"):
+            if encabezado is None:
+                encabezado = linea.decode("utf-8-sig").strip().split(",")
+                i_lle, i_sal, i_dist = (encabezado.index("arrival_time"), encabezado.index("departure_time"),
+                                        encabezado.index("shape_dist_traveled"))
+                i_seq, i_par = encabezado.index("stop_sequence"), encabezado.index("stop_id")
+                continue
+            tid = linea.split(b",", 1)[0]
+            if tid not in claves:
+                continue
+            campos = linea.decode().strip().split(",")
+            v = viajes[campos[0]]
+            sal, lle = _segundos(campos[i_sal]), _segundos(campos[i_lle])
+            v["ini"] = sal if v["ini"] is None else min(v["ini"], sal)
+            v["fin"] = lle if v["fin"] is None else max(v["fin"], lle)
+            v["paradas"] += 1
+            try:
+                dist = float(campos[i_dist] or 0)
+            except ValueError:
+                dist = 0.0
+            v["dist"] = max(v["dist"], dist)
+            v["filas"].append((int(campos[i_seq]), lle, campos[i_par], dist))
+
+        # nombres de las paradas (solo se necesitan para la linea de tiempo)
+        nombres_parada = {p["stop_id"]: p["stop_name"] for p in csv.DictReader(io.StringIO(z.leer("stops.txt")))}
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"No se pudo leer el GTFS de TransMilenio: {e}"}), 502
+
+    def recorrido(del_dia, minuto_objetivo, metros):
+        """Linea de tiempo de un bus tipico que sale cerca de una hora dada:
+        minutos desde la salida y km recorridos en cada parada."""
+        completos = [v for v in del_dia if v["filas"]]
+        if not completos:
+            return None
+        paradas_tipicas = statistics.median(v["paradas"] for v in completos)
+        candidatos = [v for v in completos if v["paradas"] >= paradas_tipicas] or completos
+        v = min(candidatos, key=lambda x: abs(x["ini"] / 60 - minuto_objetivo))
+        factor = 1000 if metros else 1
+        return {
+            "salida": v["ini"] // 60,
+            "paradas": [{"nombre": nombres_parada.get(par, par), "min": round((lle - v["ini"]) / 60, 1),
+                         "km": round(dist / factor, 2)}
+                        for _, lle, par, dist in sorted(v["filas"])],
+        }
+
+    # resumen por ruta y tipo de dia
+    resultado = []
+    for codigo in codigos:
+        propios = [v for v in viajes.values() if v["codigo"] == codigo and v["ini"] is not None and v["fin"] > v["ini"]]
+        if not propios:
+            resultado.append({"codigo": codigo, "encontrada": False})
+            continue
+        dias = {}
+        for dia in ("habil", "sabado", "domingo"):
+            del_dia = [v for v in propios if dia in v["dias"]]
+            if not del_dia:
+                continue
+            duraciones = [(v["fin"] - v["ini"]) / 60 for v in del_dia]
+            distancias = [v["dist"] for v in del_dia if v["dist"]]
+            por_hora_viajes, por_hora_min = [0] * 24, [None] * 24
+            for h in range(24):
+                en_hora = [(v["fin"] - v["ini"]) / 60 for v in del_dia if (v["ini"] // 3600) % 24 == h]
+                por_hora_viajes[h] = len(en_hora)
+                por_hora_min[h] = round(statistics.median(en_hora), 1) if en_hora else None
+            dist_km = statistics.median(distancias) if distancias else None
+            if dist_km and dist_km > 500:  # algunos GTFS dan la distancia en metros
+                dist_km /= 1000
+            dur = statistics.median(duraciones)
+            dias[dia] = {
+                "viajes": len(del_dia),
+                "duracion_min": round(dur, 1),
+                "duracion_min_rango": [round(min(duraciones), 1), round(max(duraciones), 1)],
+                "distancia_km": round(dist_km, 2) if dist_km else None,
+                "velocidad_kmh": round(dist_km / (dur / 60), 1) if dist_km and dur else None,
+                "paradas": round(statistics.median(v["paradas"] for v in del_dia)),
+                "primer_salida": min(v["ini"] for v in del_dia) // 60,
+                "ultima_salida": max(v["ini"] for v in del_dia) // 60,
+                "viajes_por_hora": por_hora_viajes,
+                "minutos_por_hora": por_hora_min,
+                # bus de media manana (~11:00) y de hora pico de la tarde (~17:30)
+                "recorrido": {
+                    "valle": recorrido(del_dia, 11 * 60, max(distancias or [0]) > 500),
+                    "pico": recorrido(del_dia, 17 * 60 + 30, max(distancias or [0]) > 500),
+                },
+            }
+        resultado.append({"codigo": codigo, "encontrada": True,
+                          "destino": propios[0]["destino"], "dias": dias})
+
+    return _con_cache(jsonify({
+        "ok": True,
+        "fuente": f"TransMilenio S.A. - GTFS {archivo} (horarios programados)",
+        "gtfs": archivo,
+        "rutas": resultado,
+    }), 24 * 3600)
+
+
 @app.route("/api/status")
 def status():
     return jsonify({"ok": True, "mensaje": "API GeoDB Andes activa (Vercel + Supabase)"})

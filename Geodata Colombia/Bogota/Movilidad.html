@@ -183,6 +183,19 @@
         color: #6b6f74;
     }
 
+    /* Enlace destacado al dashboard de demanda */
+    .btn-demanda {
+        display: flex; align-items: center; gap: 10px;
+        margin-bottom: 8px; padding: 10px 12px;
+        border-radius: 10px; text-decoration: none;
+        color: #fff; background: linear-gradient(135deg, #c8102e, #8f1610);
+        box-shadow: 0 6px 16px rgba(200, 16, 46, .28);
+    }
+    .btn-demanda:hover { filter: brightness(1.08); }
+    .btn-demanda svg { width: 22px; height: 22px; flex: none; }
+    .btn-demanda b { display: block; font-size: 13px; }
+    .btn-demanda small { display: block; font-size: 11px; opacity: .85; }
+
     .panel select.selector {
         width: 100%;
         margin: 2px 0 6px;
@@ -309,6 +322,10 @@
             <span>TransMilenio, SITP y Cable<small>Troncales, rutas zonales y TransMiCable</small></span>
         </summary>
         <div class="cuerpo">
+            <a class="btn-demanda" href="Demanda.html">
+                <i data-lucide="chart-column-big"></i>
+                <span><b>Análisis de demanda</b><small>Mapa de calor y dashboard de pasajeros</small></span>
+            </a>
             <button type="button" id="btnRedTM"></button>
             <button type="button" id="btnCable"></button>
             <button type="button" id="btnViajeCable"></button>

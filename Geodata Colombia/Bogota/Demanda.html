@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Análisis de demanda TransMilenio | Universidad de los Andes</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Sans+3:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css" rel="stylesheet">
+
+<style>
+    /* Colores por rol (paleta de referencia de visualizacion: serie 1 azul,
+       serie 2 naranja, rampa secuencial azul para magnitud) */
+    :root {
+        --pagina: #f6f5f0;
+        --superficie: #fcfcfb;
+        --tinta: #0b0b0b;
+        --tinta-2: #52514e;
+        --tenue: #898781;
+        --grilla: #e1e0d9;
+        --eje: #c3c2b7;
+        --borde: rgba(11, 11, 11, 0.10);
+        --serie-1: #2a78d6;
+        --serie-2: #eb6834;
+        --amarillo: #f5c400;
+        --amarillo-osc: #d7aa00;
+        --sombra: 0 10px 28px rgba(38, 40, 43, 0.10);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body { font-family: "Inter", system-ui, sans-serif; color: var(--tinta); background: var(--pagina); }
+    button, select, input { font: inherit; }
+
+    /* ---------- Encabezado ---------- */
+    header {
+        position: sticky; top: 0; z-index: 20;
+        height: 72px; display: flex; align-items: center; gap: 18px; padding: 0 24px;
+        background: rgba(255,255,255,.97); border-bottom: 1px solid #e5e5de;
+        box-shadow: 0 3px 15px rgba(34,36,39,.06);
+    }
+    header .logo-box { height: 42px; display: flex; align-items: center; padding-right: 18px; border-right: 1px solid #e5e5de; }
+    header .logo-box img { max-height: 38px; }
+    header small { display: block; color: #898d91; font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+    header strong { display: block; font: 700 21px/1.1 "Source Sans 3", sans-serif; color: #26292d; }
+    header nav { margin-left: auto; display: flex; gap: 8px; }
+    header nav a {
+        display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 8px;
+        color: #26292d; font-size: 13px; font-weight: 700; text-decoration: none;
+        border: 1px solid #e5e5de; background: #fff;
+    }
+    header nav a.primario { background: var(--amarillo); border-color: var(--amarillo-osc); }
+    header nav a svg { width: 16px; height: 16px; }
+
+    main { width: min(1440px, calc(100% - 32px)); margin: 0 auto; padding: 22px 0 60px; }
+
+    /* ---------- Filtros (una fila, arriba de todo) ---------- */
+    .filtros {
+        display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+        padding: 12px 14px; margin-bottom: 18px;
+        background: var(--superficie); border: 1px solid var(--borde); border-radius: 14px;
+    }
+    .filtros label, .filtros .campo { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--tinta-2); }
+    .filtros select {
+        padding: 8px 10px; border: 1px solid var(--grilla); border-radius: 9px; background: #fff; color: var(--tinta);
+    }
+    .filtros .hora { flex: 1 1 320px; display: flex; align-items: center; gap: 10px; }
+    .filtros .hora input { flex: 1; accent-color: var(--serie-1); }
+    .filtros .hora output { min-width: 108px; font-weight: 700; color: var(--tinta); font-variant-numeric: tabular-nums; }
+    .btn {
+        display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px;
+        border: 1px solid var(--grilla); border-radius: 9px; background: #fff; color: var(--tinta);
+        font-size: 13px; font-weight: 700; cursor: pointer;
+    }
+    .btn.activo { background: var(--amarillo); border-color: var(--amarillo-osc); }
+    .btn svg { width: 15px; height: 15px; }
+    .segmento { display: inline-flex; padding: 3px; background: #ecebe4; border-radius: 10px; gap: 2px; }
+    .segmento button { padding: 7px 12px; border: 0; border-radius: 8px; background: transparent;
+        font-size: 13px; font-weight: 700; color: var(--tinta-2); cursor: pointer; }
+    .segmento button.activo { background: #fff; color: var(--tinta); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    .estado { font-size: 12.5px; color: var(--tinta-2); }
+    .estado.error { color: #b42318; }
+
+    /* ---------- Cifras ---------- */
+    .cifras { display: grid; grid-template-columns: 1.4fr repeat(3, 1fr); gap: 14px; margin-bottom: 18px; }
+    .cifra { padding: 16px 18px; background: var(--superficie); border: 1px solid var(--borde); border-radius: 14px; }
+    .cifra .rotulo { font-size: 12.5px; color: var(--tinta-2); }
+    .cifra .valor { margin-top: 6px; font-size: 28px; font-weight: 700; letter-spacing: -0.01em; }
+    .cifra.heroe .valor { font-size: 48px; line-height: 1.05; }
+    .cifra .detalle { margin-top: 4px; font-size: 12.5px; color: var(--tenue); }
+    .cifra .delta.sube { color: #006300; font-weight: 700; }
+    .cifra .delta.baja { color: #b42318; font-weight: 700; }
+
+    /* ---------- Rejilla principal ---------- */
+    .rejilla { display: grid; grid-template-columns: 1.35fr 1fr; gap: 18px; }
+    .tarjeta {
+        background: var(--superficie); border: 1px solid var(--borde); border-radius: 16px;
+        padding: 16px 18px; min-width: 0;
+    }
+    .tarjeta h2 { margin: 0; font: 700 18px/1.2 "Source Sans 3", sans-serif; }
+    .tarjeta .sub { margin: 3px 0 12px; font-size: 12.5px; color: var(--tinta-2); }
+    .tarjeta.mapa-tarjeta { grid-row: span 3; display: flex; flex-direction: column; }
+    #mapa { flex: 1; min-height: 520px; border-radius: 12px; overflow: hidden; }
+    .controles-mapa { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    .leyenda-escala { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--tinta-2); }
+    .leyenda-escala .rampa { flex: 0 0 180px; height: 10px; border-radius: 5px;
+        background: linear-gradient(90deg, #ffefb0, #feb24c, #fd8d3c, #f03b20, #bd0026, #800026); }
+    .ancho { grid-column: 1 / -1; }
+
+    /* ---------- Graficas SVG ---------- */
+    svg.grafica { display: block; width: 100%; overflow: visible; }
+    .grafica text { font-size: 11px; fill: var(--tenue); font-variant-numeric: tabular-nums; }
+    .leyenda { display: flex; gap: 16px; margin: -4px 0 8px; font-size: 12.5px; color: var(--tinta-2); }
+    .leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+    .leyenda i { display: inline-block; width: 16px; height: 2px; border-radius: 1px; }
+
+    .tooltip {
+        position: fixed; z-index: 50; pointer-events: none;
+        padding: 8px 10px; border-radius: 8px; background: #fff; border: 1px solid var(--borde);
+        box-shadow: 0 6px 18px rgba(0,0,0,.14); font-size: 12px; color: var(--tinta-2); min-width: 120px;
+    }
+    .tooltip[hidden] { display: none; }
+    .tooltip .t { color: var(--tinta-2); margin-bottom: 4px; }
+    .tooltip .fila { display: flex; align-items: center; gap: 7px; }
+    .tooltip .fila b { color: var(--tinta); font-size: 13px; }
+    .tooltip .fila i { display: inline-block; width: 12px; height: 2px; }
+
+    /* Barras top estaciones */
+    .barras { display: flex; flex-direction: column; gap: 7px; }
+    .barra-fila { display: grid; grid-template-columns: 170px 1fr 70px; align-items: center; gap: 10px; cursor: pointer; font-size: 12.5px; }
+    .barra-fila .nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--tinta); }
+    .barra-fila .pista { height: 16px; }
+    .barra-fila .pista span { display: block; height: 100%; max-width: 100%; background: var(--serie-1); border-radius: 0 4px 4px 0; }
+    .barra-fila:hover .pista span, .barra-fila:focus .pista span { background: #3987e5; }
+    .barra-fila .num { text-align: right; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+    .barra-fila:focus { outline: 2px solid var(--amarillo); outline-offset: 2px; border-radius: 4px; }
+
+    /* Mapa de calor estaciones x horas */
+    .calor { display: grid; grid-template-columns: 170px repeat(19, minmax(0, 1fr)); gap: 2px; font-size: 11px; }
+    .calor .cab { color: var(--tenue); text-align: center; font-variant-numeric: tabular-nums; }
+    .calor .nom { color: var(--tinta); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 6px; font-size: 12px; }
+    .calor .celda { height: 20px; border-radius: 2px; }
+    .calor .celda:hover { outline: 2px solid var(--tinta); }
+    .calor .col-actual { box-shadow: inset 0 0 0 2px var(--amarillo); }
+
+    details.tabla { margin-top: 12px; font-size: 12.5px; }
+    details.tabla summary { cursor: pointer; color: var(--tinta-2); font-weight: 600; }
+    details.tabla table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    details.tabla th, details.tabla td { padding: 5px 8px; border-bottom: 1px solid var(--grilla); text-align: right; font-variant-numeric: tabular-nums; }
+    details.tabla th:first-child, details.tabla td:first-child { text-align: left; }
+
+    /* Pestanas */
+    .pestanas { display: flex; gap: 6px; margin-bottom: 16px; padding: 5px; width: fit-content;
+        background: #ecebe4; border-radius: 12px; }
+    .pestanas button {
+        display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border: 0; border-radius: 9px;
+        background: transparent; color: var(--tinta-2); font-weight: 700; font-size: 14px; cursor: pointer;
+    }
+    .pestanas button svg { width: 17px; height: 17px; }
+    .pestanas button.activa { background: #fff; color: var(--tinta); box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    [hidden] { display: none !important; }
+
+    /* Comparacion de rutas */
+    .rutas-cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-bottom: 18px; }
+    .ruta-tarjeta { padding: 16px 18px; background: var(--superficie); border: 1px solid var(--borde); border-radius: 14px; border-top: 4px solid var(--c); }
+    .ruta-tarjeta h3 { margin: 0; font: 700 22px/1.1 "Source Sans 3", sans-serif; }
+    .ruta-tarjeta .od { margin: 3px 0 12px; font-size: 12.5px; color: var(--tinta-2); }
+    .ruta-tarjeta dl { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; margin: 0; font-size: 13px; }
+    .ruta-tarjeta dt { color: var(--tinta-2); }
+    .ruta-tarjeta dd { margin: 0; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+    .ruta-extra { display: inline-flex; align-items: center; gap: 4px; }
+    .btn-quitar { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid var(--grilla); border-radius: 8px; background: #fff; cursor: pointer; }
+    .btn-quitar svg { width: 14px; height: 14px; }
+    #btnAgregarRuta[disabled] { opacity: .45; cursor: default; }
+    #mapaRutas { height: 460px; border-radius: 12px; overflow: hidden; }
+    .ejes-calor { margin: -4px 0 8px; font-size: 12px; color: var(--tinta-2); }
+
+    /* Que estamos analizando */
+    .explicacion {
+        display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start;
+        padding: 14px 16px; margin-bottom: 18px;
+        background: #fff8e1; border: 1px solid #f1d98a; border-radius: 14px;
+        font-size: 13.5px; line-height: 1.6; color: #3d3a2e;
+    }
+    .explicacion svg { width: 22px; height: 22px; color: #9a6b00; margin-top: 2px; }
+    .explicacion b { color: #26292d; }
+
+    /* Analisis de una estacion */
+    .analisis p { margin: 0 0 10px; font-size: 13.5px; line-height: 1.65; color: var(--tinta-2); }
+    .analisis p b { color: var(--tinta); }
+    .analisis .patron { padding: 9px 11px; border-left: 3px solid var(--serie-2); background: #fdf3ee; border-radius: 0 8px 8px 0; }
+    .analisis .elegir { font-size: 12px; color: var(--tenue); }
+    .analisis select { margin: 0 0 10px; padding: 7px 9px; border: 1px solid var(--grilla); border-radius: 8px; width: 100%; }
+
+    .nota { margin-top: 18px; font-size: 12px; color: var(--tenue); line-height: 1.6; }
+    .cargando { opacity: .45; transition: opacity .2s; }
+
+    @media (max-width: 1100px) {
+        .rejilla { grid-template-columns: 1fr; }
+        .tarjeta.mapa-tarjeta { grid-row: auto; }
+        .cifras { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 640px) {
+        header small, header nav a.secundario { display: none; }
+        .cifras { grid-template-columns: 1fr; }
+        .barra-fila, .calor { grid-template-columns: 120px 1fr 60px; }
+        .calor { grid-template-columns: 110px repeat(19, minmax(0, 1fr)); }
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <span class="logo-box"><img src="../../Imagenes/logo-uniandes.png" alt="Universidad de los Andes"></span>
+    <span>
+        <small>Geodata de Bogotá · Movilidad</small>
+        <strong>Análisis de demanda · TransMilenio</strong>
+    </span>
+    <nav>
+        <a class="secundario" href="Movilidad.html"><i data-lucide="arrow-left"></i> Volver al visor</a>
+        <a class="primario" href="../../Index.html"><i data-lucide="house"></i> Inicio</a>
+    </nav>
+</header>
+
+<main>
+
+    <!-- Menu: dos vistas -->
+    <nav class="pestanas" aria-label="Vistas">
+        <button type="button" class="activa" data-vista="vistaEstaciones"><i data-lucide="map-pin"></i> Estaciones</button>
+        <button type="button" data-vista="vistaRutas"><i data-lucide="route"></i> Análisis de rutas</button>
+    </nav>
+
+    <div id="vistaEstaciones">
+
+    <!-- Filtros: fecha, comparacion y hora (afectan todo lo de abajo) -->
+    <section class="filtros" aria-label="Filtros">
+        <label><i data-lucide="calendar"></i> Día
+            <select id="selFecha"><option>Cargando…</option></select>
+        </label>
+        <span class="campo">Medir
+            <span class="segmento" role="group" aria-label="Qué medir">
+                <button type="button" data-medida="salidas" class="activo">Salidas</button>
+                <button type="button" data-medida="entradas">Entradas</button>
+                <button type="button" data-medida="ambas">Ambas</button>
+            </span>
+        </span>
+        <label>Comparar con
+            <select id="selComparar">
+                <option value="semana">Mismo día, semana anterior</option>
+                <option value="">Sin comparación</option>
+            </select>
+        </label>
+        <div class="hora">
+            <button class="btn" type="button" id="btnPlay"></button>
+            <input type="range" id="rngHora" min="4" max="23" step="1" value="7" aria-label="Hora del día">
+            <output id="txtHora"></output>
+            <button class="btn" type="button" id="btnDia">Todo el día</button>
+        </div>
+        <span class="estado" id="estado">Cargando datos de TransMilenio…</span>
+    </section>
+
+    <!-- Que estamos analizando (se completa con las fechas elegidas) -->
+    <section class="explicacion">
+        <i data-lucide="info"></i>
+        <div id="explicacion">Cargando…</div>
+    </section>
+
+    <!-- Cifras principales -->
+    <section class="cifras" id="cifras"></section>
+
+    <section class="rejilla">
+
+        <!-- Mapa -->
+        <article class="tarjeta mapa-tarjeta">
+            <h2 id="tituloMapa">Salidas por estación</h2>
+            <p class="sub" id="subMapa">Altura y color: personas que salen de cada estación. Clic en una columna para ver su detalle.</p>
+            <div class="controles-mapa">
+                <button class="btn activo" type="button" id="btnColumnas"><i data-lucide="chart-column-big"></i> Columnas 3D</button>
+                <button class="btn" type="button" id="btnCalor"><i data-lucide="flame"></i> Mapa de calor</button>
+            </div>
+            <div id="mapa"></div>
+            <div class="leyenda-escala"><span>Menos</span><span class="rampa"></span><span>Más salidas</span><span id="maxEscala"></span></div>
+        </article>
+
+        <!-- Analisis de una estacion -->
+        <article class="tarjeta analisis">
+            <h2>Análisis de la estación</h2>
+            <p class="sub">Elige una estación aquí, en el mapa, en el top o en el mapa de calor.</p>
+            <select id="selEstacion" aria-label="Estación"></select>
+            <div id="analisis"></div>
+            <div class="leyenda" id="leyendaEst"></div>
+            <svg class="grafica" id="curvaEst" height="180" role="img" aria-label="Entradas y salidas por hora de la estación"></svg>
+        </article>
+
+        <!-- Curva del dia -->
+        <article class="tarjeta">
+            <h2>¿Cuándo se mueve la ciudad?</h2>
+            <p class="sub" id="subCurva">Salidas de todo el sistema troncal cada 15 minutos.</p>
+            <div class="leyenda" id="leyendaCurva"></div>
+            <svg class="grafica" id="curva" height="250" role="img" aria-label="Salidas cada 15 minutos"></svg>
+        </article>
+
+        <!-- Top estaciones -->
+        <article class="tarjeta">
+            <h2 id="tituloTop">Estaciones con más salidas</h2>
+            <p class="sub" id="subTop"></p>
+            <div class="barras" id="barras"></div>
+        </article>
+
+        <!-- Mapa de calor estaciones x hora -->
+        <article class="tarjeta ancho">
+            <h2>Mapa de calor: estación × hora</h2>
+            <p class="sub" id="subCalor">Las 20 estaciones con más salidas del día. Cada celda es una hora; más oscuro = más gente saliendo.</p>
+            <p class="ejes-calor"><b>Filas:</b> estaciones · <b>Columnas:</b> hora del día (de 4 a.m. a 11 p.m.) · <b>Color:</b> <span id="colorCalor">salidas</span> en esa hora.</p>
+            <div class="calor" id="calor"></div>
+            <details class="tabla">
+                <summary>Ver la tabla de datos (todas las estaciones)</summary>
+                <div id="tabla"></div>
+            </details>
+        </article>
+
+    </section>
+
+    <p class="nota" id="nota">
+        Fuente: TransMilenio S.A., "Salidas del sistema troncal" (datos abiertos, publicados al día siguiente),
+        procesados al vuelo por nuestra API sin almacenarlos. Las salidas se registran en los torniquetes de cada estación.
+    </p>
+    </div>
+
+    <!-- ===================== ANALISIS DE RUTAS ===================== -->
+    <div id="vistaRutas" hidden>
+
+        <section class="filtros" aria-label="Rutas">
+            <label>Ruta <select id="selRuta1" class="sel-ruta"><option>Cargando…</option></select></label>
+            <span class="ruta-extra" id="extra2" hidden>
+                <label>Comparar con <select id="selRuta2" class="sel-ruta"></select></label>
+                <button class="btn-quitar" type="button" data-quitar="2" aria-label="Quitar ruta 2"><i data-lucide="x"></i></button>
+            </span>
+            <span class="ruta-extra" id="extra3" hidden>
+                <label>y con <select id="selRuta3" class="sel-ruta"></select></label>
+                <button class="btn-quitar" type="button" data-quitar="3" aria-label="Quitar ruta 3"><i data-lucide="x"></i></button>
+            </span>
+            <button class="btn" type="button" id="btnAgregarRuta"><i data-lucide="git-compare"></i> Comparar con otra ruta</button>
+            <label>Día
+                <select id="selDiaRuta">
+                    <option value="habil">Hábil (lunes a viernes)</option>
+                    <option value="sabado">Sábado</option>
+                    <option value="domingo">Domingo y festivo</option>
+                </select>
+            </label>
+            <span class="estado" id="estadoRutas"></span>
+        </section>
+
+        <section class="explicacion">
+            <i data-lucide="info"></i>
+            <div id="explicacionRutas">Cargando rutas…</div>
+        </section>
+
+        <section class="rutas-cifras" id="rutasCifras"></section>
+
+        <section class="rejilla">
+            <article class="tarjeta mapa-tarjeta" style="grid-row: span 2">
+                <h2>Recorrido</h2>
+                <p class="sub">Trazado oficial de la ruta (servicio de TransMilenio).</p>
+                <div class="leyenda" id="leyendaMapaRutas"></div>
+                <div id="mapaRutas"></div>
+            </article>
+            <article class="tarjeta">
+                <h2>Línea de tiempo del recorrido</h2>
+                <p class="sub" id="subLinea"></p>
+                <div class="leyenda" id="leyendaLinea"></div>
+                <svg class="grafica" id="graficaLinea" height="270" role="img" aria-label="Minutos desde la salida en cada parada"></svg>
+            </article>
+            <article class="tarjeta">
+                <h2 id="tituloVel">Diagrama de velocidad</h2>
+                <p class="sub" id="subVel"></p>
+                <div class="leyenda" id="leyendaVel"></div>
+                <svg class="grafica" id="graficaVel" height="250" role="img" aria-label="Velocidad"></svg>
+            </article>
+            <article class="tarjeta">
+                <h2>¿Cuántos buses salen cada hora?</h2>
+                <p class="sub">Viajes programados que inician en cada hora del día.</p>
+                <div class="leyenda" id="leyendaBuses"></div>
+                <svg class="grafica" id="graficaBuses" height="230" role="img" aria-label="Buses por hora"></svg>
+            </article>
+            <article class="tarjeta analisis">
+                <h2>Lectura</h2>
+                <div id="analisisRutas"></div>
+            </article>
+        </section>
+
+        <p class="nota">
+            Fuentes: TransMilenio S.A. — GTFS diario (horarios programados) y servicio de rutas troncales.
+            Leídos al vuelo por nuestra API sin almacenarlos. Son tiempos <b>programados</b>, no medidos en la calle.
+        </p>
+    </div>
+</main>
+
+<div class="tooltip" id="tooltip" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@1.52.0/dist/umd/lucide.min.js"></script>
+<script>
+(() => {
+    "use strict";
+
+    // ---------- Configuracion ----------
+    const esLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+    // En local la API corre aparte (flask run --port 5000); en Vercel es el mismo dominio
+    const API = esLocal ? "http://localhost:5000/api/transmilenio" : "/api/transmilenio";
+    // Subir este numero cuando cambie el formato de la API (evita respuestas viejas guardadas)
+    const VERSION_API = 4;
+    const ESTACIONES_TM =
+        "https://gis.transmilenio.gov.co/arcgis/rest/services/Troncal/consulta_estaciones_troncales/MapServer/0/query" +
+        "?where=1%3D1&outFields=numero_estacion,nombre_estacion&outSR=4326&f=geojson";
+    const HORA_MIN = 4, HORA_MAX = 23;
+    // rampa secuencial calida (amarillo claro = poco, rojo oscuro = mucho)
+    const RAMPA = ["#ffefb0", "#fed976", "#feb24c", "#fd8d3c", "#f03b20", "#bd0026", "#800026"];
+    const CAJA_BOGOTA = [-74.5500, 4.1500, -73.7500, 5.0500];
+
+    const $ = (id) => document.getElementById(id);
+    const estado = $("estado");
+    const tooltip = $("tooltip");
+
+    // ---------- Estado ----------
+    let datos = null;        // dia elegido
+    let comparacion = null;  // dia de comparacion (o null)
+    let hora = 7;            // hora elegida, o null = todo el dia
+    let coordenadas = {};    // codigo -> [lng, lat]
+    let reproduciendo = null;
+    let estacionSel = null;  // codigo de la estacion analizada
+
+    // ---------- Utilidades ----------
+    const fmt = (n) => Math.round(n).toLocaleString("es-CO");
+    const compacto = (n) => n >= 1e6 ? (n / 1e6).toFixed(2).replace(".", ",") + " M"
+        : n >= 1e4 ? Math.round(n / 1e3).toLocaleString("es-CO") + " mil" : fmt(n);
+    const quitarTildes = (t) => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const horaTxt = (h) => `${String(h).padStart(2, "0")}:00 – ${String(h + 1).padStart(2, "0")}:00`;
+    function fechaLarga(iso) {
+        const [a, m, d] = iso.split("-").map(Number);
+        return new Date(a, m - 1, d).toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    }
+    function menosDias(iso, n) {
+        const [a, m, d] = iso.split("-").map(Number);
+        const f = new Date(Date.UTC(a, m - 1, d - n));
+        return f.toISOString().slice(0, 10);
+    }
+    function colorRampa(t) {
+        const i = Math.max(0, Math.min(RAMPA.length - 1, Math.round(t * (RAMPA.length - 1))));
+        return RAMPA[i];
+    }
+    // ---------- Que se mide: salidas, entradas o ambas (suma) ----------
+    let medida = "salidas";
+    const MEDIDA = {
+        salidas: { palabra: "salidas", Palabra: "Salidas", verbo: "salen" },
+        entradas: { palabra: "entradas", Palabra: "Entradas", verbo: "entran" },
+        ambas: { palabra: "entradas + salidas", Palabra: "Entradas + salidas", verbo: "entran o salen" }
+    };
+    const sumar = (a, b) => a.map((v, i) => v + (b[i] || 0));
+    function horasEst(e) {
+        const ent = e.entradas_hora || new Array(24).fill(0);
+        return medida === "salidas" ? e.salidas_hora : medida === "entradas" ? ent : sumar(e.salidas_hora, ent);
+    }
+    function totalEst(e) {
+        return medida === "salidas" ? e.salidas : medida === "entradas" ? e.entradas : e.salidas + e.entradas;
+    }
+    function horasSistema(d) {
+        return medida === "salidas" ? d.por_hora.salidas : medida === "entradas" ? d.por_hora.entradas : sumar(d.por_hora.salidas, d.por_hora.entradas);
+    }
+    function totalSistema(d) {
+        return medida === "salidas" ? d.total_salidas : medida === "entradas" ? d.total_entradas : d.total_salidas + d.total_entradas;
+    }
+    function quinceSistema(d, cual) {
+        const sal = d.salidas_cada_15_min, ent = d.entradas_cada_15_min || new Array(96).fill(0);
+        const c = cual || medida;
+        return c === "salidas" ? sal : c === "entradas" ? ent : sumar(sal, ent);
+    }
+    function valorEstacion(e) {
+        return hora === null ? totalEst(e) : horasEst(e)[hora];
+    }
+    function mostrarTooltip(ev, titulo, filas) {
+        tooltip.innerHTML = "";
+        const t = document.createElement("div");
+        t.className = "t";
+        t.textContent = titulo;
+        tooltip.appendChild(t);
+        filas.forEach(([color, valor, rotulo]) => {
+            const f = document.createElement("div");
+            f.className = "fila";
+            if (color) { const i = document.createElement("i"); i.style.background = color; f.appendChild(i); }
+            const b = document.createElement("b"); b.textContent = valor; f.appendChild(b);
+            if (rotulo) f.appendChild(document.createTextNode(" " + rotulo));
+            tooltip.appendChild(f);
+        });
+        tooltip.hidden = false;
+        const x = Math.min(ev.clientX + 14, window.innerWidth - tooltip.offsetWidth - 8);
+        const y = Math.min(ev.clientY + 14, window.innerHeight - tooltip.offsetHeight - 8);
+        tooltip.style.left = x + "px";
+        tooltip.style.top = y + "px";
+    }
+    const ocultarTooltip = () => { tooltip.hidden = true; };
+
+    // Titulos de los ejes de una grafica SVG (X abajo, Y girado a la izquierda)
+    function titulosEjes(W, H, m, tituloX, tituloY) {
+        return `<text x="${(m.izq + W - m.der) / 2}" y="${H - 4}" text-anchor="middle" style="fill:var(--tinta-2);font-size:12px">${tituloX}</text>
+                <text transform="translate(13 ${(m.arr + H - m.abj) / 2}) rotate(-90)" text-anchor="middle" style="fill:var(--tinta-2);font-size:12px">${tituloY}</text>`;
+    }
+
+    // ---------- Datos ----------
+    async function pedir(ruta) {
+        const r = await fetch(API + ruta + (ruta.includes("?") ? "&" : "?") + "v=" + VERSION_API);
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.error || "Error de la API");
+        return j;
+    }
+
+    async function cargarCoordenadas() {
+        const d = await (await fetch(ESTACIONES_TM)).json();
+        const porNombre = {};
+        d.features.forEach((f) => {
+            const num = parseInt(f.properties.numero_estacion, 10);
+            if (!isNaN(num)) coordenadas[num] = f.geometry.coordinates;
+            porNombre[quitarTildes(f.properties.nombre_estacion)] = f.geometry.coordinates;
+        });
+        coordenadas.porNombre = porNombre;
+    }
+    function coordDe(e) {
+        return coordenadas[parseInt(e.codigo, 10)] || (coordenadas.porNombre || {})[quitarTildes(e.nombre)] || null;
+    }
+
+    async function cargarDia(fecha) {
+        document.querySelector("main").classList.add("cargando");
+        estado.classList.remove("error");
+        estado.textContent = "Cargando " + fecha + "…";
+        try {
+            const modo = $("selComparar").value;
+            const [d, c] = await Promise.all([
+                pedir("/salidas?fecha=" + fecha),
+                modo === "semana" ? pedir("/salidas?fecha=" + menosDias(fecha, 7)).catch(() => null) : Promise.resolve(null)
+            ]);
+            datos = d;
+            comparacion = c;
+            pintarSelectorEstaciones();
+            estado.textContent = "Datos del " + fechaLarga(fecha);
+            pintarTodo();
+        } catch (err) {
+            estado.textContent = esLocal
+                ? "No responde la API local. Corre:  flask run --port 5000  (ver instrucciones)."
+                : "No se pudieron cargar los datos: " + err.message;
+            estado.classList.add("error");
+        } finally {
+            document.querySelector("main").classList.remove("cargando");
+        }
+    }
+
+    // ---------- Cifras ----------
+    function pintarCifras() {
+        const M = MEDIDA[medida];
+        const cont = $("cifras");
+        const horas = horasSistema(datos);
+        const total = totalSistema(datos);
+        const pico = horas.indexOf(Math.max(...horas));
+        const top = datos.estaciones.slice().sort((x, y) => totalEst(y) - totalEst(x))[0];
+        let delta = "";
+        if (comparacion) {
+            const totalC = totalSistema(comparacion);
+            const cambio = (total - totalC) / totalC * 100;
+            const clase = cambio >= 0 ? "sube" : "baja";
+            delta = `<span class="delta ${clase}">${cambio >= 0 ? "▲" : "▼"} ${Math.abs(cambio).toFixed(1).replace(".", ",")} %</span> frente al ${fechaLarga(comparacion.fecha).split(",")[0]} anterior`;
+        }
+        const enHora = hora === null ? null : horas[hora];
+        cont.innerHTML = `
+            <div class="cifra heroe"><div class="rotulo">${M.Palabra} en el día</div>
+                <div class="valor">${fmt(total)}</div>
+                <div class="detalle">${delta || fechaLarga(datos.fecha)}</div></div>
+            <div class="cifra"><div class="rotulo">Hora pico</div>
+                <div class="valor">${String(pico).padStart(2, "0")}:00</div>
+                <div class="detalle">${compacto(horas[pico])} ${M.palabra} en esa hora</div></div>
+            <div class="cifra"><div class="rotulo">Estación con más ${M.palabra}</div>
+                <div class="valor" style="font-size:22px">${top.nombre}</div>
+                <div class="detalle">${fmt(totalEst(top))} en el día</div></div>
+            <div class="cifra"><div class="rotulo">${hora === null ? "Estaciones con datos" : M.Palabra + " " + horaTxt(hora)}</div>
+                <div class="valor">${hora === null ? datos.estaciones.length : fmt(enHora)}</div>
+                <div class="detalle">${hora === null ? "del sistema troncal" : Math.round(enHora / total * 100) + " % del día"}</div></div>`;
+    }
+
+    // ---------- Curva cada 15 minutos (SVG, con cruz y tooltip) ----------
+    // Salidas o entradas: el dia elegido (azul) y la comparacion (naranja).
+    // Ambas: salidas (azul) y entradas (naranja) del dia elegido, sin comparacion.
+    function pintarCurva() {
+        const M = MEDIDA[medida];
+        const svg = $("curva");
+        const W = svg.clientWidth || 600, H = 250;
+        const m = { izq: 66, der: 12, arr: 10, abj: 42 };
+        const ini = HORA_MIN * 4, fin = 24 * 4; // desde las 4:00
+        let series;
+        if (medida === "ambas") {
+            series = [
+                { nombre: "Salidas", color: "var(--serie-1)", valores: quinceSistema(datos, "salidas").slice(ini, fin) },
+                { nombre: "Entradas", color: "var(--serie-2)", valores: quinceSistema(datos, "entradas").slice(ini, fin) }
+            ];
+            $("subCurva").textContent = "Salidas y entradas de todo el sistema troncal cada 15 minutos.";
+        } else {
+            series = [{ nombre: fechaLarga(datos.fecha), color: "var(--serie-1)", valores: quinceSistema(datos).slice(ini, fin) }];
+            if (comparacion) series.push({ nombre: fechaLarga(comparacion.fecha), color: "var(--serie-2)", valores: quinceSistema(comparacion).slice(ini, fin) });
+            $("subCurva").textContent = `${M.Palabra} de todo el sistema troncal cada 15 minutos.`;
+        }
+        const n = series[0].valores.length;
+        const max = Math.max(...series.flatMap((s) => s.valores)) * 1.08 || 1;
+        const x = (i) => m.izq + i / (n - 1) * (W - m.izq - m.der);
+        const y = (v) => H - m.abj - v / max * (H - m.arr - m.abj);
+        const linea = (s) => s.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+
+        const paso = Math.pow(10, Math.floor(Math.log10(max / 4)));
+        const pasoBonito = [1, 2, 5, 10].map((k) => k * paso).find((p) => max / p <= 5);
+        let grilla = "";
+        for (let v = 0; v <= max; v += pasoBonito) {
+            grilla += `<line x1="${m.izq}" x2="${W - m.der}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grilla)" stroke-width="1"/>
+                       <text x="${m.izq - 8}" y="${y(v) + 4}" text-anchor="end">${compacto(v)}</text>`;
+        }
+        let ejeX = "";
+        for (let h = HORA_MIN; h <= 24; h += 2) {
+            const i = (h - HORA_MIN) * 4;
+            ejeX += `<text x="${x(Math.min(i, n - 1))}" y="${H - m.abj + 16}" text-anchor="middle">${h}h</text>`;
+        }
+        const banda = hora === null ? "" :
+            `<rect x="${x((hora - HORA_MIN) * 4)}" y="${m.arr}" width="${x((hora - HORA_MIN) * 4 + 4) - x((hora - HORA_MIN) * 4)}"
+                   height="${H - m.arr - m.abj}" fill="#f5c400" opacity="0.18"/>`;
+        const tituloY = medida === "ambas" ? "Personas cada 15 min" : `${M.Palabra} (personas cada 15 min)`;
+
+        svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+        svg.innerHTML = `${grilla}${banda}
+            <line x1="${m.izq}" x2="${W - m.der}" y1="${y(0)}" y2="${y(0)}" stroke="var(--eje)" stroke-width="1"/>
+            ${series.slice().reverse().map((s) => `<path d="${linea(s.valores)}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`).join("")}
+            ${ejeX}
+            ${titulosEjes(W, H, m, "Hora del día", tituloY)}
+            <line id="cruz" y1="${m.arr}" y2="${H - m.abj}" stroke="var(--tinta-2)" stroke-width="1" visibility="hidden"/>
+            <rect x="${m.izq}" y="${m.arr}" width="${W - m.izq - m.der}" height="${H - m.arr - m.abj}" fill="transparent" id="zonaCurva"/>`;
+
+        const leyenda = $("leyendaCurva");
+        leyenda.innerHTML = "";
+        if (series.length > 1) series.forEach((s) => {
+            const sp = document.createElement("span"), i = document.createElement("i");
+            i.style.background = s.color; sp.append(i, document.createTextNode(s.nombre)); leyenda.appendChild(sp);
+        });
+
+        const zona = svg.querySelector("#zonaCurva"), cruz = svg.querySelector("#cruz");
+        const indice = (ev) => {
+            const r = svg.getBoundingClientRect();
+            const px = (ev.clientX - r.left) * (W / r.width);
+            return Math.max(0, Math.min(n - 1, Math.round((px - m.izq) / (W - m.izq - m.der) * (n - 1))));
+        };
+        zona.addEventListener("pointermove", (ev) => {
+            const i = indice(ev);
+            cruz.setAttribute("x1", x(i)); cruz.setAttribute("x2", x(i)); cruz.setAttribute("visibility", "visible");
+            const reloj = (min) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+            const minutos = (ini + i) * 15;
+            const filas = series.map((s, k) => [s.color, fmt(s.valores[i]),
+                medida === "ambas" ? s.nombre.toLowerCase() : (k === 0 ? M.palabra : "semana anterior")]);
+            mostrarTooltip(ev, `${reloj(minutos)} – ${reloj(minutos + 15)}`, filas);
+        });
+        zona.addEventListener("pointerleave", () => { cruz.setAttribute("visibility", "hidden"); ocultarTooltip(); });
+        zona.addEventListener("click", (ev) => {
+            ponerHora(Math.max(HORA_MIN, Math.min(HORA_MAX, HORA_MIN + Math.floor(indice(ev) / 4))));
+        });
+    }
+
+    // ---------- Top 10 estaciones ----------
+    function pintarTop() {
+        const M = MEDIDA[medida];
+        const lista = datos.estaciones.slice().sort((a, b) => valorEstacion(b) - valorEstacion(a)).slice(0, 10);
+        const max = valorEstacion(lista[0]) || 1;
+        $("tituloTop").textContent = `Estaciones con más ${M.palabra}`;
+        $("subTop").textContent = hora === null ? "Todo el día." : "Entre las " + horaTxt(hora) + ".";
+        const cont = $("barras");
+        cont.innerHTML = "";
+        lista.forEach((e) => {
+            const fila = document.createElement("div");
+            fila.className = "barra-fila";
+            fila.tabIndex = 0;
+            const n = document.createElement("span"); n.className = "nombre"; n.textContent = e.nombre;
+            const p = document.createElement("span"); p.className = "pista";
+            const b = document.createElement("span"); b.style.width = (valorEstacion(e) / max * 100) + "%"; p.appendChild(b);
+            const v = document.createElement("span"); v.className = "num"; v.textContent = fmt(valorEstacion(e));
+            fila.append(n, p, v);
+            const tip = (ev) => mostrarTooltip(ev, e.nombre, [[null, fmt(valorEstacion(e)), M.palabra], [null, e.linea, ""]]);
+            fila.addEventListener("pointermove", tip);
+            fila.addEventListener("pointerleave", ocultarTooltip);
+            fila.addEventListener("click", () => seleccionarEstacion(e.codigo, true));
+            fila.addEventListener("keydown", (ev) => { if (ev.key === "Enter") seleccionarEstacion(e.codigo, true); });
+            cont.appendChild(fila);
+        });
+    }
+
+    // ---------- Mapa de calor estacion x hora ----------
+    function pintarCalor() {
+        const M = MEDIDA[medida];
+        $("subCalor").textContent = `Las 20 estaciones con más ${M.palabra} del día. Cada celda es una hora; más oscuro = más gente.`;
+        $("colorCalor").textContent = M.palabra;
+        const cont = $("calor");
+        const top = datos.estaciones.slice().sort((a, b) => totalEst(b) - totalEst(a)).slice(0, 20);
+        const max = Math.max(...top.flatMap((e) => horasEst(e).slice(HORA_MIN))) || 1;
+        cont.innerHTML = "";
+        cont.appendChild(Object.assign(document.createElement("div"), { className: "cab", textContent: "Estación \\ Hora" }));
+        for (let h = HORA_MIN; h <= HORA_MAX; h++) {
+            const c = document.createElement("div");
+            c.className = "cab" + (h === hora ? " col-actual" : "");
+            c.textContent = h;
+            cont.appendChild(c);
+        }
+        top.forEach((e) => {
+            const n = document.createElement("div"); n.className = "nom"; n.textContent = e.nombre; n.title = "Analizar " + e.nombre;
+            n.style.cursor = "pointer";
+            n.addEventListener("click", () => seleccionarEstacion(e.codigo, true));
+            cont.appendChild(n);
+            const horas = horasEst(e);
+            for (let h = HORA_MIN; h <= HORA_MAX; h++) {
+                const v = horas[h];
+                const c = document.createElement("div");
+                c.className = "celda" + (h === hora ? " col-actual" : "");
+                c.style.background = v ? colorRampa(Math.sqrt(v / max)) : "#f0efec";
+                c.addEventListener("pointermove", (ev) => mostrarTooltip(ev, `${e.nombre} · ${horaTxt(h)}`, [[null, fmt(v), M.palabra]]));
+                c.addEventListener("pointerleave", ocultarTooltip);
+                c.addEventListener("click", () => ponerHora(h));
+                cont.appendChild(c);
+            }
+        });
+
+        // tabla accesible con todo
+        const filas = datos.estaciones.map((e) =>
+            `<tr><td>${e.nombre.replace(/</g, "&lt;")}</td><td>${fmt(e.salidas)}</td><td>${fmt(e.entradas)}</td><td>${hora === null ? "—" : fmt(horasEst(e)[hora])}</td></tr>`).join("");
+        $("tabla").innerHTML = `<table><thead><tr><th>Estación</th><th>Salidas del día</th><th>Entradas del día</th><th>${M.Palabra} ${hora === null ? "" : horaTxt(hora)}</th></tr></thead><tbody>${filas}</tbody></table>`;
+    }
+
+    // ---------- Mapa 3D ----------
+    const mapa = new maplibregl.Map({
+        container: "mapa",
+        style: "https://tiles.openfreemap.org/styles/liberty",
+        center: [-74.105, 4.64], zoom: 11.2, pitch: 55, bearing: 15, antialias: false
+    });
+    mapa.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
+    let mapaListo = false;
+    let modoMapa = "columnas";
+
+    function cuadrado(c, lado) {
+        const dy = lado / 2 / 111320, dx = lado / 2 / (111320 * Math.cos(c[1] * Math.PI / 180));
+        return [[[c[0] - dx, c[1] - dy], [c[0] + dx, c[1] - dy], [c[0] + dx, c[1] + dy], [c[0] - dx, c[1] + dy], [c[0] - dx, c[1] - dy]]];
+    }
+
+    function pintarMapa() {
+        if (!mapaListo || !datos) return;
+        const conCoord = datos.estaciones.map((e) => ({ e, c: coordDe(e) })).filter((x) => x.c);
+        const max = Math.max(...conCoord.map((x) => valorEstacion(x.e))) || 1;
+        $("maxEscala").textContent = "(máx. " + fmt(max) + ")";
+        const M = MEDIDA[medida];
+        $("tituloMapa").textContent = `${M.Palabra} por estación · ${hora === null ? "todo el día" : horaTxt(hora)}`;
+        $("subMapa").textContent = `Altura y color: personas que ${M.verbo} en cada estación. Clic en una columna para ver su detalle.`;
+
+        const columnas = conCoord.map(({ e, c }) => {
+            const v = valorEstacion(e);
+            return {
+                type: "Feature",
+                properties: { codigo: e.codigo, nombre: e.nombre, valor: v, color: colorRampa(Math.sqrt(v / max)), alto: 20 + v / max * 1500 },
+                geometry: { type: "Polygon", coordinates: cuadrado(c, 160) }
+            };
+        });
+        const puntos = conCoord.map(({ e, c }) => ({
+            type: "Feature", properties: { peso: valorEstacion(e) / max }, geometry: { type: "Point", coordinates: c }
+        }));
+        mapa.getSource("columnas").setData({ type: "FeatureCollection", features: columnas });
+        mapa.getSource("calor").setData({ type: "FeatureCollection", features: puntos });
+    }
+
+    function ponerModoMapa(modo) {
+        modoMapa = modo;
+        $("btnColumnas").classList.toggle("activo", modo === "columnas");
+        $("btnCalor").classList.toggle("activo", modo === "calor");
+        if (!mapaListo) return;
+        mapa.setLayoutProperty("columnas", "visibility", modo === "columnas" ? "visible" : "none");
+        mapa.setLayoutProperty("calor", "visibility", modo === "calor" ? "visible" : "none");
+        mapa.easeTo({ pitch: modo === "columnas" ? 55 : 20, duration: 800 });
+    }
+
+    function irAEstacion(e) {
+        const c = coordDe(e);
+        if (!c) { estado.textContent = e.nombre + ": sin ubicación en el mapa."; return; }
+        mapa.flyTo({ center: c, zoom: 14.5, pitch: 60, duration: 2200 });
+    }
+
+    mapa.on("load", () => {
+        mapa.addSource("satelital", {
+            type: "raster", tileSize: 256, maxzoom: 19, bounds: CAJA_BOGOTA, attribution: "Esri World Imagery",
+            tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"]
+        });
+        mapa.addLayer({ id: "satelital", type: "raster", source: "satelital", paint: { "raster-opacity": 0.55, "raster-saturation": -0.6 } },
+            mapa.getLayer("building-3d") ? "building-3d" : undefined);
+        if (mapa.getLayer("building-3d")) mapa.setLayoutProperty("building-3d", "visibility", "none");
+
+        mapa.addSource("calor", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        mapa.addLayer({
+            id: "calor", type: "heatmap", source: "calor", layout: { visibility: "none" },
+            paint: {
+                "heatmap-weight": ["get", "peso"],
+                "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 10, 18, 14, 60],
+                "heatmap-intensity": 1.2,
+                "heatmap-opacity": 0.85,
+                "heatmap-color": ["interpolate", ["linear"], ["heatmap-density"],
+                    0, "rgba(255,239,176,0)", 0.12, "#ffefb0", 0.3, "#feb24c", 0.5, "#fd8d3c", 0.7, "#f03b20", 0.88, "#bd0026", 1, "#800026"]
+            }
+        });
+        mapa.addSource("columnas", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        mapa.addLayer({
+            id: "columnas", type: "fill-extrusion", source: "columnas",
+            paint: {
+                "fill-extrusion-color": ["get", "color"],
+                "fill-extrusion-height": ["get", "alto"],
+                "fill-extrusion-base": 0,
+                "fill-extrusion-opacity": 0.92
+            }
+        });
+        mapa.on("mousemove", "columnas", (ev) => {
+            mapa.getCanvas().style.cursor = "pointer";
+            const p = ev.features[0].properties;
+            mostrarTooltip(ev.originalEvent, p.nombre, [[null, fmt(p.valor), MEDIDA[medida].palabra]]);
+        });
+        mapa.on("mouseleave", "columnas", () => { mapa.getCanvas().style.cursor = ""; ocultarTooltip(); });
+        mapa.on("click", "columnas", (ev) => {
+            seleccionarEstacion(ev.features[0].properties.codigo, true);
+        });
+        mapaListo = true;
+        pintarMapa();
+    });
+
+    // ---------- Que estamos analizando ----------
+    function pintarExplicacion() {
+        const comp = comparacion
+            ? `La comparación (línea naranja y porcentajes) es contra <b>un solo día</b>: el ${fechaLarga(comparacion.fecha)}, mismo día de la semana anterior; no es un promedio.`
+            : "No hay comparación activa (o TransMilenio no publicó datos del día de comparación).";
+        $("explicacion").innerHTML =
+            `Todo lo que ves corresponde a <b>un solo día: ${fechaLarga(datos.fecha)}</b>. ` +
+            `Son los <b>registros reales de los torniquetes</b> de las ${datos.estaciones.length} estaciones del sistema troncal ` +
+            `(entradas y salidas contadas cada 15 minutos), que TransMilenio publica como datos abiertos al día siguiente. ` +
+            `${comp} No incluye los buses zonales del SITP, y una persona que hace transbordo dentro del sistema no cuenta como salida. ` +
+            `Hay datos diarios desde marzo de 2024; puedes cambiar el día arriba.`;
+    }
+
+    // ---------- Analisis de una estacion ----------
+    const suma = (arr, a, b) => arr.slice(a, b + 1).reduce((x, y) => x + y, 0);
+    const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+
+    function seleccionarEstacion(codigo, volar) {
+        estacionSel = codigo;
+        $("selEstacion").value = codigo;
+        pintarAnalisis();
+        const e = datos.estaciones.find((x) => x.codigo === codigo);
+        if (volar && e) irAEstacion(e);
+    }
+
+    function pintarSelectorEstaciones() {
+        const sel = $("selEstacion");
+        sel.innerHTML = "";
+        datos.estaciones.slice().sort((a, b) => a.nombre.localeCompare(b.nombre, "es")).forEach((e) => {
+            const o = document.createElement("option");
+            o.value = e.codigo;
+            o.textContent = e.nombre;
+            sel.appendChild(o);
+        });
+        if (!datos.estaciones.some((e) => e.codigo === estacionSel)) estacionSel = datos.estaciones[0].codigo;
+        sel.value = estacionSel;
+    }
+
+    function pintarAnalisis() {
+        const e = datos.estaciones.find((x) => x.codigo === estacionSel);
+        if (!e) return;
+        const sal = e.salidas_hora;
+        if (!e.entradas_hora) {
+            $("analisis").innerHTML = `<p><b>${e.nombre.replace(/</g, "&lt;")}</b>: ${fmt(e.salidas)} salidas el ${fechaLarga(datos.fecha)}.</p>
+                <p class="patron">La API no está enviando las entradas por hora, así que no se puede analizar el patrón.
+                Reinicia la API (Ctrl + C y otra vez <b>python -m flask run --port 5000</b>).</p>`;
+            $("curvaEst").innerHTML = "";
+            $("leyendaEst").innerHTML = "";
+            return;
+        }
+        const ent = e.entradas_hora;
+        const puesto = datos.estaciones.indexOf(e) + 1;
+        const picoS = sal.indexOf(Math.max(...sal));
+        const picoE = ent.indexOf(Math.max(...ent));
+        const mananaE = suma(ent, 5, 9), mananaS = suma(sal, 5, 9);
+        const tardeE = suma(ent, 16, 20), tardeS = suma(sal, 16, 20);
+
+        let patron;
+        if (mananaE > 1.5 * mananaS && tardeS > tardeE) {
+            patron = `<b>Se comporta como estación de origen:</b> entre las 5 y las 10 a.m. entraron ${fmt(mananaE)} personas y salieron solo ${fmt(mananaS)}, y en la tarde (4 a 9 p.m.) se invierte. Es el patrón de una zona donde la gente vive: sale en la mañana a trabajar o estudiar y regresa en la tarde.`;
+        } else if (mananaS > 1.5 * mananaE) {
+            patron = `<b>Se comporta como estación de destino:</b> entre las 5 y las 10 a.m. salieron ${fmt(mananaS)} personas y entraron ${fmt(mananaE)}. Es el patrón de una zona de trabajo, estudio o comercio, a la que la gente llega en la mañana.`;
+        } else {
+            patron = `<b>Movimiento mixto:</b> entradas y salidas son parecidas a lo largo del día (5–10 a.m.: ${fmt(mananaE)} entradas y ${fmt(mananaS)} salidas). Suele pasar en estaciones de paso o con usos mezclados.`;
+        }
+
+        let compara = "";
+        const ce = comparacion && comparacion.estaciones.find((x) => x.codigo === e.codigo);
+        if (ce && ce.salidas) {
+            const cambio = (e.salidas - ce.salidas) / ce.salidas * 100;
+            compara = ` Frente al ${fechaLarga(comparacion.fecha)} tuvo <b>${cambio >= 0 ? "+" : "−"}${Math.abs(cambio).toFixed(1).replace(".", ",")} %</b> salidas (${fmt(ce.salidas)} ese día).`;
+        }
+        const enHora = hora === null ? "" :
+            ` Entre las ${horaTxt(hora)} salieron <b>${fmt(sal[hora])}</b> personas y entraron ${fmt(ent[hora])}.`;
+        const nombre = e.nombre.replace(/</g, "&lt;"), linea = e.linea.replace(/</g, "&lt;");
+
+        $("analisis").innerHTML = `
+            <p><b>${nombre}</b> (${linea}) registró <b>${fmt(e.salidas)} salidas</b> y ${fmt(e.entradas)} entradas el ${fechaLarga(datos.fecha)}.
+            Es la estación <b>#${puesto} de ${datos.estaciones.length}</b> por salidas y concentra el ${pct(e.salidas, datos.total_salidas)} % de todas las salidas del sistema.
+            Su hora de más salidas fue <b>${horaTxt(picoS)}</b> (${fmt(sal[picoS])}) y la de más entradas, <b>${horaTxt(picoE)}</b> (${fmt(ent[picoE])}).${compara}${enHora}</p>
+            <p class="patron">${patron}</p>`;
+
+        pintarCurvaEstacion(e, sal, ent);
+    }
+
+    // Entradas y salidas por hora de la estacion (dos series: leyenda + tooltip)
+    function pintarCurvaEstacion(e, sal, ent) {
+        const svg = $("curvaEst");
+        const W = svg.clientWidth || 400, H = 180, m = { izq: 62, der: 10, arr: 8, abj: 38 };
+        const n = HORA_MAX - HORA_MIN + 1;
+        const s1 = sal.slice(HORA_MIN, HORA_MAX + 1), s2 = ent.slice(HORA_MIN, HORA_MAX + 1);
+        const max = Math.max(...s1, ...s2) * 1.1 || 1;
+        const x = (i) => m.izq + i / (n - 1) * (W - m.izq - m.der);
+        const y = (v) => H - m.abj - v / max * (H - m.arr - m.abj);
+        const linea = (s) => s.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+        let ejes = `<line x1="${m.izq}" x2="${W - m.der}" y1="${y(0)}" y2="${y(0)}" stroke="var(--eje)"/>
+                    <line x1="${m.izq}" x2="${W - m.der}" y1="${y(max / 1.1)}" y2="${y(max / 1.1)}" stroke="var(--grilla)"/>
+                    <text x="${m.izq - 6}" y="${y(max / 1.1) + 4}" text-anchor="end">${compacto(max / 1.1)}</text>
+                    <text x="${m.izq - 6}" y="${y(0) + 4}" text-anchor="end">0</text>`;
+        for (let h = HORA_MIN; h <= HORA_MAX; h += 3) ejes += `<text x="${x(h - HORA_MIN)}" y="${H - m.abj + 15}" text-anchor="middle">${h}h</text>`;
+        ejes += titulosEjes(W, H, m, "Hora del día", "Personas por hora");
+        svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+        svg.innerHTML = `${ejes}
+            <path d="${linea(s2)}" fill="none" stroke="var(--serie-2)" stroke-width="2" stroke-linejoin="round"/>
+            <path d="${linea(s1)}" fill="none" stroke="var(--serie-1)" stroke-width="2" stroke-linejoin="round"/>
+            <line id="cruzEst" y1="${m.arr}" y2="${H - m.abj}" stroke="var(--tinta-2)" visibility="hidden"/>
+            <rect id="zonaEst" x="${m.izq}" y="${m.arr}" width="${W - m.izq - m.der}" height="${H - m.arr - m.abj}" fill="transparent"/>`;
+        const ley = $("leyendaEst");
+        ley.innerHTML = "";
+        [["var(--serie-1)", "Salidas"], ["var(--serie-2)", "Entradas"]].forEach(([c, t]) => {
+            const sp = document.createElement("span"), i = document.createElement("i");
+            i.style.background = c; sp.append(i, document.createTextNode(t)); ley.appendChild(sp);
+        });
+        const zona = svg.querySelector("#zonaEst"), cruz = svg.querySelector("#cruzEst");
+        zona.addEventListener("pointermove", (ev) => {
+            const r = svg.getBoundingClientRect();
+            const i = Math.max(0, Math.min(n - 1, Math.round(((ev.clientX - r.left) * (W / r.width) - m.izq) / (W - m.izq - m.der) * (n - 1))));
+            cruz.setAttribute("x1", x(i)); cruz.setAttribute("x2", x(i)); cruz.setAttribute("visibility", "visible");
+            mostrarTooltip(ev, `${e.nombre} · ${horaTxt(HORA_MIN + i)}`,
+                [["var(--serie-1)", fmt(s1[i]), "salidas"], ["var(--serie-2)", fmt(s2[i]), "entradas"]]);
+        });
+        zona.addEventListener("pointerleave", () => { cruz.setAttribute("visibility", "hidden"); ocultarTooltip(); });
+    }
+
+    // ---------- Hora ----------
+    function ponerHora(h) {
+        hora = h;
+        $("btnDia").classList.toggle("activo", h === null);
+        if (h !== null) $("rngHora").value = h;
+        $("txtHora").textContent = h === null ? "Todo el día" : horaTxt(h);
+        if (datos) pintarTodo();
+    }
+
+    function pintarTodo() {
+        pintarExplicacion();
+        pintarCifras();
+        pintarAnalisis();
+        pintarCurva();
+        pintarTop();
+        pintarCalor();
+        pintarMapa();
+        if (window.lucide) lucide.createIcons();
+    }
+
+    function ponerBotonPlay(activo) {
+        $("btnPlay").innerHTML = `<i data-lucide="${activo ? "pause" : "play"}"></i> ${activo ? "Pausa" : "Reproducir el día"}`;
+        $("btnPlay").classList.toggle("activo", activo);
+        if (window.lucide) lucide.createIcons();
+    }
+    function reproducir() {
+        if (reproduciendo) { clearInterval(reproduciendo); reproduciendo = null; ponerBotonPlay(false); return; }
+        ponerBotonPlay(true);
+        if (hora === null || hora >= HORA_MAX) ponerHora(HORA_MIN);
+        reproduciendo = setInterval(() => {
+            if (hora >= HORA_MAX) { reproducir(); return; }
+            ponerHora(hora + 1);
+        }, 1200);
+    }
+
+    // ---------- Eventos ----------
+    $("rngHora").addEventListener("input", (e) => ponerHora(Number(e.target.value)));
+    $("btnDia").addEventListener("click", () => ponerHora(hora === null ? 7 : null));
+    $("btnPlay").addEventListener("click", reproducir);
+    $("selFecha").addEventListener("change", (e) => cargarDia(e.target.value));
+    $("selComparar").addEventListener("change", () => cargarDia($("selFecha").value));
+    $("btnColumnas").addEventListener("click", () => ponerModoMapa("columnas"));
+    $("btnCalor").addEventListener("click", () => ponerModoMapa("calor"));
+    document.querySelectorAll("[data-medida]").forEach((b) => b.addEventListener("click", () => {
+        medida = b.dataset.medida;
+        document.querySelectorAll("[data-medida]").forEach((x) => x.classList.toggle("activo", x === b));
+        if (datos) pintarTodo();
+    }));
+    $("selEstacion").addEventListener("change", (e) => seleccionarEstacion(e.target.value, true));
+    window.addEventListener("resize", () => { if (datos) { pintarCurva(); pintarAnalisis(); } });
+
+    // ---------- Inicio ----------
+    ponerBotonPlay(false);
+    ponerHora(7);
+    if (window.lucide) lucide.createIcons();
+
+    (async () => {
+        try {
+            const [f] = await Promise.all([pedir("/fechas"), cargarCoordenadas().catch(() => {})]);
+            const sel = $("selFecha");
+            sel.innerHTML = f.fechas.slice(0, 120).map((d) => `<option value="${d}">${fechaLarga(d)}</option>`).join("");
+            await cargarDia(f.fechas[0]);
+        } catch (err) {
+            estado.textContent = esLocal
+                ? "No responde la API local. Corre:  flask run --port 5000  (ver instrucciones)."
+                : "No se pudo conectar con la API: " + err.message;
+            estado.classList.add("error");
+        }
+    })();
+
+    // =================== PESTANAS ===================
+    document.querySelectorAll(".pestanas button").forEach((b) => {
+        b.addEventListener("click", () => {
+            document.querySelectorAll(".pestanas button").forEach((x) => x.classList.toggle("activa", x === b));
+            ["vistaEstaciones", "vistaRutas"].forEach((id) => { $(id).hidden = id !== b.dataset.vista; });
+            if (b.dataset.vista === "vistaRutas") iniciarRutas();
+            else mapa.resize();
+            if (mapaRutas) mapaRutas.resize();
+        });
+    });
+
+    // =================== ANALISIS DE RUTAS ===================
+    // Arranca con UNA ruta (linea de tiempo + velocidad por tramo). El boton
+    // "Comparar con otra ruta" agrega una segunda y una tercera.
+    const RUTAS_TM = "https://gis.transmilenio.gov.co/arcgis/rest/services/Troncal/consulta_rutas_troncales/MapServer/0";
+    const COLORES_RUTA = ["#2a78d6", "#eb6834", "#1baf7a"];   // series 1-3 (validadas para daltonismo)
+    const NOMBRE_DIA = { habil: "día hábil", sabado: "sábado", domingo: "domingo o festivo" };
+    let rutasInfo = {};
+    let rutasIniciadas = false;
+    let mapaRutas = null;
+    let resultadoRutas = null;
+    let geometriasRutas = {};
+    let pedidoRutas = 0;
+
+    const hhmm = (min) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(Math.round(min) % 60).padStart(2, "0")}`;
+    const num1 = (v) => v.toFixed(1).replace(".", ",");
+    // "Calle 146 A - 2 ó 5" -> "Calle 146"  (quita vagon y puertas del nombre de la parada)
+    const parada = (n) => String(n || "").split(" - ")[0].replace(/\s+[A-Z]\d?$/, "").replace(/\s+T\d+[A-Z]?$/, "").trim();
+
+    async function iniciarRutas() {
+        if (rutasIniciadas) return;
+        rutasIniciadas = true;
+        mapaRutas = new maplibregl.Map({
+            container: "mapaRutas", style: "https://tiles.openfreemap.org/styles/liberty",
+            center: [-74.1, 4.63], zoom: 10.6, pitch: 30, antialias: false
+        });
+        mapaRutas.addControl(new maplibregl.NavigationControl(), "top-right");
+        mapaRutas.on("load", () => {
+            mapaRutas.addSource("rutas", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+            mapaRutas.addLayer({ id: "rutas-borde", type: "line", source: "rutas",
+                layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#ffffff", "line-width": 8 } });
+            mapaRutas.addLayer({ id: "rutas", type: "line", source: "rutas",
+                layout: { "line-cap": "round", "line-join": "round" },
+                paint: { "line-color": ["get", "color"], "line-width": 4, "line-offset": ["get", "desfase"] } });
+            if (resultadoRutas) pintarMapaRutas();
+        });
+
+        try {
+            const url = RUTAS_TM + "/query?where=1%3D1&returnGeometry=false&f=json&outFields=" +
+                encodeURIComponent("route_name_ruta_troncal,origen_ruta_troncal,destino_ruta_troncal,tipo_operacion");
+            const d = await (await fetch(url)).json();
+            d.features.map((f) => f.attributes).filter((x) => x.tipo_operacion !== "Ciclovia")
+                .forEach((x) => { rutasInfo[x.route_name_ruta_troncal] = x; });
+            const opciones = Object.keys(rutasInfo).sort((x, y) => x.localeCompare(y, "es", { numeric: true }))
+                .map((c) => `<option value="${c}">${c} · ${rutasInfo[c].origen_ruta_troncal} → ${rutasInfo[c].destino_ruta_troncal}</option>`).join("");
+            document.querySelectorAll(".sel-ruta").forEach((sel) => { sel.innerHTML = opciones; });
+            $("selRuta1").value = rutasInfo.H75 ? "H75" : Object.keys(rutasInfo)[0];
+            $("selRuta2").value = rutasInfo.H13 ? "H13" : $("selRuta1").value;
+            $("selRuta3").value = rutasInfo.B75 ? "B75" : $("selRuta1").value;
+            cargarRutas();
+        } catch (err) {
+            $("estadoRutas").textContent = "No se pudo cargar la lista de rutas de TransMilenio.";
+            $("estadoRutas").classList.add("error");
+        }
+    }
+
+    function codigosElegidos() {
+        const sel = [$("selRuta1").value];
+        if (!$("extra2").hidden) sel.push($("selRuta2").value);
+        if (!$("extra3").hidden) sel.push($("selRuta3").value);
+        return [...new Set(sel.filter(Boolean))];
+    }
+
+    function actualizarBotonComparar() {
+        const llenos = !$("extra2").hidden && !$("extra3").hidden;
+        $("btnAgregarRuta").disabled = llenos;
+        $("btnAgregarRuta").innerHTML = `<i data-lucide="git-compare"></i> ${$("extra2").hidden ? "Comparar con otra ruta" : "Agregar una tercera ruta"}`;
+        if (window.lucide) lucide.createIcons();
+    }
+
+    async function cargarRutas() {
+        const codigos = codigosElegidos();
+        const pedido = ++pedidoRutas;
+        const est = $("estadoRutas");
+        est.classList.remove("error");
+        est.textContent = "Leyendo los horarios programados de TransMilenio… (la primera vez tarda unos segundos)";
+        $("vistaRutas").classList.add("cargando");
+        try {
+            const geo = fetch(RUTAS_TM + "/query?outSR=4326&f=geojson&outFields=route_name_ruta_troncal&where=" +
+                encodeURIComponent("route_name_ruta_troncal IN (" + codigos.map((c) => `'${c}'`).join(",") + ")"))
+                .then((r) => r.json()).catch(() => ({ features: [] }));
+            const [res, g] = await Promise.all([pedir("/rutas?codigos=" + codigos.join(",") + "&destinos=" +
+                encodeURIComponent(codigos.map((c) => (rutasInfo[c] || {}).destino_ruta_troncal || "").join("|"))), geo]);
+            if (pedido !== pedidoRutas) return;   // llego una respuesta vieja
+            resultadoRutas = res;
+            geometriasRutas = {};
+            (g.features || []).forEach((f) => { geometriasRutas[f.properties.route_name_ruta_troncal] = f; });
+            est.textContent = "Horarios del " + res.gtfs.replace(/GTFS_(\d{4})(\d{2})(\d{2})\.zip/, "$3/$2/$1");
+            pintarRutas();
+        } catch (err) {
+            if (pedido !== pedidoRutas) return;
+            est.textContent = esLocal
+                ? "No responde la API local (flask run --port 5000) o el GTFS no se pudo leer: " + err.message
+                : "No se pudieron leer los horarios: " + err.message;
+            est.classList.add("error");
+        } finally {
+            if (pedido === pedidoRutas) $("vistaRutas").classList.remove("cargando");
+        }
+    }
+
+    function rutasDelDia() {
+        const dia = $("selDiaRuta").value;
+        return resultadoRutas.rutas.map((r, i) => ({
+            ...r, color: COLORES_RUTA[i], info: rutasInfo[r.codigo] || {}, d: r.encontrada ? r.dias[dia] : null
+        }));
+    }
+
+    function pintarRutas() {
+        if (!resultadoRutas) return;
+        const dia = $("selDiaRuta").value;
+        const rutas = rutasDelDia();
+        const una = rutas.length === 1;
+        const fechaGtfs = resultadoRutas.gtfs.replace(/GTFS_(\d{4})(\d{2})(\d{2})\.zip/, "$3/$2/$1");
+
+        $("explicacionRutas").innerHTML =
+            `${una ? "Analizamos" : "Comparamos"} los <b>horarios programados</b> de TransMilenio para un <b>${NOMBRE_DIA[dia]}</b> ` +
+            `(GTFS publicado el ${fechaGtfs}, el mismo formato que usa Google Maps). ` +
+            `La <b>línea de tiempo</b> muestra cuántos minutos tarda un bus en llegar a cada parada; la <b>velocidad</b> es distancia ÷ tiempo. ` +
+            `No son tiempos medidos en la calle: TransMilenio no publica la posición de los buses en tiempo real.`;
+
+        pintarTarjetasRutas(rutas, dia);
+        const conDatos = rutas.filter((r) => r.d);
+
+        // Linea de tiempo: una ruta -> bus de media manana vs hora pico; varias -> bus de media manana de cada ruta
+        let lineas;
+        if (una && conDatos[0]) {
+            const rec = conDatos[0].d.recorrido;
+            lineas = [["valle", COLORES_RUTA[0]], ["pico", COLORES_RUTA[1]]].filter(([k]) => rec[k])
+                .map(([k, c]) => ({ nombre: `Bus de las ${hhmm(rec[k].salida)}`, color: c, paradas: rec[k].paradas }));
+            $("subLinea").textContent = "Minutos desde la salida en cada parada: un bus de media mañana frente a uno de hora pico.";
+        } else {
+            lineas = conDatos.filter((r) => r.d.recorrido.valle)
+                .map((r) => ({ nombre: `${r.codigo} (sale ${hhmm(r.d.recorrido.valle.salida)})`, color: r.color, paradas: r.d.recorrido.valle.paradas }));
+            $("subLinea").textContent = "Minutos desde la salida en cada parada, para un bus de media mañana de cada ruta.";
+        }
+        graficaXY($("graficaLinea"), $("leyendaLinea"),
+            lineas.map((l) => ({ nombre: l.nombre, color: l.color,
+                puntos: l.paradas.map((p) => ({ x: p.km, y: p.min, etiqueta: parada(p.nombre) })) })),
+            { tituloX: "Kilómetros recorridos", tituloY: "Minutos desde la salida",
+              fmtY: (v) => Math.round(v) + " min", marcadores: true });
+
+        // Velocidad: una ruta -> por tramo entre paradas; varias -> segun la hora de salida
+        if (una && conDatos[0]) {
+            $("tituloVel").textContent = "Diagrama de velocidad por tramo";
+            $("subVel").textContent = "Velocidad programada entre cada par de paradas. Los tramos bajos son donde el bus va más lento.";
+            graficaXY($("graficaVel"), $("leyendaVel"),
+                lineas.map((l) => ({ nombre: l.nombre, color: l.color, puntos: tramos(l.paradas) })),
+                { tituloX: "Kilómetros recorridos", tituloY: "Velocidad (km/h)",
+                  fmtY: (v) => Math.round(v) + " km/h", escalones: true });
+        } else {
+            $("tituloVel").textContent = "Velocidad según la hora de salida";
+            $("subVel").textContent = "Velocidad promedio programada (distancia ÷ tiempo de viaje) del bus que sale en cada hora.";
+            graficaMulti($("graficaVel"), $("leyendaVel"),
+                conDatos.map((r) => ({ nombre: r.codigo, color: r.color,
+                    valores: r.d.minutos_por_hora.map((m) => (m && r.d.distancia_km ? r.d.distancia_km / (m / 60) : null)) })),
+                "Hora de salida del bus", "Velocidad (km/h)", (v) => num1(v) + " km/h");
+        }
+
+        graficaMulti($("graficaBuses"), $("leyendaBuses"),
+            conDatos.map((r) => ({ nombre: r.codigo, color: r.color, valores: r.d.viajes_por_hora })),
+            "Hora del día", "Buses que salen", (v) => Math.round(v) + " buses");
+        if (una) $("leyendaBuses").innerHTML = "";   // una sola serie: el titulo ya dice que es
+
+        pintarAnalisisRutas(conDatos, una);
+        pintarMapaRutas();
+    }
+
+    // Tramos entre paradas consecutivas: velocidad = km / horas
+    function tramos(paradas) {
+        const t = [];
+        for (let i = 1; i < paradas.length; i++) {
+            const a = paradas[i - 1], b = paradas[i];
+            const km = b.km - a.km, min = b.min - a.min;
+            if (km <= 0 || min <= 0) continue;
+            t.push({ x: a.km, x2: b.km, y: km / (min / 60), etiqueta: `${parada(a.nombre)} → ${parada(b.nombre)}` });
+        }
+        return t;
+    }
+
+    function pintarTarjetasRutas(rutas, dia) {
+        const cont = $("rutasCifras");
+        cont.innerHTML = "";
+        rutas.forEach((r) => {
+            const art = document.createElement("article");
+            art.className = "ruta-tarjeta";
+            art.style.setProperty("--c", r.color);
+            const od = r.info.origen_ruta_troncal ? `${r.info.origen_ruta_troncal} → ${r.info.destino_ruta_troncal}` : "";
+            if (!r.d) {
+                art.innerHTML = `<h3>${r.codigo}</h3><p class="od">${od}</p><p class="sub">Sin viajes programados para ${NOMBRE_DIA[dia]}.</p>`;
+            } else {
+                const pico = Math.max(...r.d.viajes_por_hora);
+                art.innerHTML = `<h3>${r.codigo}</h3><p class="od">${od}</p>
+                    <dl>
+                        <dt>Distancia del recorrido</dt><dd>${r.d.distancia_km ? num1(r.d.distancia_km) + " km" : "—"}</dd>
+                        <dt>Tiempo típico de viaje</dt><dd>${Math.round(r.d.duracion_min)} min</dd>
+                        <dt>Rango del día</dt><dd>${Math.round(r.d.duracion_min_rango[0])}–${Math.round(r.d.duracion_min_rango[1])} min</dd>
+                        <dt>Velocidad promedio</dt><dd>${r.d.velocidad_kmh ? num1(r.d.velocidad_kmh) + " km/h" : "—"}</dd>
+                        <dt>Paradas</dt><dd>${r.d.paradas}</dd>
+                        <dt>Viajes en el día</dt><dd>${fmt(r.d.viajes)}</dd>
+                        <dt>Frecuencia en la hora con más buses</dt><dd>cada ${pico ? Math.round(60 / pico) : "—"} min</dd>
+                        <dt>Primer y último bus</dt><dd>${hhmm(r.d.primer_salida)} – ${hhmm(r.d.ultima_salida)}</dd>
+                    </dl>`;
+            }
+            cont.appendChild(art);
+        });
+    }
+
+    // Grafica X-Y numerica (linea de tiempo y velocidad por tramo), con titulos de ejes,
+    // leyenda (si hay 2+ series) y tooltip con todas las series en el punto mas cercano
+    function graficaXY(svg, leyenda, series, op) {
+        const H = Number(svg.getAttribute("height")) || 250, W = svg.clientWidth || 600;
+        const m = { izq: 62, der: 14, arr: 10, abj: 42 };
+        const xs = series.flatMap((s) => s.puntos.flatMap((p) => [p.x, (p.x2 !== undefined ? p.x2 : p.x)]));
+        const ys = series.flatMap((s) => s.puntos.map((p) => p.y));
+        const xMax = Math.max(1, ...xs), yMax = (Math.max(1, ...ys)) * 1.1;
+        const x = (v) => m.izq + v / xMax * (W - m.izq - m.der);
+        const y = (v) => H - m.abj - v / yMax * (H - m.arr - m.abj);
+        const pasoY = [1, 2, 5, 10, 20, 25, 50, 100].find((p) => yMax / p <= 5) || 100;
+        const pasoX = [1, 2, 5, 10].find((p) => xMax / p <= 8) || 10;
+        let g = "";
+        for (let v = 0; v <= yMax; v += pasoY) g += `<line x1="${m.izq}" x2="${W - m.der}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grilla)"/><text x="${m.izq - 8}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+        for (let v = 0; v <= xMax; v += pasoX) g += `<text x="${x(v)}" y="${H - m.abj + 16}" text-anchor="middle">${v}</text>`;
+        g += `<line x1="${m.izq}" x2="${W - m.der}" y1="${y(0)}" y2="${y(0)}" stroke="var(--eje)"/>`;
+        g += titulosEjes(W, H, m, op.tituloX, op.tituloY);
+        series.forEach((s) => {
+            let d = "";
+            if (op.escalones) {
+                s.puntos.forEach((p) => { d += `M${x(p.x).toFixed(1)},${y(p.y).toFixed(1)}H${x(p.x2).toFixed(1)}`; });
+            } else {
+                d = s.puntos.map((p, i) => `${i ? "L" : "M"}${x(p.x).toFixed(1)},${y(p.y).toFixed(1)}`).join("");
+            }
+            g += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${op.escalones ? 3 : 2}" stroke-linejoin="round" stroke-linecap="round"/>`;
+            if (op.marcadores) s.puntos.forEach((p) => {
+                g += `<circle cx="${x(p.x)}" cy="${y(p.y)}" r="4" fill="${s.color}" stroke="var(--superficie)" stroke-width="2"/>`;
+            });
+        });
+        g += `<line class="cruz" y1="${m.arr}" y2="${H - m.abj}" stroke="var(--tinta-2)" visibility="hidden"/>
+              <rect class="zona" x="${m.izq}" y="${m.arr}" width="${W - m.izq - m.der}" height="${H - m.arr - m.abj}" fill="transparent"/>`;
+        svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+        svg.innerHTML = g;
+
+        leyenda.innerHTML = "";
+        if (series.length > 1) series.forEach((s) => {
+            const sp = document.createElement("span"), i = document.createElement("i");
+            i.style.background = s.color; sp.append(i, document.createTextNode(s.nombre)); leyenda.appendChild(sp);
+        });
+
+        const zona = svg.querySelector(".zona"), cruz = svg.querySelector(".cruz");
+        const cerca = (s, km) => s.puntos.reduce((a, p) => {
+            const centro = p.x2 !== undefined ? (km >= p.x && km <= p.x2 ? km : (p.x + p.x2) / 2) : p.x;
+            const dist = Math.abs(centro - km);
+            return !a || dist < a.dist ? { p, dist } : a;
+        }, null);
+        zona.addEventListener("pointermove", (ev) => {
+            const r = svg.getBoundingClientRect();
+            const km = Math.max(0, ((ev.clientX - r.left) * (W / r.width) - m.izq) / (W - m.izq - m.der) * xMax);
+            const ref = cerca(series[0], km);
+            if (!ref) return;
+            const kmRef = op.escalones ? km : ref.p.x;
+            cruz.setAttribute("x1", x(kmRef)); cruz.setAttribute("x2", x(kmRef)); cruz.setAttribute("visibility", "visible");
+            const filas = series.map((s) => { const c = cerca(s, kmRef); return [s.color, op.fmtY(c.p.y), series.length > 1 ? s.nombre : ""]; });
+            mostrarTooltip(ev, `${ref.p.etiqueta} · km ${num1(op.escalones ? km : ref.p.x)}`, filas);
+        });
+        zona.addEventListener("pointerleave", () => { cruz.setAttribute("visibility", "hidden"); ocultarTooltip(); });
+    }
+
+    // Grafica por hora del dia (varias series), con titulos de ejes y tooltip
+    function graficaMulti(svg, leyenda, series, tituloX, tituloY, formato) {
+        const H = Number(svg.getAttribute("height")) || 250, W = svg.clientWidth || 600;
+        const m = { izq: 62, der: 12, arr: 10, abj: 42 };
+        const h0 = HORA_MIN, h1 = HORA_MAX, n = h1 - h0 + 1;
+        const vals = series.flatMap((s) => s.valores.slice(h0, h1 + 1).filter((v) => v !== null && v !== undefined));
+        const max = (Math.max(0, ...vals) * 1.12) || 1;
+        const x = (i) => m.izq + i / (n - 1) * (W - m.izq - m.der);
+        const y = (v) => H - m.abj - v / max * (H - m.arr - m.abj);
+        const paso = [1, 2, 5, 10, 20, 25, 50, 100].find((p) => max / p <= 5) || 100;
+        let g = "";
+        for (let v = 0; v <= max; v += paso) g += `<line x1="${m.izq}" x2="${W - m.der}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grilla)"/><text x="${m.izq - 8}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+        for (let h = h0; h <= h1; h += 2) g += `<text x="${x(h - h0)}" y="${H - m.abj + 16}" text-anchor="middle">${h}h</text>`;
+        g += `<line x1="${m.izq}" x2="${W - m.der}" y1="${y(0)}" y2="${y(0)}" stroke="var(--eje)"/>`;
+        g += titulosEjes(W, H, m, tituloX, tituloY);
+        series.forEach((s) => {
+            let d = "", nuevo = true;
+            for (let i = 0; i < n; i++) {
+                const v = s.valores[h0 + i];
+                if (v === null || v === undefined) { nuevo = true; continue; }
+                d += `${nuevo ? "M" : "L"}${x(i).toFixed(1)},${y(v).toFixed(1)}`;
+                nuevo = false;
+            }
+            g += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+        });
+        g += `<line class="cruz" y1="${m.arr}" y2="${H - m.abj}" stroke="var(--tinta-2)" visibility="hidden"/>
+              <rect class="zona" x="${m.izq}" y="${m.arr}" width="${W - m.izq - m.der}" height="${H - m.arr - m.abj}" fill="transparent"/>`;
+        svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+        svg.innerHTML = g;
+        leyenda.innerHTML = "";
+        if (series.length > 1) series.forEach((s) => {
+            const sp = document.createElement("span"), i = document.createElement("i");
+            i.style.background = s.color; sp.append(i, document.createTextNode(s.nombre)); leyenda.appendChild(sp);
+        });
+        const zona = svg.querySelector(".zona"), cruz = svg.querySelector(".cruz");
+        zona.addEventListener("pointermove", (ev) => {
+            const r = svg.getBoundingClientRect();
+            const i = Math.max(0, Math.min(n - 1, Math.round(((ev.clientX - r.left) * (W / r.width) - m.izq) / (W - m.izq - m.der) * (n - 1))));
+            cruz.setAttribute("x1", x(i)); cruz.setAttribute("x2", x(i)); cruz.setAttribute("visibility", "visible");
+            mostrarTooltip(ev, "Salida entre las " + horaTxt(h0 + i),
+                series.map((s) => { const v = s.valores[h0 + i]; return [s.color, v === null || v === undefined ? "sin buses" : formato(v), series.length > 1 ? s.nombre : ""]; }));
+        });
+        zona.addEventListener("pointerleave", () => { cruz.setAttribute("visibility", "hidden"); ocultarTooltip(); });
+    }
+
+    // Lectura en texto
+    function pintarAnalisisRutas(rutas, una) {
+        const cont = $("analisisRutas");
+        if (!rutas.length) { cont.innerHTML = "<p>No hay viajes programados para ese día.</p>"; return; }
+        const frases = [];
+        if (una) {
+            const r = rutas[0], rec = r.d.recorrido;
+            const pico = Math.max(...r.d.viajes_por_hora);
+            frases.push(`<b>${r.codigo}</b> recorre ${num1(r.d.distancia_km || 0)} km con ${r.d.paradas} paradas y tiene ${fmt(r.d.viajes)} viajes programados el ${NOMBRE_DIA[$("selDiaRuta").value]}; en la hora con más servicio sale un bus cada ${pico ? Math.round(60 / pico) : "—"} minutos.`);
+            if (rec.valle && rec.pico) {
+                const tv = rec.valle.paradas[rec.valle.paradas.length - 1].min, tp = rec.pico.paradas[rec.pico.paradas.length - 1].min;
+                frases.push(`Un bus que sale a las <b>${hhmm(rec.valle.salida)}</b> llega en <b>${Math.round(tv)} min</b>; uno que sale a las <b>${hhmm(rec.pico.salida)}</b> tarda <b>${Math.round(tp)} min</b> (${tp >= tv ? "+" : ""}${Math.round(tp - tv)} min) por la hora pico.`);
+                const lento = tramos(rec.pico.paradas).reduce((a, t) => (!a || t.y < a.y ? t : a), null);
+                const rapido = tramos(rec.valle.paradas).reduce((a, t) => (!a || t.y > a.y ? t : a), null);
+                if (lento) frases.push(`El tramo más lento en hora pico es <b>${lento.etiqueta}</b> (${Math.round(lento.y)} km/h); el más rápido a media mañana es <b>${rapido.etiqueta}</b> (${Math.round(rapido.y)} km/h).`);
+            }
+        } else {
+            const conVel = rutas.filter((r) => r.d.velocidad_kmh);
+            if (conVel.length > 1) {
+                const rap = conVel.reduce((a, b) => (a.d.velocidad_kmh > b.d.velocidad_kmh ? a : b));
+                const len = conVel.reduce((a, b) => (a.d.velocidad_kmh < b.d.velocidad_kmh ? a : b));
+                frases.push(`<b>${rap.codigo}</b> es la más rápida (${num1(rap.d.velocidad_kmh)} km/h promedio) y <b>${len.codigo}</b> la más lenta (${num1(len.d.velocidad_kmh)} km/h).`);
+            }
+            rutas.forEach((r) => {
+                const rec = r.d.recorrido;
+                if (rec.valle && rec.pico) {
+                    const tv = rec.valle.paradas[rec.valle.paradas.length - 1].min, tp = rec.pico.paradas[rec.pico.paradas.length - 1].min;
+                    frases.push(`<b>${r.codigo}</b>: ${Math.round(tv)} min saliendo a las ${hhmm(rec.valle.salida)} y ${Math.round(tp)} min saliendo a las ${hhmm(rec.pico.salida)} (${tp >= tv ? "+" : ""}${Math.round(tp - tv)} min en hora pico).`);
+                }
+            });
+            const mas = rutas.reduce((a, b) => (a.d.viajes > b.d.viajes ? a : b));
+            frases.push(`La que más viajes tiene programados es <b>${mas.codigo}</b> (${fmt(mas.d.viajes)}).`);
+        }
+        cont.innerHTML = frases.map((f) => `<p>${f}</p>`).join("");
+    }
+
+    function pintarMapaRutas() {
+        if (!mapaRutas || !mapaRutas.getSource("rutas") || !resultadoRutas) return;
+        const rutas = rutasDelDia();
+        const n = rutas.length;
+        const features = rutas.filter((r) => geometriasRutas[r.codigo]).map((r, i) => ({
+            type: "Feature",
+            properties: { color: r.color, desfase: (i - (n - 1) / 2) * 4 },   // lado a lado donde comparten via
+            geometry: geometriasRutas[r.codigo].geometry
+        }));
+        mapaRutas.getSource("rutas").setData({ type: "FeatureCollection", features });
+        const ley = $("leyendaMapaRutas");
+        ley.innerHTML = "";
+        if (n > 1) rutas.forEach((r) => {
+            const sp = document.createElement("span"), i = document.createElement("i");
+            i.style.background = r.color; sp.append(i, document.createTextNode(r.codigo)); ley.appendChild(sp);
+        });
+        if (features.length) {
+            const caja = new maplibregl.LngLatBounds();
+            features.forEach((f) => (f.geometry.type === "MultiLineString" ? f.geometry.coordinates.flat() : f.geometry.coordinates).forEach((c) => caja.extend(c)));
+            mapaRutas.fitBounds(caja, { padding: 40, duration: 1200 });
+        }
+    }
+
+    // ---------- Eventos de la vista de rutas ----------
+    $("btnAgregarRuta").addEventListener("click", () => {
+        if ($("extra2").hidden) $("extra2").hidden = false;
+        else $("extra3").hidden = false;
+        actualizarBotonComparar();
+        cargarRutas();
+    });
+    document.querySelectorAll("[data-quitar]").forEach((b) => b.addEventListener("click", () => {
+        if (b.dataset.quitar === "2" && !$("extra3").hidden) {
+            // si se quita la 2 y hay 3, la 3 pasa a ser la 2
+            $("selRuta2").value = $("selRuta3").value;
+            $("extra3").hidden = true;
+        } else {
+            $("extra" + b.dataset.quitar).hidden = true;
+        }
+        actualizarBotonComparar();
+        cargarRutas();
+    }));
+    document.querySelectorAll(".sel-ruta").forEach((sel) => sel.addEventListener("change", cargarRutas));
+    $("selDiaRuta").addEventListener("change", pintarRutas);
+    window.addEventListener("resize", () => { if (resultadoRutas && !$("vistaRutas").hidden) pintarRutas(); });
+    actualizarBotonComparar();
+})();
+</script>
+</body>
+</html>

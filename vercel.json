@@ -3,7 +3,18 @@
     "buildCommand": null,
     "installCommand": null,
     "rewrites": [
-        { "source": "/", "destination": "/Index.html" },
-        { "source": "/api/(.*)", "destination": "/api/index" }
-    ]
+        {
+            "source": "/",
+            "destination": "/Index.html"
+        },
+        {
+            "source": "/api/(.*)",
+            "destination": "/api/index"
+        }
+    ],
+    "functions": {
+        "api/index.py": {
+            "maxDuration": 30
+        }
+    }
 }
