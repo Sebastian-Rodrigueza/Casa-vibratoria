@@ -799,6 +799,220 @@ def transmilenio_rutas():
     }), 24 * 3600)
 
 
+# =====================================================================
+# TRANSMILENIO - BUSES DEL SITP ZONAL (validaciones del dia, sin guardar nada)
+# =====================================================================
+# Cada pasaje pagado en un bus zonal trae: ID del vehiculo, ruta, paradero y
+# hora. Con eso se reconstruye el recorrido de cada bus (puntos en los
+# paraderos donde subio gente) y, cruzando con el archivo de flota, su placa.
+# El archivo del dia (~120 MB comprimido) se recorre en flujo; Vercel cachea.
+
+def _texto(b):
+    try:
+        return b.decode("utf-8")
+    except UnicodeDecodeError:
+        return b.decode("latin-1")
+
+
+def _paradero(texto):
+    """'(54191) 507A12_TM|507A12_Br. Marichuela' -> ('507A12', 'Br. Marichuela')"""
+    m = re.match(r"\s*\(\d+\)\s*([^_|]+)[^|]*\|?(?:[^_]*_)?(.*)", texto or "")
+    return (m.group(1).strip(), m.group(2).strip()) if m else ("", texto or "")
+
+
+def _ruta(texto):
+    """'(10160) 3-9 Marichuela' -> ('10160', '3-9 Marichuela')"""
+    m = re.match(r"\s*\((\w+)\)\s*(.*)", texto or "")
+    return (m.group(1), m.group(2).strip()) if m else (texto or "", texto or "")
+
+
+def _validaciones_zonales(fecha):
+    """Recorre las validaciones zonales de un dia. Devuelve (encabezado, generador de columnas)."""
+    url = f"{TM_ALMACEN}/ValidacionZonal/validacionZonal{fecha.replace('-', '')}.zip"
+    z = _ZipRemoto(url)
+    nombre = next(n for n in z.archivos if n.lower().endswith(".csv"))
+    lineas = z.lineas(nombre)
+    encabezado = next(lineas).decode("utf-8-sig").strip().split(",")
+    return encabezado, (l.rstrip(b"\r").split(b",") for l in lineas)
+
+
+def _flota():
+    """Archivo de flota mas reciente: numero del bus (sin letras) -> datos del bus."""
+    import csv
+    import io
+    datos = req_lib.get(TM_LISTADO, params={"prefix": "FlotaVinculada/flota_vinculada_", "fields": "items(name)",
+                                            "maxResults": 1000}, timeout=20).json()
+    nombres = sorted(i["name"] for i in datos.get("items", []) if i["name"].endswith(".csv"))
+    if not nombres:
+        return {}
+    texto = req_lib.get(f"{TM_ALMACEN}/{nombres[-1]}", timeout=30).content.decode("utf-8", "replace")
+    flota = {}
+    for f in csv.DictReader(io.StringIO(texto)):
+        clave = re.sub(r"\D", "", f.get("codigo_bus", "")).lstrip("0")
+        if clave:
+            flota[clave] = {"bus": f.get("codigo_bus"), "placa": f.get("matricula"), "tipo": f.get("descripcion_tipo"),
+                            "combustible": f.get("combustible"), "modelo": f.get("modelo"),
+                            "operador": f.get("concesionario_operacion"), "componente": f.get("componente")}
+    return flota
+
+
+@app.route("/api/transmilenio/sitp/indice")
+def transmilenio_sitp_indice():
+    """Rutas y buses zonales de un dia (?fecha=AAAA-MM-DD), con placa y horas de servicio."""
+    fecha = request.args.get("fecha", "").strip()
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", fecha):
+        return jsonify({"ok": False, "error": "Falta ?fecha=AAAA-MM-DD"}), 400
+    try:
+        enc, filas = _validaciones_zonales(fecha)
+    except Exception:
+        return _con_cache(jsonify({"ok": False, "error": f"TransMilenio no tiene validaciones zonales para {fecha}"}), 3600), 404
+    i_v, i_l, i_t, i_p = (enc.index("ID_Vehiculo"), enc.index("Linea"),
+                          enc.index("Fecha_Transaccion"), enc.index("Estacion_Parada"))
+    rutas, buses = {}, {}
+    try:
+        for c in filas:
+            if len(c) < len(enc) or not c[i_v]:
+                continue
+            ruta, hora, par = c[i_l], c[i_t][11:19], c[i_p]
+            r = rutas.get(ruta)
+            if r is None:
+                r = rutas[ruta] = {"validaciones": 0, "buses": set(), "paraderos": set()}
+            r["validaciones"] += 1
+            r["buses"].add(c[i_v])
+            r["paraderos"].add(par)
+            b = buses.get(c[i_v])
+            if b is None:
+                b = buses[c[i_v]] = {"ini": hora, "fin": hora, "n": 0, "rutas": set()}
+            b["ini"] = min(b["ini"], hora)
+            b["fin"] = max(b["fin"], hora)
+            b["n"] += 1
+            b["rutas"].add(ruta)
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"No se pudo leer el archivo de TransMilenio: {e}"}), 502
+
+    flota = _flota()
+    salida_rutas = []
+    for clave, r in rutas.items():
+        rid, nombre = _ruta(_texto(clave))
+        salida_rutas.append({"id": rid, "nombre": nombre, "validaciones": r["validaciones"], "buses": len(r["buses"]),
+                             "paraderos": sorted({_paradero(_texto(p))[0] for p in r["paraderos"]})})
+    salida_buses = []
+    for vid, b in buses.items():
+        vid = _texto(vid)
+        f = flota.get(vid.lstrip("0"), {})
+        salida_buses.append({"id": vid, "placa": f.get("placa"), "bus": f.get("bus"), "tipo": f.get("tipo"),
+                             "combustible": f.get("combustible"), "modelo": f.get("modelo"),
+                             "operador": f.get("operador"), "ini": _texto(b["ini"]), "fin": _texto(b["fin"]),
+                             "validaciones": b["n"], "rutas": sorted(_ruta(_texto(r))[0] for r in b["rutas"])})
+    salida_rutas.sort(key=lambda r: -r["validaciones"])
+    return _con_cache(jsonify({"ok": True, "fecha": fecha,
+                               "fuente": "TransMilenio S.A. - Validaciones del SITP zonal y flota vinculada (datos abiertos)",
+                               "rutas": salida_rutas, "buses": salida_buses}), 7 * 24 * 3600)
+
+
+@app.route("/api/transmilenio/sitp/ruta")
+def transmilenio_sitp_ruta():
+    """Recorrido de cada bus de una ruta zonal en un dia (?fecha=AAAA-MM-DD&ruta=10160):
+    paraderos donde subio gente, con hora y numero de pasajes."""
+    fecha = request.args.get("fecha", "").strip()
+    ruta = request.args.get("ruta", "").strip()
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", fecha) or not re.fullmatch(r"\w+", ruta):
+        return jsonify({"ok": False, "error": "Falta ?fecha=AAAA-MM-DD&ruta=ID"}), 400
+    try:
+        enc, filas = _validaciones_zonales(fecha)
+    except Exception:
+        return _con_cache(jsonify({"ok": False, "error": f"TransMilenio no tiene validaciones zonales para {fecha}"}), 3600), 404
+    i_v, i_l, i_t, i_p = (enc.index("ID_Vehiculo"), enc.index("Linea"),
+                          enc.index("Fecha_Transaccion"), enc.index("Estacion_Parada"))
+    prefijo = f"({ruta})".encode()
+    por_bus = {}
+    nombre_ruta = ruta
+    try:
+        for c in filas:
+            if len(c) < len(enc) or not c[i_l].startswith(prefijo):
+                continue
+            nombre_ruta = _ruta(_texto(c[i_l]))[1]
+            por_bus.setdefault(_texto(c[i_v]), []).append((_texto(c[i_t][11:19]), _texto(c[i_p])))
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"No se pudo leer el archivo de TransMilenio: {e}"}), 502
+
+    buses = {}
+    for vid, regs in por_bus.items():
+        regs.sort()
+        paradas = []   # visitas: pasajes seguidos en el mismo paradero se juntan
+        for hora, par in regs:
+            cod, nombre = _paradero(par)
+            if paradas and paradas[-1]["cod"] == cod:
+                paradas[-1]["fin"] = hora
+                paradas[-1]["n"] += 1
+            else:
+                paradas.append({"cod": cod, "nombre": nombre, "ini": hora, "fin": hora, "n": 1})
+        buses[vid] = paradas
+    return _con_cache(jsonify({"ok": True, "fecha": fecha, "ruta": ruta, "nombre": nombre_ruta, "buses": buses}),
+                      7 * 24 * 3600)
+
+
+@app.route("/api/transmilenio/sitp/trazado")
+def transmilenio_sitp_trazado():
+    """Trazado oficial por las calles de una ruta zonal (?codigo=BH907), tomado del GTFS
+    (shapes.txt). Devuelve las variantes mas usadas (normalmente ida y vuelta)."""
+    import csv
+    import io
+    from collections import Counter
+
+    codigo = request.args.get("codigo", "").strip().upper()
+    if not re.fullmatch(r"[\w\-\.]+", codigo):
+        return jsonify({"ok": False, "error": "Falta ?codigo=BH907"}), 400
+    try:
+        archivo = _gtfs_mas_reciente()
+        z = _ZipRemoto(f"{GTFS_ALMACEN}/{archivo}")
+        zonales = [r for r in csv.DictReader(io.StringIO(z.leer("routes.txt"))) if r.get("agency_id") != "1"]
+        rutas = [r for r in zonales if r.get("route_short_name", "").upper() == codigo]
+        partida = re.fullmatch(r"([A-Z])([A-Z])(\d+\w*)", codigo)
+        if not rutas and partida:
+            # "BH907" en el GTFS esta partida por sentido: "B907" (hacia zona B) y "H907" (hacia zona H)
+            sentidos = {partida.group(1) + partida.group(3), partida.group(2) + partida.group(3)}
+            rutas = [r for r in zonales if r.get("route_short_name", "").upper() in sentidos]
+        normales = [r for r in rutas if "ciclov" not in r.get("route_long_name", "").lower()]
+        ids = {r["route_id"] for r in (normales or rutas)}
+        if not ids:
+            return _con_cache(jsonify({"ok": False, "error": f"La ruta {codigo} no esta en el GTFS"}), 86400), 404
+
+        viajes_gtfs = [t for t in csv.DictReader(io.StringIO(z.leer("trips.txt")))
+                       if t["route_id"] in ids and t.get("shape_id")]
+        usos = Counter(t["shape_id"] for t in viajes_gtfs)
+        # hacia donde va cada trazado: nombre largo de su ruta (en las partidas por sentido es el destino)
+        nombre_ruta = {r["route_id"]: r.get("route_long_name", "") for r in rutas}
+        ruta_de_trazado = {}
+        for t in viajes_gtfs:
+            ruta_de_trazado.setdefault(t["shape_id"], Counter())[t["route_id"]] += 1
+        elegidos = [s for s, _ in usos.most_common(4)]
+        puntos = {s: [] for s in elegidos}
+        claves = {s.encode() + b"," for s in elegidos}
+        lineas = z.lineas("shapes.txt")
+        enc = next(lineas).decode("utf-8-sig").strip().split(",")
+        i_s, i_la, i_lo, i_q = (enc.index("shape_id"), enc.index("shape_pt_lat"),
+                                enc.index("shape_pt_lon"), enc.index("shape_pt_sequence"))
+        for l in lineas:
+            if not any(l.startswith(k) for k in claves):
+                continue
+            c = l.rstrip(b"\r").decode().split(",")
+            puntos[c[i_s]].append((int(c[i_q]), round(float(c[i_lo]), 5), round(float(c[i_la]), 5)))
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"No se pudo leer el GTFS: {e}"}), 502
+
+    trazados = []
+    for s in elegidos:
+        pts = [[lo, la] for _, lo, la in sorted(puntos[s])]
+        limpios = [p for i, p in enumerate(pts) if i == 0 or p != pts[i - 1]]
+        if len(limpios) > 1:
+            rid = ruta_de_trazado[s].most_common(1)[0][0]
+            trazados.append({"id": s, "viajes": usos[s], "nombre": nombre_ruta.get(rid, ""), "coords": limpios})
+    return _con_cache(jsonify({"ok": True, "codigo": codigo, "gtfs": archivo,
+                               "nombre": " / ".join(sorted({r.get("route_long_name", "") for r in (normales or rutas)})),
+                               "trazados": trazados}), 7 * 24 * 3600)
+
+
 @app.route("/api/status")
 def status():
     return jsonify({"ok": True, "mensaje": "API GeoDB Andes activa (Vercel + Supabase)"})
