@@ -1261,6 +1261,51 @@
                      display: none;
                  }
 
+             /* ---------- Imagenes historicas (Esri Wayback) ---------- */
+             .wayback-card { max-height: min(600px, calc(100vh - var(--topbar-h) - 60px)); }
+             .wayback-body { display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
+             .wb-fila { display: flex; gap: 8px; }
+             .wb-btn {
+                 flex: 1; padding: 8px 10px; border-radius: var(--radius-sm);
+                 border: 1px solid var(--yellow-dark); background: var(--yellow-soft);
+                 font: 600 12.5px var(--font-body); color: var(--charcoal); cursor: pointer;
+             }
+             .wb-btn:hover { background: var(--yellow); }
+             .wb-btn:disabled { opacity: .5; cursor: wait; }
+             .wb-check { display: flex; gap: 7px; align-items: flex-start; font-size: 12.5px; color: var(--text); cursor: pointer; }
+             .wb-check input { margin-top: 2px; accent-color: var(--yellow-dark); }
+             .wb-campo { display: flex; flex-direction: column; gap: 4px; }
+             .wb-campo[hidden] { display: none; }
+             .wb-etq { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+             .wb-campo select {
+                 padding: 7px 8px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+                 font: 500 13px var(--font-body); background: #fff;
+             }
+             .wb-meta { color: var(--muted); font-size: 11.5px; min-height: 14px; }
+             .wb-estado { margin: 0; font-size: 12px; color: var(--warning); }
+             .wb-estado:empty { display: none; }
+             .wb-nota { margin: 0; font-size: 11.5px; line-height: 1.45; color: var(--muted); }
+
+             /* Barra de la cortina sobre el mapa */
+             .wb-cortina {
+                 position: absolute; top: 0; bottom: 0; width: 0; z-index: 650;
+                 border-left: 3px solid #fff; box-shadow: 0 0 6px rgba(0, 0, 0, .5);
+                 pointer-events: none;
+             }
+             .wb-cortina .wb-asa {
+                 position: absolute; top: 50%; left: -19px; width: 34px; height: 34px;
+                 margin-top: -17px; border-radius: 50%; background: #fff;
+                 box-shadow: 0 2px 8px rgba(0, 0, 0, .4); cursor: ew-resize; pointer-events: auto;
+                 display: flex; align-items: center; justify-content: center;
+                 font: 700 14px var(--font-body); color: var(--charcoal); user-select: none; touch-action: none;
+             }
+             .wb-cortina .wb-fecha {
+                 position: absolute; top: 12px; padding: 4px 8px; border-radius: 6px;
+                 background: rgba(37, 40, 44, .85); color: #fff; font: 600 12px var(--font-body); white-space: nowrap;
+             }
+             .wb-cortina .wb-fecha.izq { right: 8px; }
+             .wb-cortina .wb-fecha.der { left: 8px; }
+
              .upload-body {
                  padding: 16px;
                  overflow-y: auto;
@@ -1980,6 +2025,15 @@
                     </svg>
                     <span class="tip">Subir documentos</span>
                 </button>
+
+                <button class="nav-btn" id="sideWayback" type="button" aria-label="Imágenes históricas">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 7v5l3 2" />
+                        <path d="M3 12h2" />
+                    </svg>
+                    <span class="tip">Imágenes históricas</span>
+                </button>
             </nav>
 
             <div class="sidebar-bottom">
@@ -2001,6 +2055,7 @@
                     <img src="Imagenes/logo-uniandes.png"
                          alt="Universidad de los Andes"
                          onerror="this.style.display='none'; this.parentElement.classList.add('logo-missing');">
+                    <img class="logo-sinergia" src="Imagenes/SinerGIA-oscuro.png" alt="Lab SinergIA" style="height:40px;width:auto;max-width:none;max-height:none;flex:none;margin-left:12px;display:block">
                 </div>
 
                 <div class="top-title">
@@ -2212,6 +2267,56 @@
                         la temática y el rango de fechas.
                     </p>
                 </div>
+            </div>
+        </section>
+
+        <section class="upload-card wayback-card" id="waybackCard" hidden>
+            <div class="zone-chat-head">
+                <div class="zone-chat-title">
+                    <span class="zone-chat-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <circle cx="12" cy="12" r="9" />
+                            <path d="M12 7v5l3 2" />
+                        </svg>
+                    </span>
+                    <div>
+                        <small>Esri World Imagery Wayback</small>
+                        <h2>Imágenes históricas</h2>
+                    </div>
+                </div>
+                <button class="zone-chat-close" id="waybackClose" type="button" aria-label="Cerrar imágenes históricas">×</button>
+            </div>
+
+            <div class="upload-body wayback-body">
+                <div class="wb-fila">
+                    <button type="button" class="wb-btn" id="wbBogota">Ir a Bogotá</button>
+                    <button type="button" class="wb-btn" id="wbBuscar" title="Busca las fechas en que cambió la imagen en el centro del mapa">Buscar fechas aquí</button>
+                </div>
+                <label class="wb-check">
+                    <input type="checkbox" id="wbSoloCambios" checked>
+                    Solo fechas con imagen distinta en el centro del mapa
+                </label>
+                <label class="wb-check">
+                    <input type="checkbox" id="wbCortina" checked>
+                    Comparar con cortina (arrastra la barra del mapa)
+                </label>
+
+                <div class="wb-campo" id="wbCampoAntes">
+                    <span class="wb-etq">Izquierda (antes)</span>
+                    <select id="wbAntes"></select>
+                    <small class="wb-meta" id="wbMetaAntes"></small>
+                </div>
+                <div class="wb-campo">
+                    <span class="wb-etq" id="wbEtqDespues">Derecha (después)</span>
+                    <select id="wbDespues"></select>
+                    <small class="wb-meta" id="wbMetaDespues"></small>
+                </div>
+
+                <p class="wb-estado" id="wbEstado">Cargando versiones…</p>
+                <p class="wb-nota">
+                    Cada versión es una actualización del mapa satelital de Esri; la fecha de la foto
+                    puede ser anterior. Debajo de cada lista aparece la fecha real de la toma en el centro del mapa.
+                </p>
             </div>
         </section>
 
@@ -5838,6 +5943,256 @@
                 stabilizeInitialMap();
                 loadArcgisFromQueryString();
             });
+
+            /* ---------- Imagenes historicas (Esri World Imagery Wayback) ----------
+             * Esri guarda cada version publicada de su mapa satelital desde 2014
+             * (gratis, sin clave). Idea tomada del plugin "Historical Imagery" de
+             * GeoLibre: se elige una fecha a la izquierda y otra a la derecha y una
+             * cortina deja comparar el antes y el despues.
+             * - Versiones: waybackconfig.json (numero de version -> plantilla de teselas).
+             * - "Solo fechas con imagen distinta": el servicio tilemap dice, para una
+             *   tesela, en que version cambio por ultima vez; saltando hacia atras
+             *   desde la mas reciente salen solo las fechas en que la foto cambio.
+             * - Fecha real de la toma: capa de metadatos de cada version.
+             */
+            (function () {
+                const CONFIG_WB = "https://s3-us-west-2.amazonaws.com/config.maptiles.arcgis.com/waybackconfig.json";
+                const TILEMAP_WB = "https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tilemap/";
+                const ANDES = [4.6016, -74.0652];
+                const SENSORES = {
+                    WV01: "WorldView-1", WV02: "WorldView-2", WV03: "WorldView-3", WV04: "WorldView-4",
+                    GE01: "GeoEye-1", QB02: "QuickBird", IK02: "IKONOS", PLEIADES: "Pléiades"
+                };
+
+                const card = document.getElementById("waybackCard");
+                const selAntes = document.getElementById("wbAntes");
+                const selDespues = document.getElementById("wbDespues");
+                const chkSoloCambios = document.getElementById("wbSoloCambios");
+                const chkCortina = document.getElementById("wbCortina");
+                const estado = document.getElementById("wbEstado");
+                const btnBuscar = document.getElementById("wbBuscar");
+
+                let versiones = null;     // [{num, fecha, url, meta}] de la mas reciente a la mas antigua
+                let listaActual = [];     // versiones que se muestran en las listas
+                let capaAntes = null, capaDespues = null;
+                let busqueda = 0;         // para descartar busquedas viejas si se lanza otra
+                let posCortina = 0.5;     // fraccion del ancho del mapa
+
+                map.createPane("wbDespues").style.zIndex = "250";
+                map.createPane("wbAntes").style.zIndex = "251";
+                const paneAntes = map.getPane("wbAntes");
+
+                // Barra de la cortina
+                const cortina = document.createElement("div");
+                cortina.className = "wb-cortina";
+                cortina.innerHTML = '<span class="wb-fecha izq"></span><span class="wb-fecha der"></span><span class="wb-asa">⇔</span>';
+                cortina.hidden = true;
+                map.getContainer().appendChild(cortina);
+                const asa = cortina.querySelector(".wb-asa");
+                L.DomEvent.disableClickPropagation(cortina);
+
+                asa.addEventListener("pointerdown", (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    asa.setPointerCapture(e.pointerId);
+                    map.dragging.disable();
+                    const mover = (ev) => {
+                        const r = map.getContainer().getBoundingClientRect();
+                        posCortina = Math.min(0.98, Math.max(0.02, (ev.clientX - r.left) / r.width));
+                        recortar();
+                    };
+                    const soltar = () => {
+                        asa.removeEventListener("pointermove", mover);
+                        asa.removeEventListener("pointerup", soltar);
+                        asa.removeEventListener("pointercancel", soltar);
+                        map.dragging.enable();
+                    };
+                    asa.addEventListener("pointermove", mover);
+                    asa.addEventListener("pointerup", soltar);
+                    asa.addEventListener("pointercancel", soltar);
+                });
+
+                // Recorta la capa de la izquierda hasta la cortina. Los panes de
+                // Leaflet se mueven con el mapa, por eso el recorte va en
+                // coordenadas de capa y se recalcula en cada movimiento.
+                function recortar() {
+                    const usar = !card.hidden && chkCortina.checked && capaAntes;
+                    cortina.hidden = !usar;
+                    if (!usar) { paneAntes.style.clip = ""; return; }
+                    const tam = map.getSize();
+                    const x = Math.round(tam.x * posCortina);
+                    const nw = map.containerPointToLayerPoint([0, 0]);
+                    const se = map.containerPointToLayerPoint(tam);
+                    const corte = map.containerPointToLayerPoint([x, 0]).x;
+                    paneAntes.style.clip = `rect(${nw.y}px, ${corte}px, ${se.y}px, ${nw.x}px)`;
+                    cortina.style.left = x + "px";
+                }
+                map.on("move zoom resize", recortar);
+
+                function capa(v, pane) {
+                    return L.tileLayer(v.url, {
+                        pane, maxZoom: 19, maxNativeZoom: 19,
+                        attribution: "Imágenes históricas © Esri World Imagery Wayback"
+                    });
+                }
+
+                function porNum(num) { return versiones.find((v) => v.num === num); }
+
+                function pintarCapas() {
+                    if (capaAntes) { map.removeLayer(capaAntes); capaAntes = null; }
+                    if (capaDespues) { map.removeLayer(capaDespues); capaDespues = null; }
+                    if (card.hidden || !versiones) { recortar(); return; }
+                    const despues = porNum(+selDespues.value);
+                    if (despues) capaDespues = capa(despues, "wbDespues").addTo(map);
+                    const antes = chkCortina.checked && porNum(+selAntes.value);
+                    if (antes) capaAntes = capa(antes, "wbAntes").addTo(map);
+                    document.getElementById("wbCampoAntes").hidden = !chkCortina.checked;
+                    document.getElementById("wbEtqDespues").textContent = chkCortina.checked ? "Derecha (después)" : "Imagen";
+                    cortina.querySelector(".izq").textContent = antes ? antes.fecha : "";
+                    cortina.querySelector(".der").textContent = despues ? despues.fecha : "";
+                    recortar();
+                    fechasDeToma();
+                }
+
+                function llenarListas(lista) {
+                    listaActual = lista;
+                    const antes = +selAntes.value, despues = +selDespues.value;
+                    const opciones = lista.map((v) => `<option value="${v.num}">${v.fecha}</option>`).join("");
+                    selAntes.innerHTML = opciones;
+                    selDespues.innerHTML = opciones;
+                    // Conserva lo elegido si sigue en la lista; si no: la mas antigua vs la mas reciente
+                    const esta = (n) => lista.some((v) => v.num === n);
+                    selDespues.value = esta(despues) ? despues : lista[0].num;
+                    selAntes.value = esta(antes) ? antes : lista[lista.length - 1].num;
+                    pintarCapas();
+                }
+
+                async function cargarVersiones() {
+                    if (versiones) return;
+                    const r = await fetch(CONFIG_WB);
+                    if (!r.ok) throw new Error("HTTP " + r.status);
+                    const config = await r.json();
+                    versiones = Object.entries(config).map(([num, v]) => ({
+                        num: +num,
+                        fecha: (v.itemTitle.match(/\d{4}-\d{2}-\d{2}/) || [""])[0],
+                        url: v.itemURL.replace("{level}", "{z}").replace("{row}", "{y}").replace("{col}", "{x}"),
+                        meta: v.metadataLayerUrl
+                    })).filter((v) => v.fecha).sort((a, b) => b.fecha.localeCompare(a.fecha));
+                }
+
+                // Fechas en que cambio la imagen en la tesela del centro del mapa
+                async function buscarCambios() {
+                    const yo = ++busqueda;
+                    const z = Math.max(3, Math.min(18, Math.round(map.getZoom())));
+                    const t = map.project(map.getCenter(), z).divideBy(256).floor();
+                    const cambios = [];
+                    let i = 0;
+                    while (i < versiones.length) {
+                        const r = await fetch(`${TILEMAP_WB}${versiones[i].num}/${z}/${t.y}/${t.x}/1/1`);
+                        if (yo !== busqueda) return null;
+                        const j = await r.json();
+                        if (!j.data || !j.data[0]) break; // de aqui hacia atras no hay imagen
+                        const real = j.select ? j.select[0] : versiones[i].num;
+                        const k = versiones.findIndex((v) => v.num === real);
+                        if (k < 0) break;
+                        cambios.push(versiones[k]);
+                        estado.textContent = `Buscando fechas con cambios… (${cambios.length})`;
+                        i = k + 1;
+                    }
+                    return cambios;
+                }
+
+                async function actualizarListas() {
+                    btnBuscar.disabled = true;
+                    try {
+                        estado.textContent = "Cargando versiones…";
+                        await cargarVersiones();
+                        if (chkSoloCambios.checked) {
+                            const cambios = await buscarCambios();
+                            if (cambios === null) return;
+                            if (!cambios.length) {
+                                estado.textContent = "No hay imágenes históricas en este punto.";
+                                return;
+                            }
+                            llenarListas(cambios);
+                            estado.textContent = "";
+                            showToast(`${cambios.length} fechas con imagen distinta aquí (de ${versiones.length} versiones)`);
+                        } else {
+                            busqueda++;
+                            llenarListas(versiones);
+                            estado.textContent = "";
+                        }
+                    } catch (e) {
+                        estado.textContent = "No se pudo consultar Esri Wayback (" + e.message + ").";
+                    } finally {
+                        btnBuscar.disabled = false;
+                    }
+                }
+
+                // Fecha real de la toma, satelite y resolucion en el centro del mapa
+                async function tomaDe(v) {
+                    const c = map.getCenter();
+                    const consulta = `/query?f=json&geometry=${c.lng},${c.lat}&geometryType=esriGeometryPoint&inSR=4326` +
+                        "&spatialRel=esriSpatialRelIntersects&outFields=SRC_DATE2,SRC_DESC,SRC_RES&returnGeometry=false";
+                    // Las capas van de la mas fina (0 = 1,9 cm) a la mas gruesa (13 = 150 m)
+                    for (let capaMeta = 0; capaMeta <= 13; capaMeta++) {
+                        const j = await (await fetch(v.meta + "/" + capaMeta + consulta)).json();
+                        const a = j.features && j.features[0] && j.features[0].attributes;
+                        if (!a) continue;
+                        const fecha = a.SRC_DATE2 ? new Date(a.SRC_DATE2).toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "fecha desconocida";
+                        const sensor = SENSORES[a.SRC_DESC] || a.SRC_DESC || "";
+                        const res = a.SRC_RES ? ` · ${(+a.SRC_RES).toFixed(2)} m/píxel` : "";
+                        return `Foto tomada el ${fecha}${sensor ? " · " + sensor : ""}${res}`;
+                    }
+                    return "Sin datos de la toma en este punto";
+                }
+
+                let esperaToma = null;
+                function fechasDeToma() {
+                    clearTimeout(esperaToma);
+                    esperaToma = setTimeout(() => {
+                        [[selAntes, "wbMetaAntes"], [selDespues, "wbMetaDespues"]].forEach(([sel, id]) => {
+                            const el = document.getElementById(id);
+                            const v = versiones && porNum(+sel.value);
+                            if (!v || card.hidden) { el.textContent = ""; return; }
+                            el.textContent = "Consultando fecha de la foto…";
+                            tomaDe(v).then((t) => { if (porNum(+sel.value) === v) el.textContent = t; })
+                                .catch(() => { el.textContent = ""; });
+                        });
+                    }, 400);
+                }
+                map.on("moveend", () => { if (!card.hidden) fechasDeToma(); });
+
+                function irABogota(luego) {
+                    map.once("moveend", luego);
+                    map.flyTo(ANDES, 16, { duration: 1.5 });
+                }
+
+                function abrir() {
+                    card.hidden = false;
+                    document.getElementById("uploadCard").hidden = true;
+                    // Lejos (vista de pais) se va directo a Bogota
+                    if (map.getZoom() < 11) irABogota(actualizarListas);
+                    else if (!versiones) actualizarListas();
+                    else pintarCapas();
+                }
+
+                function cerrar() {
+                    card.hidden = true;
+                    busqueda++;
+                    pintarCapas();
+                }
+
+                document.getElementById("sideWayback").addEventListener("click", () => card.hidden ? abrir() : cerrar());
+                document.getElementById("waybackClose").addEventListener("click", cerrar);
+                document.getElementById("sideUpload").addEventListener("click", () => { if (!card.hidden) cerrar(); });
+                document.getElementById("wbBogota").addEventListener("click", () => irABogota(actualizarListas));
+                btnBuscar.addEventListener("click", actualizarListas);
+                chkSoloCambios.addEventListener("change", actualizarListas);
+                chkCortina.addEventListener("change", pintarCapas);
+                selAntes.addEventListener("change", pintarCapas);
+                selDespues.addEventListener("change", pintarCapas);
+            })();
 
             window.addEventListener("load", stabilizeInitialMap);
 
