@@ -449,8 +449,35 @@ def agente_consultar():
 # un JSON pequeno. Vercel guarda la respuesta en su cache (CDN), asi que
 # cada fecha se descarga una sola vez y no se guarda nada de nuestro lado.
 
-TM_ALMACEN = "https://storage.googleapis.com/validaciones_tmsa"
-TM_LISTADO = "https://storage.googleapis.com/storage/v1/b/validaciones_tmsa/o"
+# En octubre de 2026 TransMilenio cerro el almacenamiento validaciones_tmsa y movio
+# los mismos archivos a este sitio. No tiene listado tipo API: cada carpeta tiene una
+# pagina HTML con los enlaces a los archivos, y de ahi se sacan los nombres.
+TM_ALMACEN = "https://validaciones.datosabiertos.transmilenio.gov.co"
+# El sitio rechaza (403) las peticiones con el agente por defecto de Python
+TM_CABECERAS = {"User-Agent": "LabSinergIA-Uniandes/1.0 (datos abiertos)"}
+
+
+def _listar_tm(pagina, carpeta):
+    """Nombres de archivo ('Salidas/salidas20261018.zip') enlazados en una pagina del sitio."""
+    r = req_lib.get(f"{TM_ALMACEN}/{pagina}", headers=TM_CABECERAS, timeout=20)
+    if r.status_code in (401, 403):
+        raise _SinAcceso()
+    r.raise_for_status()
+    return sorted(set(re.findall(rf"/({carpeta}/[^\"'<>\s]+)", r.text)))
+
+
+# Si el sitio vuelve a negar el acceso se avisa eso en vez de "no hay datos".
+SIN_ACCESO_TM = ("TransMilenio cerró el acceso público a sus archivos de validaciones "
+                 "(validaciones.datosabiertos.transmilenio.gov.co responde 'Access denied'). "
+                 "No hay pasajes de ningún día hasta que lo vuelvan a abrir.")
+
+
+class _SinAcceso(Exception):
+    pass
+
+
+def _sin_acceso():
+    return _con_cache(jsonify({"ok": False, "sin_acceso": True, "error": SIN_ACCESO_TM}), 600), 503
 
 
 def _codigo_y_nombre(texto):
@@ -470,21 +497,14 @@ def _con_cache(respuesta, segundos):
 def transmilenio_fechas():
     """Fechas con archivo de salidas disponible (las mas recientes primero)."""
     try:
-        fechas, token = [], None
-        while True:
-            params = {"prefix": "Salidas/salidas", "fields": "items(name),nextPageToken", "maxResults": 1000}
-            if token:
-                params["pageToken"] = token
-            datos = req_lib.get(TM_LISTADO, params=params, timeout=20).json()
-            for item in datos.get("items", []):
-                m = re.search(r"salidas(\d{4})(\d{2})(\d{2})\.zip$", item["name"])
-                if m:
-                    fechas.append(f"{m.group(1)}-{m.group(2)}-{m.group(3)}")
-            token = datos.get("nextPageToken")
-            if not token:
-                break
-        fechas.sort(reverse=True)
-        return _con_cache(jsonify({"ok": True, "fechas": fechas}), 6 * 3600)
+        fechas = set()
+        for nombre in _listar_tm("Salidas.html", "Salidas"):
+            m = re.search(r"salidas(\d{4})(\d{2})(\d{2})\.(?:zip|csv)$", nombre)
+            if m:
+                fechas.add(f"{m.group(1)}-{m.group(2)}-{m.group(3)}")
+        return _con_cache(jsonify({"ok": True, "fechas": sorted(fechas, reverse=True)}), 6 * 3600)
+    except _SinAcceso:
+        return _sin_acceso()
     except Exception as e:
         return jsonify({"ok": False, "error": f"No se pudo consultar el listado de TransMilenio: {e}"}), 502
 
@@ -502,9 +522,13 @@ def transmilenio_salidas():
 
     url = f"{TM_ALMACEN}/Salidas/salidas{fecha.replace('-', '')}.zip"
     try:
-        r = req_lib.get(url, timeout=25)
+        r = req_lib.get(url, headers=TM_CABECERAS, timeout=25)
+        if r.status_code == 404:  # los dias viejos (2020) estan como .csv suelto
+            r = req_lib.get(url[:-4] + ".csv", headers=TM_CABECERAS, timeout=25)
     except req_lib.exceptions.RequestException as e:
         return jsonify({"ok": False, "error": f"No se pudo descargar el archivo de TransMilenio: {e}"}), 502
+    if r.status_code in (401, 403):
+        return _sin_acceso()
     if r.status_code == 404:
         return _con_cache(jsonify({"ok": False, "error": f"TransMilenio no tiene datos para {fecha}"}), 3600), 404
     if r.status_code != 200:
@@ -516,42 +540,45 @@ def transmilenio_salidas():
     por_franja_salidas = [0] * 96  # cada 15 minutos
     por_franja_entradas = [0] * 96
 
-    with zipfile.ZipFile(io.BytesIO(r.content)) as z:
-        nombre = next(n for n in z.namelist() if n.lower().endswith(".csv"))
-        with z.open(nombre) as f:
-            # el archivo mezcla UTF-8 y Latin-1 segun la fila: se decodifica linea por linea
-            def lineas():
-                for cruda in f:
-                    try:
-                        yield cruda.decode("utf-8-sig")
-                    except UnicodeDecodeError:
-                        yield cruda.decode("latin-1")
-            lector = csv.DictReader(lineas())
-            for fila in lector:
+    if r.content[:2] == b"PK":
+        z = zipfile.ZipFile(io.BytesIO(r.content))
+        f = z.open(next(n for n in z.namelist() if n.lower().endswith(".csv")))
+    else:
+        f = io.BytesIO(r.content)
+    with f:
+        # el archivo mezcla UTF-8 y Latin-1 segun la fila: se decodifica linea por linea
+        def lineas():
+            for cruda in f:
                 try:
-                    hh, mm = int(fila["Tiempo"][:2]), int(fila["Tiempo"][3:5])
-                    ent = int(fila.get("Entradas_E") or 0)
-                    sal = int(fila.get("Salidas_S") or 0)
-                except (ValueError, KeyError, TypeError):
-                    continue
-                if not (ent or sal) or hh > 23:
-                    continue
-                codigo, nombre_est = _codigo_y_nombre(fila.get("Estacion"))
-                est = estaciones.get(codigo)
-                if est is None:
-                    _, linea = _codigo_y_nombre(fila.get("Linea"))
-                    est = estaciones[codigo] = {
-                        "codigo": codigo, "nombre": nombre_est, "linea": linea,
-                        "entradas": 0, "salidas": 0, "salidas_hora": [0] * 24, "entradas_hora": [0] * 24,
-                    }
-                est["entradas"] += ent
-                est["salidas"] += sal
-                est["salidas_hora"][hh] += sal
-                est["entradas_hora"][hh] += ent
-                por_hora_entradas[hh] += ent
-                por_hora_salidas[hh] += sal
-                por_franja_salidas[hh * 4 + mm // 15] += sal
-                por_franja_entradas[hh * 4 + mm // 15] += ent
+                    yield cruda.decode("utf-8-sig")
+                except UnicodeDecodeError:
+                    yield cruda.decode("latin-1")
+        lector = csv.DictReader(lineas())
+        for fila in lector:
+            try:
+                hh, mm = int(fila["Tiempo"][:2]), int(fila["Tiempo"][3:5])
+                ent = int(fila.get("Entradas_E") or 0)
+                sal = int(fila.get("Salidas_S") or 0)
+            except (ValueError, KeyError, TypeError):
+                continue
+            if not (ent or sal) or hh > 23:
+                continue
+            codigo, nombre_est = _codigo_y_nombre(fila.get("Estacion"))
+            est = estaciones.get(codigo)
+            if est is None:
+                _, linea = _codigo_y_nombre(fila.get("Linea"))
+                est = estaciones[codigo] = {
+                    "codigo": codigo, "nombre": nombre_est, "linea": linea,
+                    "entradas": 0, "salidas": 0, "salidas_hora": [0] * 24, "entradas_hora": [0] * 24,
+                }
+            est["entradas"] += ent
+            est["salidas"] += sal
+            est["salidas_hora"][hh] += sal
+            est["entradas_hora"][hh] += ent
+            por_hora_entradas[hh] += ent
+            por_hora_salidas[hh] += sal
+            por_franja_salidas[hh * 4 + mm // 15] += sal
+            por_franja_entradas[hh * 4 + mm // 15] += ent
 
     lista = sorted(estaciones.values(), key=lambda e: -e["salidas"])
     return _con_cache(jsonify({
@@ -587,7 +614,11 @@ class _ZipRemoto:
     def __init__(self, url):
         import struct
         self.url = url
-        tam = int(req_lib.head(url, timeout=20).headers["Content-Length"])
+        cab = req_lib.head(url, timeout=20)
+        if cab.status_code in (401, 403):
+            raise _SinAcceso()
+        cab.raise_for_status()
+        tam = int(cab.headers["Content-Length"])
         cola = self._rango(tam - 65536, tam - 1)
         i = cola.rfind(b"PK\x05\x06")
         _, tam_dir, ini_dir = struct.unpack("<HII", cola[i + 10:i + 20])
@@ -829,23 +860,53 @@ def _ruta(texto):
 def _validaciones_zonales(fecha):
     """Recorre las validaciones zonales de un dia. Devuelve (encabezado, generador de columnas)."""
     url = f"{TM_ALMACEN}/ValidacionZonal/validacionZonal{fecha.replace('-', '')}.zip"
-    z = _ZipRemoto(url)
-    nombre = next(n for n in z.archivos if n.lower().endswith(".csv"))
-    lineas = z.lineas(nombre)
+    lineas = _lineas_zip_flujo(url)
     encabezado = next(lineas).decode("utf-8-sig").strip().split(",")
     return encabezado, (l.rstrip(b"\r").split(b",") for l in lineas)
+
+
+def _lineas_zip_flujo(url):
+    """Recorre linea por linea el primer archivo de un zip descargandolo de corrido.
+    El sitio de TransMilenio no siempre acepta peticiones Range (la primera vez que se
+    pide un archivo lo manda entero), asi que no se puede saltar al final del zip:
+    se lee la cabecera local del primer archivo y se descomprime en flujo."""
+    import struct
+    import zlib
+    r = req_lib.get(url, headers=TM_CABECERAS, timeout=60, stream=True)
+    if r.status_code in (401, 403):
+        raise _SinAcceso()
+    r.raise_for_status()
+    trozos = r.iter_content(1 << 20)
+    buf = b""
+    while len(buf) < 30:
+        buf += next(trozos)
+    firma, = struct.unpack("<I", buf[:4])
+    metodo, = struct.unpack("<H", buf[8:10])
+    ln, le = struct.unpack("<HH", buf[26:30])
+    if firma != 0x04034B50 or metodo != 8:
+        raise ValueError("El zip de TransMilenio no tiene el formato esperado")
+    while len(buf) < 30 + ln + le:
+        buf += next(trozos)
+    d = zlib.decompressobj(-15)
+    resto = d.decompress(buf[30 + ln + le:])
+    for bloque in trozos:
+        partes = (resto + d.decompress(bloque)).split(b"\n")
+        resto = partes.pop()
+        yield from partes
+        if d.eof:  # termino el primer archivo (lo que sigue es el directorio del zip)
+            break
+    if resto:
+        yield resto
 
 
 def _flota():
     """Archivo de flota mas reciente: numero del bus (sin letras) -> datos del bus."""
     import csv
     import io
-    datos = req_lib.get(TM_LISTADO, params={"prefix": "FlotaVinculada/flota_vinculada_", "fields": "items(name)",
-                                            "maxResults": 1000}, timeout=20).json()
-    nombres = sorted(i["name"] for i in datos.get("items", []) if i["name"].endswith(".csv"))
+    nombres = [n for n in _listar_tm("FlotaVinculada.html", "FlotaVinculada") if n.endswith(".csv")]
     if not nombres:
         return {}
-    texto = req_lib.get(f"{TM_ALMACEN}/{nombres[-1]}", timeout=30).content.decode("utf-8", "replace")
+    texto = req_lib.get(f"{TM_ALMACEN}/{nombres[-1]}", headers=TM_CABECERAS, timeout=30).content.decode("utf-8", "replace")
     flota = {}
     for f in csv.DictReader(io.StringIO(texto)):
         clave = re.sub(r"\D", "", f.get("codigo_bus", "")).lstrip("0")
@@ -864,16 +925,20 @@ def transmilenio_sitp_indice():
         return jsonify({"ok": False, "error": "Falta ?fecha=AAAA-MM-DD"}), 400
     try:
         enc, filas = _validaciones_zonales(fecha)
+    except _SinAcceso:
+        return _sin_acceso()
     except Exception:
         return _con_cache(jsonify({"ok": False, "error": f"TransMilenio no tiene validaciones zonales para {fecha}"}), 3600), 404
     i_v, i_l, i_t, i_p = (enc.index("ID_Vehiculo"), enc.index("Linea"),
                           enc.index("Fecha_Transaccion"), enc.index("Estacion_Parada"))
-    rutas, buses = {}, {}
+    rutas, buses, por_paradero = {}, {}, {}
     try:
         for c in filas:
             if len(c) < len(enc) or not c[i_v]:
                 continue
             ruta, hora, par = c[i_l], c[i_t][11:19], c[i_p]
+            pp = por_paradero.setdefault(par, {})
+            pp[ruta] = pp.get(ruta, 0) + 1
             r = rutas.get(ruta)
             if r is None:
                 r = rutas[ruta] = {"validaciones": 0, "buses": set(), "paraderos": set()}
@@ -905,9 +970,21 @@ def transmilenio_sitp_indice():
                              "operador": f.get("operador"), "ini": _texto(b["ini"]), "fin": _texto(b["fin"]),
                              "validaciones": b["n"], "rutas": sorted(_ruta(_texto(r))[0] for r in b["rutas"])})
     salida_rutas.sort(key=lambda r: -r["validaciones"])
+    # pasajes del dia en cada paradero, por ruta (para simular el cierre de un paradero)
+    salida_paraderos = {}
+    for par, porRuta in por_paradero.items():
+        cen = _paradero(_texto(par))[0]
+        if not cen or cen == "(Unknown)":
+            continue
+        d = salida_paraderos.setdefault(cen, {"n": 0, "rutas": {}})
+        for ruta, n in porRuta.items():
+            rid = _ruta(_texto(ruta))[0]
+            d["n"] += n
+            d["rutas"][rid] = d["rutas"].get(rid, 0) + n
     return _con_cache(jsonify({"ok": True, "fecha": fecha,
                                "fuente": "TransMilenio S.A. - Validaciones del SITP zonal y flota vinculada (datos abiertos)",
-                               "rutas": salida_rutas, "buses": salida_buses}), 7 * 24 * 3600)
+                               "rutas": salida_rutas, "buses": salida_buses,
+                               "paraderosDia": salida_paraderos}), 7 * 24 * 3600)
 
 
 @app.route("/api/transmilenio/sitp/ruta")
@@ -920,6 +997,8 @@ def transmilenio_sitp_ruta():
         return jsonify({"ok": False, "error": "Falta ?fecha=AAAA-MM-DD&ruta=ID"}), 400
     try:
         enc, filas = _validaciones_zonales(fecha)
+    except _SinAcceso:
+        return _sin_acceso()
     except Exception:
         return _con_cache(jsonify({"ok": False, "error": f"TransMilenio no tiene validaciones zonales para {fecha}"}), 3600), 404
     i_v, i_l, i_t, i_p = (enc.index("ID_Vehiculo"), enc.index("Linea"),
@@ -1011,6 +1090,90 @@ def transmilenio_sitp_trazado():
     return _con_cache(jsonify({"ok": True, "codigo": codigo, "gtfs": archivo,
                                "nombre": " / ".join(sorted({r.get("route_long_name", "") for r in (normales or rutas)})),
                                "trazados": trazados}), 7 * 24 * 3600)
+
+
+@app.route("/api/transmilenio/gtfs/red")
+def transmilenio_gtfs_red():
+    """Red PROGRAMADA de TransMilenio (GTFS) para planear viajes de A a B y ver rutas:
+    las paradas y, por cada ruta (un sentido), sus paradas en orden con los minutos desde
+    la primera y cuantos viajes salen en cada hora de un dia habil. No usa validaciones."""
+    import csv
+    import io
+
+    try:
+        archivo = _gtfs_mas_reciente()
+        z = _ZipRemoto(f"{GTFS_ALMACEN}/{archivo}")
+        tabla = lambda n: csv.DictReader(io.StringIO(z.leer(n)))
+        agencias = {a["agency_id"]: a["agency_name"].split("-", 1)[-1] for a in tabla("agency.txt")}
+        habiles = {c["service_id"] for c in tabla("calendar.txt") if c.get("monday") == "1"}
+        rutas = {r["route_id"]: r for r in tabla("routes.txt")}
+
+        # cada viaje habil -> su ruta; y por ruta unos pocos viajes candidatos para tomar sus paradas
+        ruta_de_viaje, candidatos = {}, {}
+        for t in tabla("trips.txt"):
+            if t["service_id"] not in habiles or t["route_id"] not in rutas:
+                continue
+            ruta_de_viaje[t["trip_id"].encode()] = t["route_id"]
+            candidatos.setdefault(t["route_id"], []).append(t["trip_id"].encode())
+        elegidos = set()
+        for ids in candidatos.values():  # el primero, el del medio y el ultimo
+            elegidos.update({ids[0], ids[len(ids) // 2], ids[-1]})
+
+        por_hora = {r: [0] * 24 for r in candidatos}
+        filas = {t: [] for t in elegidos}
+        lineas = z.lineas("stop_times.txt")
+        enc = next(lineas).decode("utf-8-sig").strip().split(",")
+        i_lle, i_sal, i_par, i_seq = (enc.index("arrival_time"), enc.index("departure_time"),
+                                      enc.index("stop_id"), enc.index("stop_sequence"))
+        corte = max(i_lle, i_sal, i_par, i_seq) + 1
+        for l in lineas:
+            c = l.split(b",", corte)
+            if len(c) <= corte - 1:
+                continue
+            tid = c[0]
+            if c[i_seq] == b"1" and tid in ruta_de_viaje:
+                h = int(c[i_sal][:2]) % 24
+                por_hora[ruta_de_viaje[tid]][h] += 1
+            if tid in elegidos:
+                filas[tid].append((int(c[i_seq]), _segundos(c[i_lle].decode()), c[i_par].decode()))
+
+        paradas_gtfs = {p["stop_id"]: p for p in tabla("stops.txt")}
+    except _SinAcceso:
+        return jsonify({"ok": False, "error": "TransMilenio cerro el acceso al GTFS"}), 503
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"No se pudo leer el GTFS de TransMilenio: {e}"}), 502
+
+    # paradas usadas, en una lista compacta: [lon, lat, nombre, codigo de paradero]
+    indice_parada, paradas = {}, []
+
+    def parada(sid):
+        if sid not in indice_parada:
+            p = paradas_gtfs.get(sid)
+            if not p:
+                return None
+            indice_parada[sid] = len(paradas)
+            paradas.append([round(float(p["stop_lon"]), 6), round(float(p["stop_lat"]), 6),
+                            (p.get("stop_name") or "").strip(), (p.get("stop_code") or "").split("_")[0]])
+        return indice_parada[sid]
+
+    salida = []
+    for rid, ids in candidatos.items():
+        viaje = max((sorted(filas[t]) for t in {ids[0], ids[len(ids) // 2], ids[-1]}), key=len)
+        if len(viaje) < 2:
+            continue
+        p, m = [], []
+        for _, seg, sid in viaje:
+            k = parada(sid)
+            if k is not None and (not p or p[-1] != k):
+                p.append(k)
+                m.append(round((seg - viaje[0][1]) / 60, 1))
+        r = rutas[rid]
+        salida.append({"id": rid, "c": r.get("route_short_name", ""), "n": r.get("route_long_name", ""),
+                       "a": agencias.get(r.get("agency_id"), ""), "col": r.get("route_color", ""),
+                       "p": p, "m": m, "h": por_hora[rid], "v": len(ids)})
+
+    return _con_cache(jsonify({"ok": True, "gtfs": archivo, "fuente": f"TransMilenio S.A. - GTFS {archivo} (dia habil programado)",
+                               "paradas": paradas, "rutas": salida}), 24 * 3600)
 
 
 @app.route("/api/status")

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Buses del SITP | Universidad de los Andes</title>
+<title>Rutas y buses del SITP | Universidad de los Andes</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -172,6 +172,53 @@
     .tiempo input[type=range] { flex: 1; accent-color: var(--amarillo); }
     .tiempo select { flex: none; padding: 5px 8px; border-radius: 8px; border: 0; background: #33373d; color: #fff; font-size: 12px; }
 
+    /* ---------- Secciones de la pagina (A a B, ver una ruta, buses del dia) ---------- */
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid #d9d9d2; border-radius: 9px;
+        background: #fff; font-size: 12.5px; font-weight: 700; color: var(--tinta); cursor: pointer; }
+    .btn:hover { background: #fafaf5; }
+    .btn.activo { background: #fff3ad; border-color: var(--amarillo-osc); }
+    .btn svg { width: 15px; height: 15px; }
+    .modos { display: flex; gap: 0; margin: 0 0 14px; padding: 3px; border-radius: 11px; background: #1f2226; }
+    .modos button { flex: 1; padding: 7px 4px; border: 0; border-radius: 8px; background: transparent; color: #d6d5cf;
+        font-size: 12px; font-weight: 700; cursor: pointer; line-height: 1.2; }
+    .modos button.activo { background: var(--amarillo); color: #1f2226; }
+    .pendiente { margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; background: #fff7d6; border: 1px solid #f0d77a;
+        font-size: 12.5px; line-height: 1.5; color: #4d3d00; }
+    .pendiente b { color: #1f2226; }
+    .ab { display: grid; gap: 6px; margin-bottom: 10px; }
+    .punto { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; text-align: left; cursor: pointer;
+        border: 1px solid #e5e5de; border-radius: 10px; background: #fff; }
+    .punto.esperando { border-color: var(--amarillo-osc); background: #fffbe6; box-shadow: 0 0 0 2px #fff3ad; }
+    .punto b { display: block; font-size: 12.5px; }
+    .punto small { display: block; color: var(--tinta-2); font-size: 11.5px; }
+    .letra { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+        color: #fff; font: 800 13px/1 "Inter", sans-serif; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+    .letra.a { background: #2f9e44; } .letra.b { background: #e03131; }
+    .marcador { cursor: grab; }
+    .fila-btn { display: flex; gap: 6px; margin: 2px 0 8px; }
+    .fila-btn .btn { flex: 1; justify-content: center; }
+    .opcion { margin-bottom: 8px; padding: 10px 12px; background: #fff; border: 1px solid #e5e5de; border-radius: 12px; cursor: pointer; }
+    .opcion:hover { border-color: #c9ddf5; }
+    .opcion.activo { border-color: var(--serie-1); box-shadow: 0 0 0 2px #cfe0f7; cursor: default; }
+    .opcion .arriba { display: flex; align-items: baseline; gap: 8px; }
+    .opcion .total { font: 800 19px/1 "Source Sans 3", sans-serif; font-variant-numeric: tabular-nums; }
+    .opcion .etiqueta { margin-left: auto; font-size: 10.5px; font-weight: 700; color: #15703a; background: #e8f6ee; padding: 2px 7px; border-radius: 999px; }
+    .opcion .cadena { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 6px; font-size: 11.5px; color: var(--tinta-2); }
+    .opcion .cadena svg { width: 13px; height: 13px; }
+    .cod { display: inline-block; padding: 2px 7px; border-radius: 6px; color: #fff; font-weight: 800; font-size: 12px; letter-spacing: .02em; }
+    .indicaciones { list-style: none; margin: 10px 0 0; padding: 10px 0 0; border-top: 1px solid #ecece6; display: grid; gap: 9px; }
+    .indicaciones li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; font-size: 12.5px; line-height: 1.45; }
+    .indicaciones li > svg { width: 18px; height: 18px; color: var(--tinta-2); margin-top: 1px; }
+    .indicaciones small { display: block; color: var(--tenue); font-size: 11.5px; }
+    .ficha-linea .tiles { margin: 10px 0; }
+    .ficha-linea h4 { margin: 0 0 4px; font: 700 18px/1.2 "Source Sans 3", sans-serif; }
+    .sentidos { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+    .lista-paradas { list-style: none; margin: 6px 0 0; padding: 0; }
+    .lista-paradas li { display: grid; grid-template-columns: 52px 1fr; gap: 8px; padding: 5px 4px; border-radius: 6px; cursor: pointer; font-size: 12.5px; }
+    .lista-paradas li:hover { background: #fff7cc; }
+    .lista-paradas .min { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--tinta-2); }
+    .lista-paradas small { display: block; color: var(--tenue); font-size: 11px; }
+
     .maplibregl-popup-content { font-family: "Inter", sans-serif; font-size: 12.5px; }
     .maplibregl-popup-content b { display: block; font-size: 13.5px; margin-bottom: 2px; }
 
@@ -187,8 +234,9 @@
 <body>
 
 <header>
-    <span class="logo-box"><img src="../../Imagenes/logo-uniandes.png" alt="Universidad de los Andes"></span>
-    <span><small>Geodata de Bogotá · Movilidad</small><strong>Buses del SITP</strong></span>
+    <span class="logo-box"><img src="../../Imagenes/logo-uniandes.png" alt="Universidad de los Andes">
+<img class="logo-sinergia" src="../../Imagenes/SinerGIA-oscuro.png" alt="Lab SinergIA" style="height:40px;width:auto;max-width:none;max-height:none;flex:none;margin-left:12px;display:block"></span>
+    <span><small>Geodata de Bogotá · Movilidad</small><strong>Rutas y buses del SITP</strong></span>
     <nav>
         <a href="Movilidad.html"><i data-lucide="arrow-left"></i> Volver al visor</a>
         <a class="primario" href="../../Index.html"><i data-lucide="house"></i> Inicio</a>
@@ -196,6 +244,65 @@
 </header>
 
 <aside class="panel">
+    <div class="modos" id="modos" role="tablist">
+        <button type="button" class="activo" data-pagina="viaje">De A a B</button>
+        <button type="button" data-pagina="linea">Ver una ruta</button>
+        <button type="button" data-pagina="dia">Buses del día</button>
+    </div>
+
+    <!-- DE A a B (GTFS: horarios programados) -->
+    <section id="vistaViaje">
+        <h2>¿Cómo llego de A a B?</h2>
+        <p class="sub">Combina buses zonales, TransMilenio, alimentadores y TransMiCable con los horarios
+           <b>programados</b> de TransMilenio para un día hábil.</p>
+        <div class="ab">
+            <button type="button" class="punto esperando" id="puntoA"><span class="letra a">A</span>
+                <span><b>Origen</b><small id="txtA">Toca el mapa donde sales</small></span></button>
+            <button type="button" class="punto" id="puntoB"><span class="letra b">B</span>
+                <span><b>Destino</b><small id="txtB">Después toca a dónde vas</small></span></button>
+        </div>
+        <label class="campo"><span>O busca un paradero o estación</span>
+            <input type="search" id="buscarLugar" placeholder="Ej.: Portal Norte, Unicentro, 120A04…" autocomplete="off"></label>
+        <div class="lista" id="listaLugares"></div>
+        <label class="campo"><span>Hora de salida</span><select id="selHora"></select></label>
+        <div class="fila-btn">
+            <button type="button" class="btn" id="btnInvertir"><i data-lucide="arrow-up-down"></i> Invertir</button>
+            <button type="button" class="btn" id="btnBorrarPlan"><i data-lucide="x"></i> Borrar</button>
+        </div>
+        <div class="estado" id="estadoPlan"></div>
+        <div id="opciones"></div>
+        <details class="aviso">
+            <summary>¿Cómo se calcula?</summary>
+            <p>Sale del <b>GTFS de TransMilenio</b>: el horario oficial que publican cada día, con todas las rutas,
+               sus paradas en orden y los minutos entre una y otra. Son tiempos <b>programados</b>, no el tráfico de hoy.</p>
+            <p>La espera es la mitad del tiempo entre buses de esa ruta a esa hora. Se camina a 4,5 km/h, hasta 900 m
+               hasta el primer paradero y hasta 400 m en un transbordo. Se buscan opciones directas y con uno o dos transbordos;
+               cada transbordo suma 4 minutos de “castigo” para preferir viajes más simples.</p>
+            <p>Puedes arrastrar los puntos A y B en el mapa.</p>
+        </details>
+    </section>
+
+    <!-- VER UNA RUTA (GTFS) -->
+    <section id="vistaLinea" hidden>
+        <div id="buscadorLinea">
+            <h2>Ver una ruta</h2>
+            <p class="sub">Recorrido, paradas y horario <b>programado</b> de cualquier ruta: troncal, zonal, alimentadora o cable
+               (día hábil).</p>
+            <label class="campo"><span>Código, nombre o paradero</span>
+                <input type="search" id="buscarLinea" placeholder="Ej.: H907, C25, Usme, Portal Norte…" autocomplete="off"></label>
+            <div class="estado" id="estadoLinea"></div>
+            <div class="lista larga" id="listaLineas"></div>
+        </div>
+        <div id="fichaLinea" class="ficha-linea" hidden></div>
+    </section>
+
+    <!-- BUSES DEL DIA (validaciones del SITP zonal; el aviso solo sale si TransMilenio cierra el acceso) -->
+    <div id="vistaDia" hidden>
+    <div class="pendiente" id="pendienteDia" hidden>
+        <b>Sin acceso.</b> TransMilenio no está dejando consultar sus validaciones (los pasajes con TuLlave),
+        que es de donde sale esta sección. Volverá a funcionar sola cuando lo reabran. Mientras tanto usa
+        <b>De A a B</b> o <b>Ver una ruta</b>, que salen de los horarios programados (GTFS).
+    </div>
     <!-- Indicador de pasos -->
     <ol class="pasos" id="pasos">
         <li data-paso="rutas" class="activo"><span>1</span>Ruta</li>
@@ -266,6 +373,7 @@
             <section id="resumenRuta"></section>
         </div>
     </section>
+    </div>
 
 </aside>
 
@@ -348,7 +456,11 @@
     async function pedir(r) {
         const resp = await fetch(API + r + (r.includes("?") ? "&" : "?") + "v=" + VERSION_API);
         const j = await resp.json();
-        if (!j.ok) throw new Error(j.error || "Error de la API");
+        if (!j.ok) {
+            const e = new Error(j.error || "Error de la API");
+            e.sinAcceso = !!j.sin_acceso;   // TransMilenio cerro el acceso a las validaciones
+            throw e;
+        }
         return j;
     }
     function iconos() { if (window.lucide) lucide.createIcons(); }
@@ -497,6 +609,7 @@
             pintarRutas();
         } catch (err) {
             indice = null;
+            if (err.sinAcceso) { mensaje(""); $("pendienteDia").hidden = false; return; }
             mensaje(esLocal ? "No responde la API local (python -m flask run --port 5000) o no hay datos para ese día: " + err.message
                             : "No se pudieron leer los pasajes de ese día: " + err.message, true);
         }
@@ -895,7 +1008,7 @@
     }
 
     // Grafica de barras por hora (una serie, sin leyenda); clic en una barra = ir a esa hora
-    function barras(cont, valores, titulo, ejeY) {
+    function barras(cont, valores, titulo, ejeY, conClic = true) {
         const h0 = 4, h1 = 23, W = 330, H = 100, izq = 38, abajo = 30;
         const max = Math.max(1, ...valores);
         const ancho = (W - izq) / (h1 - h0 + 1);
@@ -915,8 +1028,9 @@
         }
         svg += `<text class="eje" x="${izq + (W - izq) / 2}" y="${H + 26}" text-anchor="middle">Hora del día</text>`;
         svg += `<text class="eje" transform="translate(8 ${H / 2}) rotate(-90)" text-anchor="middle">${escapar(ejeY)}</text></svg>`;
-        cont.innerHTML = `<div class="titulo">${escapar(titulo)}</div><div class="nota">Clic en una barra para ver los buses a esa hora</div>` + svg;
-        cont.querySelectorAll("[data-h]").forEach((r) => r.addEventListener("click", () => { pausar(); fijarTiempo(Number(r.dataset.h) * 3600 + 1800); }));
+        cont.innerHTML = `<div class="titulo">${escapar(titulo)}</div>` +
+            (conClic ? `<div class="nota">Clic en una barra para ver los buses a esa hora</div>` : "") + svg;
+        if (conClic) cont.querySelectorAll("[data-h]").forEach((r) => r.addEventListener("click", () => { pausar(); fijarTiempo(Number(r.dataset.h) * 3600 + 1800); }));
     }
 
     // ---------- Lista de buses ----------
@@ -1191,6 +1305,599 @@
         if (!cont.children.length) cont.innerHTML = `<div class="vacio">Ningún bus con esa placa ese día.</div>`;
     }
 
+    // =====================================================================
+    // Red PROGRAMADA (GTFS): "De A a B" y "Ver una ruta". No usa validaciones.
+    // =====================================================================
+    const VEL_PIE = 75;              // metros por minuto caminando (4,5 km/h)
+    const FACTOR_CALLE = 1.25;       // por las calles se camina ~25 % mas que en linea recta
+    const CAMINATA_INICIO = 900;     // m en linea recta hasta el primer paradero (y desde el ultimo)
+    const CAMINATA_TRANSBORDO = 400; // m entre dos paradas para hacer transbordo
+    const CASTIGO_TRANSBORDO = 4;    // min extra por transbordo: se prefieren viajes simples
+    const MAX_BUSES = 3;             // hasta dos transbordos
+    const COLOR_TIPO = { Troncal: "#d6232a", Urbano: "#2a78d6", Alimentadores: "#2f9e44", Dual: "#e8590c",
+                         TransMiCable: "#862e9c", Especial: "#7048e8", Complementario: "#7048e8" };
+    const NOMBRE_TIPO = { Troncal: "TransMilenio", Urbano: "Zonal", Alimentadores: "Alimentador", Dual: "Dual",
+                          TransMiCable: "TransMiCable", Especial: "Especial", Complementario: "Complementario" };
+    const paraderosListos = cargarParaderos().catch(() => {});
+    let red = null, cargandoRed = null;
+    let pagina = "viaje";
+    const plan = { A: null, B: null, siguiente: "A", opciones: [], elegida: 0 };
+    const oficiales = {};            // trazado oficial (GTFS shapes) ya ubicado sobre cada ruta
+
+    const caminarMin = (m) => m / VEL_PIE;
+    const minTxt = (m) => (m < 59.5 ? `${Math.max(1, Math.round(m))} min`
+                                    : `${Math.floor(Math.round(m) / 60)} h ${String(Math.round(m) % 60).padStart(2, "0")} min`);
+    const metrosTxt = (m) => (m >= 1000 ? (m / 1000).toFixed(1).replace(".", ",") + " km" : Math.round(m / 10) * 10 + " m");
+    const limpiarNombre = (n) => String(n || "").replace(/\s*\|\|\s*/g, " – ").replace(/\s+/g, " ").trim();
+    const chipRuta = (r) => `<span class="cod" style="background:${r.color}">${escapar(r.c)}</span>`;
+    const horaTxt = (h) => `${h % 12 || 12}:00 ${h < 12 ? "a. m." : "p. m."}`;
+
+    function cargarRed() {
+        if (!cargandoRed) {
+            cargandoRed = (async () => {
+                await paraderosListos;
+                const d = await pedir("/gtfs/red");
+                d.P = d.paradas.map(([lon, lat, nombre, cod]) => {
+                    const pz = paraderos[cod];
+                    // algunos nombres del GTFS vienen con letras danadas: se usa el del servicio de paraderos
+                    return { c: [lon, lat], cod, rutas: [], localidad: pz ? pz.localidad : "",
+                             nombre: (/�/.test(nombre) && pz ? pz.nombre : nombre) || cod };
+                });
+                d.rutas.forEach((r, k) => {
+                    r.k = k;
+                    r.color = COLOR_TIPO[r.a] || "#2a78d6";
+                    r.tipo = NOMBRE_TIPO[r.a] || r.a;
+                    r.nombre = limpiarNombre(r.n);
+                    r.clave = quitarTildes(r.c + " " + r.nombre);
+                    r.p.forEach((i, j) => d.P[i].rutas.push([k, j]));
+                });
+                d.rejilla = {};
+                d.P.forEach((p, i) => { const c = celda(p.c); (d.rejilla[c] = d.rejilla[c] || []).push(i); });
+                red = d;
+                return d;
+            })();
+            cargandoRed.catch(() => { cargandoRed = null; });
+        }
+        return cargandoRed;
+    }
+
+    // Rejilla de ~550 m para encontrar paradas cercanas sin recorrer las 8.000
+    const TAM_CELDA = 0.005;
+    const celda = (c) => Math.floor(c[0] / TAM_CELDA) + ":" + Math.floor(c[1] / TAM_CELDA);
+    function cercanas(c, radio) {
+        const n = Math.ceil(radio / 550), x0 = Math.floor(c[0] / TAM_CELDA), y0 = Math.floor(c[1] / TAM_CELDA);
+        const out = [];
+        for (let dx = -n; dx <= n; dx++) for (let dy = -n; dy <= n; dy++) {
+            (red.rejilla[(x0 + dx) + ":" + (y0 + dy)] || []).forEach((i) => {
+                const d = distancia(c, red.P[i].c);
+                if (d <= radio) out.push({ i, d });
+            });
+        }
+        return out.sort((a, b) => a.d - b.d);
+    }
+
+    // Espera esperada en una ruta a una hora: medio intervalo entre buses (viajes que salen esa hora o la anterior)
+    function frecuencia(r, h) { return Math.max(r.h[h % 24], r.h[(h + 23) % 24]); }
+    function espera(r, h) { const f = frecuencia(r, h); return f ? Math.min(30, 30 / f) : null; }
+
+    // ---------- Planear: busqueda por rondas (0, 1 y 2 transbordos) ----------
+    // Ronda k = mejor tiempo para llegar a cada parada usando k buses. En cada ronda se recorre cada ruta
+    // en orden: se sube donde convenga (llegada de la ronda anterior + espera) y se baja en cualquier parada
+    // siguiente. Luego se permite caminar a paradas cercanas para el transbordo.
+    function planear(A, B, hora) {
+        const P = red.P, n = P.length;
+        const esperas = red.rutas.map((r) => espera(r, hora));
+        const ronda0 = { t: new Float64Array(n).fill(Infinity), ptr: new Array(n) };
+        const cercaA = cercanas(A, CAMINATA_INICIO), cercaB = cercanas(B, CAMINATA_INICIO);
+        cercaA.forEach(({ i, d }) => { ronda0.t[i] = caminarMin(d * FACTOR_CALLE); ronda0.ptr[i] = { tipo: "inicio", m: d * FACTOR_CALLE }; });
+        const rondas = [ronda0];
+        for (let k = 1; k <= MAX_BUSES; k++) {
+            const prev = rondas[k - 1], act = { t: new Float64Array(n).fill(Infinity), ptr: new Array(n) };
+            const castigo = k > 1 ? CASTIGO_TRANSBORDO : 0;
+            red.rutas.forEach((r, ri) => {
+                const w = esperas[ri];
+                if (w == null) return;
+                let sube = Infinity, j0 = -1;
+                for (let j = 0; j < r.p.length; j++) {
+                    const s = r.p[j];
+                    if (j0 >= 0) {
+                        const llega = sube + r.m[j];
+                        if (llega < act.t[s]) { act.t[s] = llega; act.ptr[s] = { tipo: "bus", r: ri, j0, j1: j, espera: w }; }
+                    }
+                    const t = prev.t[s] + castigo + w - r.m[j];
+                    if (t < sube) { sube = t; j0 = j; }
+                }
+            });
+            const enBus = [];
+            for (let s = 0; s < n; s++) if (act.ptr[s]) enBus.push(s);
+            enBus.forEach((s) => cercanas(P[s].c, CAMINATA_TRANSBORDO).forEach(({ i, d }) => {
+                if (i === s) return;
+                const t = act.t[s] + caminarMin(d * FACTOR_CALLE);
+                if (t < act.t[i]) { act.t[i] = t; act.ptr[i] = { tipo: "pie", desde: s, m: d * FACTOR_CALLE }; }
+            }));
+            rondas.push(act);
+        }
+
+        const opciones = [];
+        // la mejor opcion con 1, 2 y 3 buses
+        for (let k = 1; k <= MAX_BUSES; k++) {
+            let mejor = null;
+            cercaB.forEach(({ i, d }) => {
+                const t = rondas[k].t[i] + caminarMin(d * FACTOR_CALLE);
+                if (t < Infinity && (!mejor || t < mejor.t)) mejor = { t, i, m: d * FACTOR_CALLE };
+            });
+            if (mejor) opciones.push(armarOpcion(rondas, k, mejor, A, B));
+        }
+        // otras rutas directas, para comparar
+        const mA = new Map(cercaA.map(({ i, d }) => [i, d * FACTOR_CALLE]));
+        const mB = new Map(cercaB.map(({ i, d }) => [i, d * FACTOR_CALLE]));
+        red.rutas.forEach((r, ri) => {
+            const w = esperas[ri];
+            if (w == null) return;
+            let sube = Infinity, j0 = -1, mejor = null;
+            for (let j = 0; j < r.p.length; j++) {
+                const s = r.p[j];
+                if (j0 >= 0 && mB.has(s)) {
+                    const t = sube + r.m[j] + caminarMin(mB.get(s));
+                    if (!mejor || t < mejor.t) mejor = { t, j0, j1: j };
+                }
+                if (mA.has(s)) { const t = caminarMin(mA.get(s)) + w - r.m[j]; if (t < sube) { sube = t; j0 = j; } }
+            }
+            if (mejor) {
+                const s0 = r.p[mejor.j0], s1 = r.p[mejor.j1];
+                opciones.push(opcionDe([
+                    { tipo: "pie", de: A, a: P[s0].c, m: mA.get(s0), hasta: s0 },
+                    { tipo: "bus", r: ri, j0: mejor.j0, j1: mejor.j1, espera: w },
+                    { tipo: "pie", de: P[s1].c, a: B, m: mB.get(s1), final: true }], mejor.t));
+            }
+        });
+        // caminando, si es cerca
+        const directo = distancia(A, B) * FACTOR_CALLE;
+        if (directo <= 2500) opciones.push(opcionDe([{ tipo: "pie", de: A, a: B, m: directo, final: true, solo: true }], caminarMin(directo)));
+
+        // ordenar, quitar repetidas y las que no valen la pena
+        const vistas = new Set();
+        const lista = opciones.sort((a, b) => a.costo - b.costo).filter((o) => {
+            if (vistas.has(o.clave)) return false;
+            vistas.add(o.clave);
+            return true;
+        });
+        if (!lista.length) return [];
+        const mejor = lista[0].costo;
+        // fuera las que usan mas buses sin ahorrar tiempo frente a otra con menos (incluye "mejor caminar")
+        return lista.filter((o, i) => (i === 0 || o.costo <= mejor * 1.6 + 10) &&
+            !lista.some((x) => x !== o && x.buses.length < o.buses.length && x.costo <= o.costo)).slice(0, 5);
+    }
+
+    function armarOpcion(rondas, k, fin, A, B) {
+        const P = red.P;
+        const tramos = [{ tipo: "pie", de: P[fin.i].c, a: B, m: fin.m, final: true }];
+        let s = fin.i, kk = k;
+        for (let guarda = 0; guarda < 20; guarda++) {
+            const ptr = rondas[kk].ptr[s];
+            if (ptr.tipo === "inicio") { tramos.push({ tipo: "pie", de: A, a: P[s].c, m: ptr.m, hasta: s }); break; }
+            if (ptr.tipo === "pie") {
+                tramos.push({ tipo: "pie", de: P[ptr.desde].c, a: P[s].c, m: ptr.m, hasta: s, transbordo: true });
+                s = ptr.desde;
+                continue;
+            }
+            tramos.push({ tipo: "bus", r: ptr.r, j0: ptr.j0, j1: ptr.j1, espera: ptr.espera });
+            s = red.rutas[ptr.r].p[ptr.j0];
+            kk--;
+        }
+        return opcionDe(tramos.reverse(), fin.t);
+    }
+
+    function opcionDe(tramos, costo) {
+        let min = 0, pie = 0;
+        const buses = [];
+        tramos.forEach((t) => {
+            if (t.tipo === "pie") { t.min = caminarMin(t.m); pie += t.m; }
+            else { const r = red.rutas[t.r]; t.min = r.m[t.j1] - r.m[t.j0]; min += t.espera; buses.push(r); }
+            min += t.min;
+        });
+        return { tramos, costo, min, pie, buses, transbordos: Math.max(0, buses.length - 1),
+                 clave: buses.length ? tramos.filter((t) => t.tipo === "bus").map((t) => `${t.r}:${t.j0}:${t.j1}`).join("|") : "pie" };
+    }
+
+    // ---------- Puntos A y B ----------
+    function marcadorDe(letra) {
+        const el = document.createElement("div");
+        el.className = "letra marcador " + letra.toLowerCase();
+        el.textContent = letra;
+        const m = new maplibregl.Marker({ element: el, draggable: true });
+        m.on("dragend", () => { const p = m.getLngLat(); ponerPunto(letra, [p.lng, p.lat], true); });
+        return m;
+    }
+    const marcadores = { A: marcadorDe("A"), B: marcadorDe("B") };
+
+    function esperarPunto(letra) {
+        plan.siguiente = letra;
+        $("puntoA").classList.toggle("esperando", letra === "A");
+        $("puntoB").classList.toggle("esperando", letra === "B");
+    }
+    function lugarCerca(c) {
+        if (!red) return "";
+        const x = cercanas(c, 600)[0];
+        return x ? "Cerca de " + red.P[x.i].nombre : "Lejos de paraderos (más de 600 m)";
+    }
+    function ponerPunto(letra, c, arrastrado) {
+        plan[letra] = c;
+        if (!arrastrado) marcadores[letra].setLngLat(c).addTo(mapa);
+        $("txt" + letra).textContent = lugarCerca(c);
+        esperarPunto(!plan.A ? "A" : !plan.B ? "B" : null);
+        calcularPlan();
+    }
+    function borrarPlan() {
+        plan.A = plan.B = null;
+        plan.opciones = [];
+        marcadores.A.remove();
+        marcadores.B.remove();
+        $("txtA").textContent = "Toca el mapa donde sales";
+        $("txtB").textContent = "Después toca a dónde vas";
+        $("opciones").innerHTML = "";
+        $("estadoPlan").textContent = "";
+        esperarPunto("A");
+        dibujarPlan(null);
+    }
+
+    function calcularPlan() {
+        if (!plan.A || !plan.B || !red) return;
+        const hora = Number($("selHora").value);
+        const t0 = performance.now();
+        plan.opciones = planear(plan.A, plan.B, hora);
+        plan.elegida = 0;
+        const est = $("estadoPlan");
+        est.classList.remove("error");
+        if (!plan.opciones.length) {
+            est.textContent = `No se encontró cómo llegar a las ${horaTxt(hora)}: puede que A o B estén a más de 900 m de un paradero, ` +
+                "o que las rutas no funcionen a esa hora. Prueba otra hora o mueve los puntos.";
+            est.classList.add("error");
+            $("opciones").innerHTML = "";
+            dibujarPlan(null);
+            return;
+        }
+        est.textContent = `${plan.opciones.length} opción${plan.opciones.length === 1 ? "" : "es"} saliendo a las ${horaTxt(hora)} ` +
+            `(calculado en ${Math.round(performance.now() - t0)} ms). Toca una para ver el paso a paso.`;
+        pintarOpciones();
+        dibujarPlan(plan.opciones[0]);
+    }
+
+    function pintarOpciones() {
+        const P = red.P;
+        const mejorMin = Math.min(...plan.opciones.map((o) => o.min));
+        $("opciones").innerHTML = plan.opciones.map((o, i) => {
+            const cadena = o.buses.length
+                ? o.buses.map(chipRuta).join(`<i data-lucide="chevron-right"></i>`)
+                : `<i data-lucide="footprints"></i> Solo caminando`;
+            const etiqueta = o.min === mejorMin ? "Más rápida" : (i === 0 ? "Recomendada" : (o.transbordos === 0 && o.buses.length ? "Sin transbordo" : ""));
+            let pasos = "";
+            if (i === plan.elegida) {
+                pasos = `<ol class="indicaciones">` + o.tramos.map((t) => {
+                    if (t.tipo === "pie") {
+                        if (t.solo) return `<li><i data-lucide="footprints"></i><span>Camina ${minTxt(t.min)} (${metrosTxt(t.m)}) hasta <b>B</b>.</span></li>`;
+                        if (t.final) return `<li><i data-lucide="flag"></i><span>Camina ${minTxt(t.min)} (${metrosTxt(t.m)}) hasta <b>B</b>.</span></li>`;
+                        const p = P[t.hasta];
+                        return `<li><i data-lucide="footprints"></i><span>Camina ${minTxt(t.min)} (${metrosTxt(t.m)}) ${t.transbordo ? "para el transbordo " : ""}hasta
+                            <b>${escapar(p.nombre)}</b><small>${p.cod ? "Paradero " + escapar(p.cod) : "Estación"}${p.localidad ? " · " + escapar(p.localidad) : ""}</small></span></li>`;
+                    }
+                    const r = red.rutas[t.r], sube = P[r.p[t.j0]], baja = P[r.p[t.j1]];
+                    const cada = Math.round(60 / Math.max(1, frecuencia(r, Number($("selHora").value))));
+                    return `<li><i data-lucide="${r.a === "Troncal" ? "train-front" : (r.a === "TransMiCable" ? "cable-car" : "bus")}"></i><span>
+                        Toma ${chipRuta(r)} <b>${escapar(r.tipo)}</b> ${r.nombre ? "· " + escapar(r.nombre) : ""} en <b>${escapar(sube.nombre)}</b>
+                        <small>Espera ~${minTxt(t.espera)} (pasa cada ~${cada} min) · ${t.j1 - t.j0} parada${t.j1 - t.j0 === 1 ? "" : "s"} · ${minTxt(t.min)} a bordo</small>
+                        Bájate en <b>${escapar(baja.nombre)}</b>${baja.cod ? ` <small>Paradero ${escapar(baja.cod)}</small>` : ""}</span></li>`;
+                }).join("") + `</ol>`;
+            }
+            return `<div class="opcion${i === plan.elegida ? " activo" : ""}" data-i="${i}">
+                <div class="arriba"><span class="total">${minTxt(o.min)}</span>
+                    <span>${o.buses.length ? (o.transbordos ? `${o.transbordos} transbordo${o.transbordos > 1 ? "s" : ""}` : "directo") : ""}</span>
+                    ${etiqueta ? `<span class="etiqueta">${etiqueta}</span>` : ""}</div>
+                <div class="cadena">${cadena}<span>· camina ${metrosTxt(o.pie)}</span></div>
+                ${pasos}</div>`;
+        }).join("");
+        $("opciones").querySelectorAll(".opcion").forEach((el) => el.addEventListener("click", () => {
+            const i = Number(el.dataset.i);
+            if (i === plan.elegida) return;
+            plan.elegida = i;
+            pintarOpciones();
+            dibujarPlan(plan.opciones[i]);
+        }));
+        iconos();
+    }
+
+    // ---------- Dibujar en el mapa ----------
+    // Trazado oficial (shapes del GTFS) de una ruta zonal, ubicando cada parada sobre el; sin el, linea entre paradas
+    function trazadoOficial(r) {
+        if (r.a === "Troncal" || r.a === "TransMiCable") return Promise.resolve(null);
+        if (!oficiales[r.k]) {
+            oficiales[r.k] = pedir("/sitp/trazado?codigo=" + encodeURIComponent(r.c)).then((d) => {
+                const pts = r.p.map((i) => red.P[i].c);
+                let mejor = null;
+                d.trazados.forEach((t) => {
+                    const tr = prepararTrazado(t.coords, t.nombre);
+                    let m = 0, bien = 0;
+                    const ms = pts.map((c) => {
+                        const u = ubicarEnTrazado(tr, c, m - 150);
+                        if (!u) return null;
+                        bien++;
+                        m = u.m;
+                        return u.m;
+                    });
+                    if (!mejor || bien > mejor.bien) mejor = { tr, ms, bien };
+                });
+                return mejor && mejor.bien >= pts.length * 0.6 ? mejor : null;
+            }).catch(() => null);
+        }
+        return oficiales[r.k];
+    }
+    function lineaBus(r, j0, j1, of) {
+        const out = [];
+        for (let j = j0; j < j1; j++) {
+            const a = red.P[r.p[j]].c, b = red.P[r.p[j + 1]].c;
+            const ma = of && of.ms[j], mb = of && of.ms[j + 1];
+            if (ma != null && mb != null && mb >= ma && mb - ma < distancia(a, b) * 4 + 800) out.push(a, ...subTrazado(of.tr, ma, mb), b);
+            else out.push(a, b);
+        }
+        return out;
+    }
+
+    let dibujoActual = 0;
+    async function dibujarPlan(o) {
+        const yo = ++dibujoActual;
+        const fuente = mapa.getSource("plan");
+        if (!fuente) return;
+        if (!o) { fuente.setData(vacio()); mapa.getSource("plan-paradas").setData(vacio()); return; }
+        const armar = (ofs) => {
+            const lineas = [], puntos = [];
+            o.tramos.forEach((t, k) => {
+                if (t.tipo === "pie") {
+                    lineas.push({ type: "Feature", properties: { pie: true, color: "#52514e" }, geometry: { type: "LineString", coordinates: [t.de, t.a] } });
+                    return;
+                }
+                const r = red.rutas[t.r];
+                lineas.push({ type: "Feature", properties: { pie: false, color: r.color },
+                              geometry: { type: "LineString", coordinates: lineaBus(r, t.j0, t.j1, ofs[k]) } });
+                [t.j0, t.j1].forEach((j, n) => puntos.push({ type: "Feature",
+                    properties: { color: r.color, nombre: red.P[r.p[j]].nombre, texto: (n ? "Bájate: " : "Sube al " + r.c + ": ") + red.P[r.p[j]].nombre },
+                    geometry: { type: "Point", coordinates: red.P[r.p[j]].c } }));
+            });
+            fuente.setData({ type: "FeatureCollection", features: lineas });
+            mapa.getSource("plan-paradas").setData({ type: "FeatureCollection", features: puntos });
+        };
+        armar({});
+        const caja = new maplibregl.LngLatBounds();
+        [plan.A, plan.B].forEach((c) => caja.extend(c));
+        o.tramos.forEach((t) => { if (t.tipo === "bus") { const r = red.rutas[t.r]; for (let j = t.j0; j <= t.j1; j++) caja.extend(red.P[r.p[j]].c); } });
+        mapa.fitBounds(caja, { padding: 60, maxZoom: 15.5, duration: 800 });
+        // luego, por las calles con el trazado oficial
+        const ofs = {};
+        await Promise.all(o.tramos.map(async (t, k) => { if (t.tipo === "bus") ofs[k] = await trazadoOficial(red.rutas[t.r]); }));
+        if (yo === dibujoActual) armar(ofs);
+    }
+
+    // ---------- Buscar paradero o estacion (para poner A o B) ----------
+    function buscarLugar() {
+        const cont = $("listaLugares");
+        const q = quitarTildes($("buscarLugar").value.trim());
+        cont.innerHTML = "";
+        if (!red || q.length < 3) return;
+        const vistos = new Set();
+        red.P.forEach((p, i) => {
+            if (vistos.size >= 8) return;
+            const clave = p.nombre + "|" + p.cod;
+            if (vistos.has(clave) || !(quitarTildes(p.nombre).includes(q) || quitarTildes(p.cod).includes(q))) return;
+            vistos.add(clave);
+            const b = document.createElement("button");
+            b.type = "button";
+            const letra = plan.siguiente || (plan.A ? "B" : "A");
+            b.innerHTML = `${escapar(p.nombre)}<small>${p.cod ? "Paradero " + escapar(p.cod) : "Estación"}${p.localidad ? " · " + escapar(p.localidad) : ""}
+                · ${p.rutas.length} ruta${p.rutas.length === 1 ? "" : "s"} · usar como <b>${letra}</b></small>`;
+            b.addEventListener("click", () => {
+                $("buscarLugar").value = "";
+                cont.innerHTML = "";
+                ponerPunto(letra, p.c);
+                if (!(plan.A && plan.B)) mapa.flyTo({ center: p.c, zoom: 15, duration: 800 });
+            });
+            cont.appendChild(b);
+        });
+        if (!cont.children.length) cont.innerHTML = `<div class="vacio">Ningún paradero o estación con ese nombre.</div>`;
+    }
+
+    // ---------- Ver una ruta ----------
+    function pintarLineas() {
+        if (!red) return;
+        const texto = $("buscarLinea").value.trim(), q = quitarTildes(texto);
+        const cont = $("listaLineas");
+        let lista = red.rutas;
+        if (q) {
+            const exacta = (r) => quitarTildes(r.c) === q;
+            const porParada = (r) => r.p.some((i) => quitarTildes(red.P[i].nombre).includes(q));
+            lista = lista.filter((r) => r.clave.includes(q) || (q.length >= 4 && porParada(r)))
+                .sort((a, b) => (exacta(b) - exacta(a)) || (b.clave.includes(q) - a.clave.includes(q)) || b.v - a.v);
+        } else lista = [...lista].sort((a, b) => b.v - a.v);
+        $("estadoLinea").textContent = q ? `${fmt(lista.length)} ruta${lista.length === 1 ? "" : "s"} coinciden con “${texto}”.`
+                                         : `${fmt(red.rutas.length)} rutas en el horario de hoy. Las de más viajes aparecen primero.`;
+        cont.innerHTML = "";
+        lista.slice(0, 40).forEach((r) => {
+            const b = document.createElement("button");
+            b.type = "button";
+            b.innerHTML = `${chipRuta(r)} ${escapar(r.nombre)}<small>${escapar(r.tipo)} · ${r.p.length} paradas · ${fmt(r.v)} viajes en un día hábil</small>`;
+            b.addEventListener("click", () => verLinea(r.k));
+            cont.appendChild(b);
+        });
+        if (!lista.length) cont.innerHTML = `<div class="vacio">Prueba con el código (ej. H907) o un barrio.</div>`;
+    }
+
+    let lineaActual = null;
+    async function verLinea(k) {
+        const r = red.rutas[k], P = red.P;
+        lineaActual = k;
+        const horas = r.h.map((n, h) => (n ? h : null)).filter((h) => h != null);
+        const pico = Math.max(...r.h), hPico = r.h.indexOf(pico);
+        // otros sentidos / variantes de la misma ruta (mismo numero, ej. B907 y H907)
+        const num = (r.c.match(/\d+[A-Z]?$/) || [""])[0];
+        const otras = red.rutas.filter((x) => x !== r && num && (x.c === r.c || (x.c.match(/\d+[A-Z]?$/) || [""])[0] === num) &&
+            x.a === r.a && x.p.some((i) => r.p.includes(i)));
+        $("buscadorLinea").hidden = true;
+        const f = $("fichaLinea");
+        f.hidden = false;
+        f.innerHTML = `
+            <button type="button" class="volver" id="volverLineas"><i data-lucide="arrow-left"></i> Todas las rutas</button>
+            <h4>${chipRuta(r)} ${escapar(r.nombre)}</h4>
+            <div class="sub">${escapar(r.tipo)} · de <b>${escapar(P[r.p[0]].nombre)}</b> a <b>${escapar(P[r.p[r.p.length - 1]].nombre)}</b></div>
+            <div class="tiles">
+                <div class="tile"><b>${r.p.length}</b><span>paradas</span></div>
+                <div class="tile"><b>${minTxt(r.m[r.m.length - 1])}</b><span>de punta a punta</span></div>
+                <div class="tile"><b>${fmt(r.v)}</b><span>viajes en el día</span></div>
+                <div class="tile"><b>${horas.length ? horaTxt(horas[0]) : "—"}</b><span>primeras salidas</span></div>
+                <div class="tile"><b>${horas.length ? horaTxt(horas[horas.length - 1]) : "—"}</b><span>últimas salidas</span></div>
+                <div class="tile"><b>${pico ? "cada " + Math.round(60 / pico) + " min" : "—"}</b><span>en la hora pico (${pico ? horaTxt(hPico) : "—"})</span></div>
+            </div>
+            ${otras.length ? `<div class="sentidos">${otras.map((x) => `<button type="button" class="btn" data-k="${x.k}">${chipRuta(x)} ${escapar(x.nombre)}</button>`).join("")}</div>` : ""}
+            <div class="grafica" id="grafLinea"></div>
+            <h3>Paradas en orden</h3>
+            <ol class="lista-paradas">${r.p.map((i, j) => `<li data-i="${i}"><span class="min">+${Math.round(r.m[j])} min</span>
+                <span>${escapar(P[i].nombre)}<small>${P[i].cod ? "Paradero " + escapar(P[i].cod) : "Estación"}${P[i].localidad ? " · " + escapar(P[i].localidad) : ""}
+                · ${P[i].rutas.length} ruta${P[i].rutas.length === 1 ? "" : "s"} paran aquí</small></span></li>`).join("")}</ol>
+            <p class="que-es">Horario programado de un día hábil (GTFS de TransMilenio), no lo que pasó en la calle.</p>`;
+        barras($("grafLinea"), r.h, "Buses que salen por hora", "Buses", false);
+        iconos();
+        $("volverLineas").addEventListener("click", () => {
+            f.hidden = true;
+            lineaActual = null;
+            $("buscadorLinea").hidden = false;
+            pintarLinea(null);
+        });
+        f.querySelectorAll(".sentidos button").forEach((b) => b.addEventListener("click", () => verLinea(Number(b.dataset.k))));
+        f.querySelectorAll(".lista-paradas li").forEach((li) => li.addEventListener("click", () =>
+            mapa.flyTo({ center: P[Number(li.dataset.i)].c, zoom: 16, duration: 800 })));
+        document.querySelector(".panel").scrollTop = 0;
+        pintarLinea(r, null);
+        encuadrar(r.p.map((i) => P[i].c));
+        const of = await trazadoOficial(r);
+        if (of && lineaActual === k && !$("fichaLinea").hidden && pagina === "linea") pintarLinea(r, of);
+    }
+    function pintarLinea(r, of) {
+        if (!mapa.getSource("linea")) return;
+        if (!r) { mapa.getSource("linea").setData(vacio()); mapa.getSource("linea-paradas").setData(vacio()); return; }
+        mapa.getSource("linea").setData({ type: "FeatureCollection", features: [{ type: "Feature", properties: { color: r.color },
+            geometry: { type: "LineString", coordinates: lineaBus(r, 0, r.p.length - 1, of) } }] });
+        mapa.getSource("linea-paradas").setData({ type: "FeatureCollection", features: r.p.map((i, j) => ({ type: "Feature",
+            properties: { i, color: r.color, num: j + 1, min: Math.round(r.m[j]), ruta: r.c }, geometry: { type: "Point", coordinates: red.P[i].c } })) });
+    }
+
+    // ---------- Capas del mapa para A-B y ver una ruta ----------
+    mapa.on("load", () => {
+        ["plan", "plan-paradas", "linea", "linea-paradas"].forEach((s) => mapa.addSource(s, { type: "geojson", data: vacio() }));
+        mapa.addLayer({ id: "linea-borde", type: "line", source: "linea", layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#ffffff", "line-width": 8 } });
+        mapa.addLayer({ id: "linea", type: "line", source: "linea", layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": ["get", "color"], "line-width": 4.5 } });
+        mapa.addLayer({ id: "linea-paradas", type: "circle", source: "linea-paradas",
+            paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 2.5, 15, 6], "circle-color": "#ffffff",
+                     "circle-stroke-color": ["get", "color"], "circle-stroke-width": 2 } });
+        mapa.addLayer({ id: "plan-borde", type: "line", source: "plan", filter: ["!", ["get", "pie"]],
+            layout: { "line-join": "round", "line-cap": "round" }, paint: { "line-color": "#ffffff", "line-width": 9 } });
+        mapa.addLayer({ id: "plan", type: "line", source: "plan", filter: ["!", ["get", "pie"]],
+            layout: { "line-join": "round", "line-cap": "round" }, paint: { "line-color": ["get", "color"], "line-width": 5.5 } });
+        mapa.addLayer({ id: "plan-pie", type: "line", source: "plan", filter: ["get", "pie"],
+            layout: { "line-cap": "round" }, paint: { "line-color": "#52514e", "line-width": 3, "line-dasharray": [0.2, 1.8] } });
+        mapa.addLayer({ id: "plan-paradas", type: "circle", source: "plan-paradas",
+            paint: { "circle-radius": 7, "circle-color": "#ffffff", "circle-stroke-color": ["get", "color"], "circle-stroke-width": 3.5 } });
+        mapa.addLayer({ id: "plan-paradas-txt", type: "symbol", source: "plan-paradas", minzoom: 13,
+            layout: { "text-field": ["get", "texto"], "text-font": ["Noto Sans Bold"], "text-size": 11.5, "text-offset": [0, 1.4],
+                      "text-anchor": "top", "text-max-width": 14 },
+            paint: { "text-color": "#1f2226", "text-halo-color": "#ffffff", "text-halo-width": 2 } });
+
+        mapa.on("click", "linea-paradas", (e) => {
+            const p = e.features[0].properties, par = red.P[p.i];
+            const otras = [...new Set(par.rutas.map(([k]) => red.rutas[k].c))].filter((c) => c !== p.ruta);
+            new maplibregl.Popup().setLngLat(e.lngLat).setHTML(`<b>${p.num}. ${escapar(par.nombre)}</b>
+                ${par.cod ? "Paradero " + escapar(par.cod) + " · " : ""}+${p.min} min desde el inicio
+                ${otras.length ? `<br><small>También paran: ${escapar(otras.slice(0, 15).join(", "))}${otras.length > 15 ? "…" : ""}</small>` : ""}`).addTo(mapa);
+        });
+        mapa.on("mouseenter", "linea-paradas", () => mapa.getCanvas().style.cursor = "pointer");
+        mapa.on("mouseleave", "linea-paradas", () => mapa.getCanvas().style.cursor = "");
+        // en "De A a B", tocar el mapa pone el punto que falta
+        mapa.on("click", (e) => {
+            if (pagina !== "viaje" || !red) return;
+            ponerPunto(plan.siguiente || "B", [e.lngLat.lng, e.lngLat.lat]);
+        });
+        verCapasDePagina();
+    });
+
+    function verCapasDePagina() {
+        if (!mapa.getLayer("plan")) return;
+        const ver = (ids, v) => ids.forEach((id) => mapa.setLayoutProperty(id, "visibility", v ? "visible" : "none"));
+        ver(["plan-borde", "plan", "plan-pie", "plan-paradas", "plan-paradas-txt"], pagina === "viaje");
+        ver(["linea-borde", "linea", "linea-paradas"], pagina === "linea");
+        Object.values(marcadores).forEach((m) => { m.getElement().style.display = pagina === "viaje" ? "" : "none"; });
+    }
+
+    // ---------- Cambiar de seccion ----------
+    let diaIniciado = false;
+    async function cambiarPagina(p) {
+        if (p !== "dia" && pagina === "dia") { pausar(); limpiarRuta(); vista("rutas"); }
+        pagina = p;
+        document.querySelectorAll("#modos button").forEach((b) => b.classList.toggle("activo", b.dataset.pagina === p));
+        $("vistaViaje").hidden = p !== "viaje";
+        $("vistaLinea").hidden = p !== "linea";
+        $("vistaDia").hidden = p !== "dia";
+        document.querySelector(".panel").scrollTop = 0;
+        verCapasDePagina();
+        if (p === "dia") { if (!diaIniciado) { diaIniciado = true; iniciarDia(); } return; }
+        const est = p === "viaje" ? $("estadoPlan") : $("estadoLinea");
+        if (!red) {
+            est.classList.remove("error");
+            est.textContent = "Cargando las rutas y horarios de TransMilenio (GTFS de hoy)… la primera vez tarda unos 15 segundos.";
+            try {
+                await cargarRed();
+            } catch (err) {
+                est.textContent = (esLocal ? "No responde la API local (python -m flask run --port 5000): " : "No se pudo leer el GTFS: ") + err.message;
+                est.classList.add("error");
+                return;
+            }
+            est.textContent = p === "viaje" ? `Listo: ${fmt(red.rutas.length)} rutas y ${fmt(red.P.length)} paradas. Toca el mapa para poner A.` : "";
+        }
+        if (p === "linea") pintarLineas();
+        if (p === "viaje") calcularPlan();
+    }
+
+    async function iniciarDia() {
+        try {
+            const f = await pedir("/fechas");
+            await paraderosListos;
+            $("selFecha").innerHTML = f.fechas.slice(0, 60).map((d) => `<option value="${d}">${fechaLarga(d)}</option>`).join("");
+            await cargarDia(f.fechas[0]);
+        } catch (err) {
+            if (err.sinAcceso) { mensaje(""); $("pendienteDia").hidden = false; return; }
+            mensaje(esLocal ? "No responde la API local. Corre: python -m flask run --port 5000" : "No se pudo conectar con la API: " + err.message, true);
+        }
+    }
+
+    (() => {
+        const ahora = new Date().getHours(), sel = $("selHora");
+        for (let h = 4; h <= 23; h++) sel.insertAdjacentHTML("beforeend", `<option value="${h}">${horaTxt(h)}${h === ahora ? " (ahora)" : ""}</option>`);
+        sel.value = String(ahora >= 4 && ahora <= 22 ? ahora : 7);
+    })();
+    document.querySelectorAll("#modos button").forEach((b) => b.addEventListener("click", () => cambiarPagina(b.dataset.pagina)));
+    $("puntoA").addEventListener("click", () => esperarPunto("A"));
+    $("puntoB").addEventListener("click", () => esperarPunto("B"));
+    $("btnBorrarPlan").addEventListener("click", borrarPlan);
+    $("btnInvertir").addEventListener("click", () => {
+        if (!plan.A || !plan.B) return;
+        [plan.A, plan.B] = [plan.B, plan.A];
+        marcadores.A.setLngLat(plan.A);
+        marcadores.B.setLngLat(plan.B);
+        $("txtA").textContent = lugarCerca(plan.A);
+        $("txtB").textContent = lugarCerca(plan.B);
+        calcularPlan();
+    });
+    $("selHora").addEventListener("change", calcularPlan);
+    $("buscarLugar").addEventListener("input", buscarLugar);
+    $("buscarLinea").addEventListener("input", pintarLineas);
+
     // ---------- Eventos ----------
     $("selFecha").addEventListener("change", (e) => cargarDia(e.target.value));
     $("selLocalidad").addEventListener("change", () => { rutasVisibles = 20; pintarRutas(); });
@@ -1214,15 +1921,7 @@
     $("rangoTiempo").addEventListener("input", (e) => { pausar(); fijarTiempo(Number(e.target.value)); });
     iconos();
 
-    (async () => {
-        try {
-            const [f] = await Promise.all([pedir("/fechas"), cargarParaderos().catch(() => {})]);
-            $("selFecha").innerHTML = f.fechas.slice(0, 60).map((d) => `<option value="${d}">${fechaLarga(d)}</option>`).join("");
-            await cargarDia(f.fechas[0]);
-        } catch (err) {
-            mensaje(esLocal ? "No responde la API local. Corre: python -m flask run --port 5000" : "No se pudo conectar con la API: " + err.message, true);
-        }
-    })();
+    cambiarPagina("viaje");
 })();
 </script>
 </body>
