@@ -1,0 +1,1739 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Red vial de Bogotá | Universidad de los Andes</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Sans+3:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css" rel="stylesheet">
+
+<style>
+    :root {
+        --tinta: #1f2226; --tinta-2: #52514e; --tenue: #898781; --grilla: #e1e0d9;
+        --serie-1: #2a78d6; --serie-2: #eb6834; --amarillo: #f5c400; --amarillo-osc: #d7aa00;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; font-family: "Inter", system-ui, sans-serif; color: var(--tinta); overflow: hidden; }
+    button, input, select { font: inherit; }
+    [hidden] { display: none !important; }
+
+    header {
+        height: 72px; display: flex; align-items: center; gap: 18px; padding: 0 24px;
+        background: rgba(255,255,255,.97); border-bottom: 1px solid #e5e5de; box-shadow: 0 3px 15px rgba(34,36,39,.06);
+        position: relative; z-index: 10;
+    }
+    header .logo-box { height: 42px; display: flex; align-items: center; padding-right: 18px; border-right: 1px solid #e5e5de; }
+    header .logo-box img { max-height: 38px; }
+    header small { display: block; color: #898d91; font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+    header strong { display: block; font: 700 21px/1.1 "Source Sans 3", sans-serif; }
+    header nav { margin-left: auto; display: flex; gap: 8px; }
+    header nav a { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 8px;
+        color: var(--tinta); font-size: 13px; font-weight: 700; text-decoration: none; border: 1px solid #e5e5de; background: #fff; }
+    header nav a.primario { background: var(--amarillo); border-color: var(--amarillo-osc); }
+    header nav a svg { width: 16px; height: 16px; }
+
+    #mapa { position: absolute; top: 72px; left: 380px; right: 0; bottom: 0; }
+
+    .panel {
+        position: absolute; top: 72px; left: 0; bottom: 0; width: 380px; overflow-y: auto;
+        background: #fbfbf8; border-right: 1px solid #e5e5de; padding: 16px 16px 40px; font-size: 13px;
+    }
+    .panel h2 { margin: 0 0 2px; font: 700 20px/1.15 "Source Sans 3", sans-serif; }
+    .panel .sub { margin: 0 0 12px; color: var(--tinta-2); font-size: 12.5px; line-height: 1.5; }
+    .paso { margin: 18px 0 8px; display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+    .paso b { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--amarillo); font-size: 12px; }
+    .campo { display: block; margin-bottom: 8px; }
+    .campo span { display: block; font-size: 12px; font-weight: 600; color: var(--tinta-2); margin-bottom: 4px; }
+    .campo select, .campo input[type=number], .campo input[type=password] { width: 100%; padding: 8px 10px; border: 1px solid #d9d9d2; border-radius: 9px; background: #fff; }
+    .o { text-align: center; color: var(--tenue); font-size: 11.5px; margin: 4px 0; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 12px; border: 1px solid #d9d9d2; border-radius: 9px;
+        background: #fff; font-size: 12.5px; font-weight: 700; cursor: pointer; color: var(--tinta); }
+    .btn:hover { background: #fafaf5; }
+    .btn.ancho { width: 100%; }
+    .btn.primario { background: var(--amarillo); border-color: var(--amarillo-osc); }
+    .btn:disabled { opacity: .5; cursor: default; }
+    .btn svg { width: 15px; height: 15px; }
+    .estado { margin: 8px 0; font-size: 12px; color: var(--tinta-2); line-height: 1.45; }
+    .estado.error { color: #b42318; }
+    .barra-progreso { height: 6px; border-radius: 3px; background: #ecece5; overflow: hidden; margin: 6px 0; }
+    .barra-progreso i { display: block; height: 100%; width: 0; background: var(--serie-2); transition: width .2s; }
+
+    .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .tile { background: #fff; border: 1px solid #ecece6; border-radius: 9px; padding: 7px 8px; }
+    .tile b { display: block; font-size: 15px; font-variant-numeric: tabular-nums; }
+    .tile span { font-size: 10.5px; color: var(--tinta-2); line-height: 1.25; display: block; }
+
+    .leyenda { display: grid; gap: 6px; margin-top: 10px; padding: 9px 10px; border-radius: 10px; background: #fff;
+        border: 1px solid #ecece6; font-size: 12.5px; font-weight: 600; color: var(--tinta); }
+    .leyenda div { display: flex; align-items: center; gap: 8px; }
+    .leyenda i { flex: none; display: inline-block; width: 26px; border-radius: 2px; }
+    .leyenda .flecha { width: 26px; display: inline-flex; justify-content: center; }
+    .rampa { height: 8px; border-radius: 4px; flex: 1; }
+
+    .pestanas { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 10px; }
+    .pestanas button { display: flex; align-items: center; gap: 6px; padding: 8px 9px; border: 1px solid #d9d9d2; border-radius: 9px;
+        background: #fff; font-size: 12.5px; font-weight: 700; cursor: pointer; text-align: left; }
+    .pestanas button svg { width: 15px; height: 15px; flex: none; }
+    .pestanas button.activo { background: var(--tinta); color: #fff; border-color: var(--tinta); }
+    .segmento { display: flex; padding: 3px; border-radius: 10px; background: #ececE5; margin-bottom: 8px; }
+    .segmento button { flex: 1; padding: 6px; border: 0; border-radius: 8px; background: transparent; font-size: 12px; font-weight: 700; color: var(--tinta-2); cursor: pointer; }
+    .segmento button.activo { background: #fff; color: var(--tinta); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+    .explica { padding: 10px 12px; border-radius: 10px; background: #eef5fd; border: 1px solid #c9ddf5; color: #24364d; font-size: 12px; line-height: 1.5; margin-bottom: 10px; }
+    .explica b { color: #13263d; }
+    .instruccion { display: flex; gap: 8px; align-items: center; padding: 9px 11px; margin: 8px 0; border-radius: 10px; background: #1f2226; color: #fff; font-size: 12.5px; }
+    .instruccion svg { width: 16px; height: 16px; color: var(--amarillo); flex: none; }
+    .check { display: flex; gap: 8px; align-items: center; font-size: 12.5px; margin: 6px 0; cursor: pointer; }
+    .resultado { background: #fff; border: 1px solid #e5e5de; border-radius: 12px; padding: 12px; margin-top: 8px; }
+    .resultado h4 { margin: 0 0 8px; font-size: 13px; }
+    .resultado p { margin: 8px 0 0; font-size: 12px; color: var(--tinta-2); line-height: 1.5; }
+    table.comparar { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+    table.comparar th, table.comparar td { padding: 5px 4px; border-bottom: 1px solid #ecece6; text-align: right; font-variant-numeric: tabular-nums; }
+    table.comparar th:first-child, table.comparar td:first-child { text-align: left; }
+    table.comparar th { color: var(--tinta-2); font-weight: 600; }
+    .top ol { margin: 6px 0 0; padding-left: 20px; }
+    .top li { padding: 3px 0; cursor: pointer; font-size: 12px; }
+    .top li:hover { color: var(--serie-1); }
+    .top small { color: var(--tenue); }
+    .fuente-info { margin: -2px 0 10px; font-size: 11.5px; color: var(--tinta-2); line-height: 1.45; }
+    .fuente-info a { color: var(--serie-1); font-weight: 600; }
+    .pestanas button:disabled { opacity: .4; cursor: default; }
+    .fuentes { margin-top: 18px; padding: 10px 12px; border-radius: 10px; background: #fff; border: 1px solid #e5e5de; font-size: 11.5px; line-height: 1.55; color: var(--tinta-2); }
+    .fuentes summary { cursor: pointer; font-weight: 700; color: var(--tinta); }
+    .fuentes p { margin: 6px 0 0; }
+    .fuentes a { color: var(--serie-1); }
+
+    /* Prueba de cierres (arriba del panel) */
+    .prueba { display: flex; align-items: center; gap: 10px; padding: 11px 12px; margin: 0 0 6px; border-radius: 12px;
+        background: #1f2226; color: #fff; }
+    .prueba div { flex: 1; line-height: 1.3; }
+    .prueba b { display: block; font-size: 13px; }
+    .prueba span { font-size: 11.5px; color: #c9cbcf; }
+    .pestanas .tab-cierre { grid-column: 1 / -1; justify-content: center; border-color: #b42318; color: #b42318; }
+    .pestanas .tab-cierre.activo { background: #b42318; color: #fff; border-color: #b42318; }
+    .cierres { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0; }
+    .cierres span { display: inline-flex; align-items: center; gap: 5px; padding: 4px 6px 4px 9px; border-radius: 99px;
+        background: #fff0ee; border: 1px solid #f3c2bc; color: #8a1c12; font-size: 11.5px; font-weight: 700; }
+    .cierres button { border: 0; background: transparent; color: #8a1c12; cursor: pointer; font-weight: 800; padding: 0 2px; }
+    .fila-btn { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin-top: 6px; }
+    .recomendacion { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: #edf8f1; border: 1px solid #b9e3c8;
+        color: #14532d; font-size: 12.5px; line-height: 1.5; }
+    .recomendacion b { color: #0f3d22; }
+    .resultado ul { margin: 6px 0 0; padding-left: 18px; font-size: 12px; }
+    .resultado li { padding: 2px 0; }
+
+    .maplibregl-popup-content { font-family: "Inter", sans-serif; font-size: 12.5px; }
+    .maplibregl-popup-content b { display: block; font-size: 13.5px; margin-bottom: 2px; }
+    .atribucion { position: absolute; right: 8px; bottom: 30px; z-index: 5; padding: 3px 8px; border-radius: 6px; background: rgba(255,255,255,.9); font-size: 11px; color: var(--tinta-2); }
+
+    @media (max-width: 860px) {
+        .panel { width: 100%; bottom: auto; height: 45%; border-right: 0; border-bottom: 1px solid #e5e5de; }
+        #mapa { left: 0; top: calc(72px + 45%); }
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <span class="logo-box"><img src="../../Imagenes/logo-uniandes.png" alt="Universidad de los Andes">
+<img class="logo-sinergia" src="../../Imagenes/SinerGIA-oscuro.png" alt="Lab SinergIA" style="height:40px;width:auto;max-width:none;max-height:none;flex:none;margin-left:12px;display:block"></span>
+    <span><small>Geodata de Bogotá · Movilidad</small><strong>Red vial y algoritmos</strong></span>
+    <nav>
+        <a href="Movilidad.html"><i data-lucide="arrow-left"></i> Volver al visor</a>
+        <a class="primario" href="../../Index.html"><i data-lucide="house"></i> Inicio</a>
+    </nav>
+</header>
+
+<aside class="panel">
+    <h2>Red vial de Bogotá como grafo</h2>
+    <p class="sub">Intersecciones = nodos · tramos de calle = aristas con sentido.</p>
+
+    <div class="prueba">
+        <div><b>Prueba: ¿y si se cierra una vía o un paradero?</b><span>Usaquén · OpenStreetMap</span></div>
+        <button type="button" class="btn primario" id="btnPrueba"><i data-lucide="flask-conical"></i> Abrir</button>
+    </div>
+
+    <!-- PASO 1 -->
+    <div class="paso"><b>1</b> Fuente y zona</div>
+    <div class="segmento" id="segFuente">
+        <button type="button" class="activo" data-v="mvi">MVI oficial</button>
+        <button type="button" data-v="osm">OpenStreetMap</button>
+        <button type="button" data-v="esri">Esri</button>
+    </div>
+    <div class="fuente-info" id="fuenteInfo"></div>
+
+    <div id="bloqueEsri" hidden>
+        <label class="campo"><span>Clave API de ArcGIS (gratis en location.arcgis.com)</span>
+            <input type="password" id="claveEsri" placeholder="Pega aquí tu clave" autocomplete="off"></label>
+    </div>
+
+    <div id="bloqueZona">
+        <label class="campo"><span>Localidad</span>
+            <select id="selLocalidad"><option value="">Cargando localidades…</option></select></label>
+        <div class="o">o</div>
+        <button type="button" class="btn ancho" id="btnVisible"><i data-lucide="scan"></i> Usar la zona que se ve en el mapa</button>
+    </div>
+    <div class="estado" id="estado"></div>
+    <div class="barra-progreso" id="progresoCarga" hidden><i></i></div>
+
+    <section id="resumen" hidden>
+        <div id="bloqueRed">
+            <div class="tiles" id="tiles"></div>
+            <div class="leyenda">
+                <div><i style="height:6px;background:#0b3d91"></i> <span id="leyClase3">Avenidas</span></div>
+                <div><i style="height:4px;background:#2f9e44"></i> <span id="leyClase2">Vías de 60 km/h</span></div>
+                <div><i style="height:3px;background:#f0b400"></i> <span id="leyClase1">Vías locales</span></div>
+                <div><span class="flecha"><svg width="26" height="14" viewBox="0 0 48 24"><path d="M5 8.5h22V3l16 9-16 9v-5.5H5z"
+                    fill="#e03131" stroke="#1f2226" stroke-width="2.5" stroke-linejoin="round"/></svg></span> Un solo sentido (acerca el mapa)</div>
+            </div>
+            <label class="check" id="filaSD"><input type="checkbox" id="chkSD"> Resaltar tramos sin dato de sentido
+                <i style="display:inline-block;width:22px;height:3px;background:#7b3fb0;margin-left:2px"></i></label>
+        </div>
+
+        <!-- PASO 2 -->
+        <div class="paso"><b>2</b> Algoritmo</div>
+        <div class="pestanas" role="tablist">
+            <button type="button" class="tab-cierre" data-modo="cierre"><i data-lucide="construction"></i> ¿Y si se cierra? Vía o paradero</button>
+            <button type="button" class="activo" data-modo="ruta"><i data-lucide="route"></i> Ruta</button>
+            <button type="button" data-modo="isocrona"><i data-lucide="timer"></i> Isócrona</button>
+            <button type="button" data-modo="central"><i data-lucide="flame"></i> Calles clave</button>
+            <button type="button" data-modo="conect"><i data-lucide="network"></i> Conectividad</button>
+        </div>
+
+        <!-- Cierres -->
+        <div id="modoCierre" hidden>
+            <div class="explica">Cierra vías o un paradero y el visor recalcula con <b>Dijkstra</b> cómo cambian los viajes,
+                por dónde se va el tráfico y qué rutas del SITP se afectan.</div>
+            <div class="segmento" id="segCierre">
+                <button type="button" class="activo" data-v="vias">1 · Cerrar vías</button>
+                <button type="button" data-v="viaje">2 · Probar un viaje</button>
+                <button type="button" data-v="paradero">Paradero</button>
+            </div>
+            <div class="instruccion"><i data-lucide="mouse-pointer-click"></i><span id="instrCierre">Toca una calle para cerrarla (otra vez para abrirla).</span></div>
+            <label class="check" id="filaCalleCompleta"><input type="checkbox" id="chkCalleCompleta" checked> Cerrar la cuadra completa (tramos seguidos de la misma calle, hasta 250 m)</label>
+            <div class="cierres" id="listaCierres"></div>
+            <div class="fila-btn" id="botonesCierre">
+                <button type="button" class="btn primario" id="btnImpacto"><i data-lucide="waypoints"></i> ¿A dónde se va el tráfico?</button>
+                <button type="button" class="btn" id="btnQuitarCierres" title="Quitar todos los cierres"><i data-lucide="rotate-ccw"></i></button>
+            </div>
+            <div class="barra-progreso" id="progresoCierre" hidden><i></i></div>
+            <div class="resultado" id="resCierre" hidden></div>
+            <div class="leyenda">
+                <div><i style="height:6px;background:repeating-linear-gradient(90deg,#1f2226 0 6px,#e03131 6px 10px)"></i> Vía cerrada</div>
+                <div><i style="height:3px;background:repeating-linear-gradient(90deg,#868e96 0 5px,transparent 5px 8px)"></i> Viaje antes del cierre</div>
+                <div><i style="height:5px;background:#eb6834"></i> Viaje con el cierre (desvío)</div>
+                <div><i class="rampa" style="background:linear-gradient(90deg,#fde2c4,#f59e42,#e8590c,#b42318)"></i> Recibe tráfico desviado</div>
+                <div><i style="height:10px;width:10px;border-radius:50%;background:#2a78d6;border:2px solid #fff"></i> Paradero SITP · <i style="height:10px;width:10px;border-radius:50%;background:#1baf7a"></i> alternativa</div>
+            </div>
+        </div>
+
+        <!-- Ruta -->
+        <div id="modoRuta">
+            <div class="explica" id="explicaRuta"><b>Dijkstra</b> revisa el grafo en orden de costo; <b>A*</b> va primero hacia el destino y revisa menos.</div>
+            <div id="opcionesRuta">
+                <div class="segmento" id="segCriterio">
+                    <button type="button" class="activo" data-v="tiempo">Más rápida</button>
+                    <button type="button" data-v="dist">Más corta</button>
+                </div>
+                <div class="segmento" id="segAlgoritmo">
+                    <button type="button" class="activo" data-v="astar">A*</button>
+                    <button type="button" data-v="dijkstra">Dijkstra</button>
+                </div>
+                <label class="check"><input type="checkbox" id="chkAnimar" checked> Ver cómo busca</label>
+            </div>
+            <div class="instruccion"><i data-lucide="mouse-pointer-click"></i><span id="instrRuta">Toca el mapa: origen (A).</span></div>
+            <div class="resultado" id="resRuta" hidden></div>
+            <button type="button" class="btn ancho" id="btnLimpiarRuta" style="margin-top:8px"><i data-lucide="eraser"></i> Otra ruta</button>
+        </div>
+
+        <!-- Isocrona -->
+        <div id="modoIsocrona" hidden>
+            <div class="explica">Hasta dónde se llega en carro desde un punto.</div>
+            <div class="leyenda">
+                <div><i class="rampa" style="background:#b42318"></i> 0–3 min</div>
+                <div><i class="rampa" style="background:#e8590c"></i> 3–6 min</div>
+                <div><i class="rampa" style="background:#f59e42"></i> 6–10 min</div>
+                <div><i class="rampa" style="background:#fcd29a"></i> 10–15 min</div>
+            </div>
+            <div class="instruccion"><i data-lucide="mouse-pointer-click"></i> Toca el mapa: punto de partida.</div>
+            <div class="resultado" id="resIsocrona" hidden></div>
+        </div>
+
+        <!-- Centralidad -->
+        <div id="modoCentral" hidden>
+            <div class="explica"><b>Brandes:</b> cuántas rutas más rápidas pasan por cada calle. Más rojo = más importante.</div>
+            <label class="campo"><span>Puntos de partida: <b id="txtFuentes">150</b></span>
+                <input type="range" id="rngFuentes" min="50" max="400" step="50" value="150" style="width:100%"></label>
+            <button type="button" class="btn primario ancho" id="btnCentral"><i data-lucide="play"></i> Calcular</button>
+            <div class="barra-progreso" id="progresoCentral" hidden><i></i></div>
+            <div class="leyenda">
+                <div><span>Pocas</span><i class="rampa" style="background:linear-gradient(90deg,#fde2c4,#f59e42,#e8590c,#b42318)"></i><span>Muchas rutas</span></div>
+            </div>
+            <div class="resultado top" id="resCentral" hidden></div>
+        </div>
+
+        <!-- Conectividad -->
+        <div id="modoConect" hidden>
+            <div class="explica"><b>Tarjan:</b> zonas a las que no se puede entrar o salir respetando los sentidos.</div>
+            <button type="button" class="btn primario ancho" id="btnConect"><i data-lucide="play"></i> Analizar</button>
+            <div class="leyenda">
+                <div><i style="height:3px;background:#b42318"></i> Aislado por los sentidos</div>
+                <div><i style="height:10px;width:10px;border-radius:50%;background:#7b3fb0"></i> Calle sin salida</div>
+            </div>
+            <div class="resultado" id="resConect" hidden></div>
+        </div>
+    </section>
+    <p class="fuente-info" style="margin-top:18px">Localidades: Catastro Distrital (IDECA). Tiempos sin tráfico, salvo Esri.</p>
+</aside>
+
+<div id="mapa"></div>
+<div class="atribucion" id="atribucion">Red vial: Malla Vial Integral · SDM, IDU, Catastro (CC BY 4.0)</div>
+
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@1.52.0/dist/umd/lucide.min.js"></script>
+<script>
+(() => {
+    "use strict";
+
+    // ---------- Configuracion ----------
+    // Servidores publicos de Overpass (gratuitos y a veces saturados): se piden
+    // escalonados y se usa el primero que responda bien. El de mail.ru suele ser el mas rapido.
+    const OVERPASS = [
+        "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+        "https://overpass-api.de/api/interpreter",
+        "https://overpass.private.coffee/api/interpreter",
+        "https://overpass.kumi.systems/api/interpreter"
+    ];
+    // Escenario de cierres: paraderos (TransMilenio) y pasajes del dia por paradero (API propia)
+    const esLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+    const API = esLocal ? "http://localhost:5000/api/transmilenio" : "/api/transmilenio";
+    const PARADEROS_TM = "https://gis.transmilenio.gov.co/arcgis/rest/services/Zonal/consulta_paraderos_zonales/MapServer/0/query" +
+        "?where=1%3D1&outFields=cenefa,nombre,localidad,via,consola&outSR=4326&f=geojson";
+    const VEL_PIE = 75;          // metros por minuto caminando (4,5 km/h)
+    const CAMINATA_MAX = 1500;   // m: mas lejos no se ofrece como paradero alterno
+    const LOCALIDADES = "https://serviciosgis.catastrobogota.gov.co/arcgis/rest/services/ordenamientoterritorial/localidad/MapServer/0/query" +
+        "?where=1%3D1&outFields=LOCNOMBRE&outSR=4326&maxAllowableOffset=0.0003&geometryPrecision=5&f=geojson";
+    const MVI = "https://services2.arcgis.com/NEwhEo9GGSHXcRXV/arcgis/rest/services/Malla_Vial_Integral_Bogota_D_C/FeatureServer/0/query";
+    const VIAS = "motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link";
+    // velocidad tipica (km/h) cuando OSM no trae maxspeed
+    const VEL_TIPICA = { motorway: 80, trunk: 50, primary: 50, secondary: 40, tertiary: 40, unclassified: 30, residential: 30, living_street: 10 };
+    const AREA_MAX_KM2 = 60;   // zona visible maxima para no saturar Overpass
+    // Esri: no entrega la red, pero su API calcula rutas e isocronas con su red comercial (requiere clave)
+    const ESRI_RUTA = "https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World/solve";
+    const ESRI_AREA = "https://route-api.arcgis.com/arcgis/rest/services/World/ServiceAreas/NAServer/ServiceArea_World/solveServiceArea";
+    const ESRI_CALLES = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}";
+    const INFO_FUENTE = {
+        mvi: `Oficial de Bogotá (SDM, IDU, Catastro) · tramos editados hasta <b>2014</b>, cargados en <b>2021</b>, ficha de <b>2024</b> ·
+              <a href="https://datos.movilidadbogota.gov.co/datasets/malla-vial-integral-bogota-d-c/about" target="_blank" rel="noopener">Ver la capa ↗</a>`,
+        osm: `Colaborativa · se actualiza <b>a diario</b> · licencia ODbL ·
+              <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap ↗</a>`,
+        esri: `Red comercial de Esri · actualizada <b>continuamente</b> · solo rutas e isócronas por API (no entrega la red) ·
+               <a href="https://location.arcgis.com/" target="_blank" rel="noopener">Crear clave gratis ↗</a>`
+    };
+
+    const $ = (id) => document.getElementById(id);
+    let localidades = [];      // features GeoJSON
+    let G = null;              // grafo actual
+    let modo = "ruta";
+    let criterio = "tiempo", algoritmo = "astar";
+    let puntoA = null;         // indice de nodo
+    let animando = 0;          // id de la animacion en curso (0 = ninguna)
+    let esriA = null;          // origen de la ruta con Esri
+    let fuente = "mvi";        // "mvi" (Malla Vial Integral, oficial) u "osm" (OpenStreetMap)
+
+    // ---------- Utilidades ----------
+    const fmt = (n, d = 0) => Number(n).toLocaleString("es-CO", { maximumFractionDigits: d, minimumFractionDigits: d });
+    const escapar = (t) => String(t == null ? "" : t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const vacio = () => ({ type: "FeatureCollection", features: [] });
+    const esperar = () => new Promise((r) => setTimeout(r, 0));
+    function distancia(a, b) {
+        const r = Math.PI / 180;
+        const x = (b[0] - a[0]) * r * Math.cos((a[1] + b[1]) / 2 * r), y = (b[1] - a[1]) * r;
+        return 6371000 * Math.hypot(x, y);
+    }
+    function mensaje(t, error) { $("estado").textContent = t; $("estado").classList.toggle("error", !!error); }
+    function progreso(id, f) { const b = $(id); b.hidden = f == null; if (f != null) b.firstElementChild.style.width = Math.round(f * 100) + "%"; }
+    function iconos() { if (window.lucide) lucide.createIcons(); }
+    function minutos(seg) { return seg < 60 ? "< 1 min" : fmt(seg / 60, seg < 600 ? 1 : 0) + " min"; }
+
+    // punto dentro de poligono (GeoJSON Polygon o MultiPolygon), por rayos
+    function dentro(p, geom) {
+        const polis = geom.type === "Polygon" ? [geom.coordinates] : geom.coordinates;
+        return polis.some((anillos) => {
+            let adentro = false;
+            anillos.forEach((anillo, k) => {
+                let c = false;
+                for (let i = 0, j = anillo.length - 1; i < anillo.length; j = i++) {
+                    const [xi, yi] = anillo[i], [xj, yj] = anillo[j];
+                    if ((yi > p[1]) !== (yj > p[1]) && p[0] < (xj - xi) * (p[1] - yi) / (yj - yi) + xi) c = !c;
+                }
+                if (k === 0) adentro = c; else if (c) adentro = false;   // huecos
+            });
+            return adentro;
+        });
+    }
+
+    // Cola de prioridad (monticulo binario) para Dijkstra y A*
+    class Monticulo {
+        constructor() { this.k = []; this.v = []; }
+        get size() { return this.k.length; }
+        push(clave, valor) {
+            const k = this.k, v = this.v;
+            let i = k.length; k.push(clave); v.push(valor);
+            while (i > 0) {
+                const p = (i - 1) >> 1;
+                if (k[p] <= clave) break;
+                k[i] = k[p]; v[i] = v[p]; i = p;
+            }
+            k[i] = clave; v[i] = valor;
+        }
+        pop() {
+            const k = this.k, v = this.v, top = v[0], ck = k.pop(), cv = v.pop();
+            if (k.length) {
+                let i = 0;
+                for (;;) {
+                    let h = 2 * i + 1;
+                    if (h >= k.length) break;
+                    if (h + 1 < k.length && k[h + 1] < k[h]) h++;
+                    if (k[h] >= ck) break;
+                    k[i] = k[h]; v[i] = v[h]; i = h;
+                }
+                k[i] = ck; v[i] = cv;
+            }
+            return top;
+        }
+    }
+
+    // ---------- Mapa ----------
+    const mapa = new maplibregl.Map({
+        container: "mapa", style: "https://tiles.openfreemap.org/styles/positron",
+        center: [-74.06, 4.65], zoom: 14, antialias: false
+    });
+    mapa.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left");
+    const mapaListo = new Promise((ok) => mapa.on("load", ok));
+
+    function flechaImagen() {
+        // flecha roja con borde oscuro que apunta en el sentido de la via
+        // (MapLibre la gira sola con symbol-placement: line); se dibuja al doble y se usa con pixelRatio 2
+        const ancho = 56, alto = 28, c = document.createElement("canvas");
+        c.width = ancho; c.height = alto;
+        const x = c.getContext("2d");
+        x.fillStyle = "#e03131"; x.strokeStyle = "#1f2226"; x.lineWidth = 3.5; x.lineJoin = "round";
+        x.beginPath();
+        x.moveTo(6, 10); x.lineTo(32, 10); x.lineTo(32, 3); x.lineTo(51, 14);
+        x.lineTo(32, 25); x.lineTo(32, 18); x.lineTo(6, 18); x.closePath();
+        x.stroke(); x.fill();
+        return x.getImageData(0, 0, ancho, alto);
+    }
+
+    mapa.on("load", () => {
+        mapa.addImage("flecha", flechaImagen(), { pixelRatio: 2 });
+        // mapa de calles de Esri (se ve solo con la fuente Esri)
+        mapa.addSource("esri-calles", { type: "raster", tiles: [ESRI_CALLES], tileSize: 256, attribution: "Esri, HERE, Garmin, © OpenStreetMap" });
+        mapa.addLayer({ id: "esri-calles", type: "raster", source: "esri-calles", layout: { visibility: "none" } });
+        mapa.addSource("esri-area", { type: "geojson", data: vacio() });
+        mapa.addLayer({ id: "esri-area", type: "fill", source: "esri-area",
+            paint: { "fill-opacity": 0.45, "fill-color": ["step", ["get", "hasta"], "#b42318", 3.5, "#e8590c", 6.5, "#f59e42", 10.5, "#fcd29a"] } });
+        ["zona", "red", "explorado", "ruta", "puntos", "sinsalida", "cerradas", "paraderos"].forEach((s) => mapa.addSource(s, { type: "geojson", data: vacio() }));
+        mapa.addLayer({ id: "zona", type: "line", source: "zona", paint: { "line-color": "#2a78d6", "line-width": 2, "line-dasharray": [3, 2] } });
+        // red base por tipo de via
+        mapa.addLayer({ id: "red", type: "line", source: "red", layout: { "line-cap": "round", "line-join": "round" },
+            paint: {
+                "line-color": ["match", ["get", "c"], 3, "#0b3d91", 2, "#2f9e44", "#f0b400"],
+                "line-width": ["interpolate", ["linear"], ["zoom"], 12, ["match", ["get", "c"], 3, 2.5, 2, 1.6, 0.9], 16, ["match", ["get", "c"], 3, 7, 2, 5, 3]],
+                "line-opacity": 1
+            } });
+        // tramos de la MVI sin dato de sentido (se toman como doble sentido)
+        mapa.addLayer({ id: "sd", type: "line", source: "red", filter: ["==", ["get", "sd"], 1],
+            layout: { "line-cap": "round", visibility: "none" }, paint: { "line-color": "#7b3fb0", "line-width": 3 } });
+        // capa de resultados del algoritmo (color segun "v")
+        mapa.addLayer({ id: "analisis", type: "line", source: "red", filter: [">=", ["get", "v"], 0],
+            layout: { "line-cap": "round", "line-join": "round", visibility: "none" }, paint: { "line-color": "#b42318", "line-width": 3 } });
+        // vias cerradas (escenario): negro con rayas rojas
+        mapa.addLayer({ id: "cerradas-base", type: "line", source: "cerradas", layout: { "line-cap": "round" },
+            paint: { "line-color": "#1f2226", "line-width": 8 } });
+        mapa.addLayer({ id: "cerradas", type: "line", source: "cerradas",
+            paint: { "line-color": "#e03131", "line-width": 4, "line-dasharray": [1.2, 1] } });
+        mapa.addLayer({ id: "explorado", type: "line", source: "explorado", paint: { "line-color": "#6da7ec", "line-width": 2, "line-opacity": 0.8 } });
+        mapa.addLayer({ id: "ruta-borde", type: "line", source: "ruta", filter: ["==", ["get", "tipo"], "principal"],
+            layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#ffffff", "line-width": 9 } });
+        mapa.addLayer({ id: "ruta-libre", type: "line", source: "ruta", filter: ["==", ["get", "tipo"], "libre"],
+            layout: { "line-cap": "round" }, paint: { "line-color": "#7b3fb0", "line-width": 3, "line-dasharray": [1.5, 1.5] } });
+        mapa.addLayer({ id: "ruta-antes", type: "line", source: "ruta", filter: ["==", ["get", "tipo"], "antes"],
+            layout: { "line-cap": "round" }, paint: { "line-color": "#868e96", "line-width": 4, "line-dasharray": [1.5, 1.2] } });
+        mapa.addLayer({ id: "caminata", type: "line", source: "ruta", filter: ["==", ["get", "tipo"], "caminata"],
+            layout: { "line-cap": "round" }, paint: { "line-color": "#1baf7a", "line-width": 4, "line-dasharray": [0.6, 1.4] } });
+        mapa.addLayer({ id: "ruta", type: "line", source: "ruta", filter: ["==", ["get", "tipo"], "principal"],
+            layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#eb6834", "line-width": 5 } });
+        mapa.addLayer({ id: "flechas", type: "symbol", source: "red", minzoom: 14, filter: ["==", ["get", "u"], 1],
+            layout: { "symbol-placement": "line", "symbol-spacing": 80, "icon-image": "flecha",
+                      "icon-size": ["interpolate", ["linear"], ["zoom"], 14, 0.75, 17, 1.2],
+                      "icon-allow-overlap": true, "icon-ignore-placement": true } });
+        mapa.addLayer({ id: "sinsalida", type: "circle", source: "sinsalida",
+            paint: { "circle-radius": 4, "circle-color": "#7b3fb0", "circle-stroke-color": "#fff", "circle-stroke-width": 1.5 } });
+        // paraderos del SITP (solo en el escenario de cierres)
+        mapa.addLayer({ id: "paraderos", type: "circle", source: "paraderos", layout: { visibility: "none" },
+            paint: {
+                "circle-radius": ["match", ["get", "e"], "cerrado", 9, "alterna", 8, ["interpolate", ["linear"], ["zoom"], 12, 2.5, 16, 6]],
+                "circle-color": ["match", ["get", "e"], "cerrado", "#e03131", "alterna", "#1baf7a", "#2a78d6"],
+                "circle-stroke-color": "#fff", "circle-stroke-width": ["match", ["get", "e"], "normal", 1, 2.5] } });
+        mapa.addLayer({ id: "paraderos-x", type: "symbol", source: "paraderos", filter: ["==", ["get", "e"], "cerrado"],
+            layout: { "text-field": "✕", "text-font": ["Noto Sans Bold"], "text-size": 12, "text-allow-overlap": true, visibility: "none" },
+            paint: { "text-color": "#fff" } });
+        mapa.addLayer({ id: "puntos", type: "circle", source: "puntos",
+            paint: { "circle-radius": 9, "circle-color": ["match", ["get", "t"], "A", "#1baf7a", "#b42318"], "circle-stroke-color": "#fff", "circle-stroke-width": 3 } });
+        mapa.addLayer({ id: "puntos-txt", type: "symbol", source: "puntos",
+            layout: { "text-field": ["get", "t"], "text-font": ["Noto Sans Bold"], "text-size": 11, "text-allow-overlap": true },
+            paint: { "text-color": "#fff" } });
+
+        mapa.on("click", "red", (e) => {
+            if (modo !== "central" && modo !== "conect") return;
+            const p = e.features[0].properties;
+            const e2 = G && G.aristas[p.i];
+            if (!e2) return;
+            new maplibregl.Popup().setLngLat(e.lngLat).setHTML(
+                `<b>${escapar(e2.nombre || "Calle sin nombre")}</b>${e2.uno ? "Un solo sentido" : "Doble sentido"} · ${fmt(e2.len)} m · ${fmt(e2.vel)} km/h` +
+                (modo === "central" && p.v >= 0 ? `<br>Índice de paso: ${fmt(p.v * 100)} de 100` : "")).addTo(mapa);
+        });
+        mapa.on("click", (e) => clicMapa(e));
+    });
+
+    // ---------- Localidades ----------
+    async function cargarLocalidades() {
+        try {
+            const d = await (await fetch(LOCALIDADES)).json();
+            localidades = d.features.filter((f) => f.geometry && f.properties.LOCNOMBRE !== "SUMAPAZ")
+                .sort((a, b) => a.properties.LOCNOMBRE.localeCompare(b.properties.LOCNOMBRE, "es"));
+            $("selLocalidad").innerHTML = `<option value="">— Elige una localidad —</option>` +
+                localidades.map((f, i) => `<option value="${i}">${escapar(f.properties.LOCNOMBRE.charAt(0) + f.properties.LOCNOMBRE.slice(1).toLowerCase())}</option>`).join("");
+        } catch (err) {
+            $("selLocalidad").innerHTML = `<option value="">No se pudieron cargar las localidades</option>`;
+        }
+    }
+
+    function cajaDe(geom) {
+        let w = 180, s = 90, e = -180, n = -90;
+        const rec = (c) => { if (typeof c[0] === "number") { w = Math.min(w, c[0]); e = Math.max(e, c[0]); s = Math.min(s, c[1]); n = Math.max(n, c[1]); } else c.forEach(rec); };
+        rec(geom.coordinates);
+        return { w, s, e, n };
+    }
+    const areaKm2 = (b) => distancia([b.w, b.s], [b.e, b.s]) * distancia([b.w, b.s], [b.w, b.n]) / 1e6;
+
+    // ---------- Descarga de OpenStreetMap (Overpass) ----------
+    const cacheOSM = new Map(); // misma zona = no se vuelve a descargar
+    const ESPERA_SIGUIENTE = 12000; // si un servidor no responde en 12 s se pide tambien al siguiente
+    const LIMITE_RONDA = 120000;
+
+    async function overpass(caja) {
+        const q = `[out:json][timeout:90];way["highway"~"^(${VIAS})$"]["access"!~"^(private|no)$"]` +
+                  `(${caja.s},${caja.w},${caja.n},${caja.e});out body geom qt;`;
+        const clave = [caja.s, caja.w, caja.n, caja.e].map((v) => v.toFixed(5)).join(",");
+        if (cacheOSM.has(clave)) return cacheOSM.get(clave);
+        let ultimo = null;
+        for (let ronda = 1; ronda <= 2; ronda++) {
+            try {
+                const vias = await rondaOverpass(q, ronda);
+                cacheOSM.set(clave, vias);
+                return vias;
+            } catch (err) {
+                ultimo = err;
+                if (ronda === 1) {
+                    mensaje("Los servidores de OpenStreetMap están ocupados; reintentando en unos segundos…");
+                    await new Promise((ok) => setTimeout(ok, 5000));
+                }
+            }
+        }
+        throw new Error("Los servidores de OpenStreetMap no respondieron (" + (ultimo ? ultimo.message : "sin respuesta") +
+                        "). Prueba de nuevo en un minuto o usa la Malla Vial.");
+    }
+
+    // Una ronda: pide al primer servidor; si falla o tarda mas de 12 s, pide tambien al
+    // siguiente. Gana la primera respuesta valida y las demas se cancelan.
+    function rondaOverpass(q, ronda) {
+        return new Promise((resolver, rechazar) => {
+            const controles = [];
+            let lanzados = 0, fallidos = 0, terminado = false, ultimo = null, espera = null;
+            const fin = (err, vias) => {
+                if (terminado) return;
+                terminado = true;
+                clearTimeout(espera); clearTimeout(limite);
+                controles.forEach((c) => c.abort());
+                err ? rechazar(err) : resolver(vias);
+            };
+            const lanzar = () => {
+                if (terminado || lanzados >= OVERPASS.length) return;
+                const i = lanzados++;
+                if (i > 0) mensaje(`OpenStreetMap tarda en responder; probando otro servidor (${i + 1} de ${OVERPASS.length}` +
+                                   (ronda > 1 ? ", segundo intento" : "") + ")…");
+                clearTimeout(espera);
+                espera = setTimeout(lanzar, ESPERA_SIGUIENTE);
+                const ctl = new AbortController();
+                controles.push(ctl);
+                fetch(OVERPASS[i], { method: "POST", body: "data=" + encodeURIComponent(q),
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" }, signal: ctl.signal })
+                    .then((r) => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+                    .then((j) => {
+                        // Overpass a veces responde 200 pero con la consulta cortada
+                        if (j.remark && /runtime error|timed out|out of memory/i.test(j.remark)) throw new Error("consulta cortada");
+                        fin(null, j.elements.filter((x) => x.type === "way"));
+                    })
+                    .catch((err) => {
+                        if (terminado) return;
+                        ultimo = err;
+                        if (++fallidos >= OVERPASS.length) fin(ultimo);
+                        else if (fallidos >= lanzados) lanzar(); // ninguno en curso: el siguiente ya
+                    });
+            };
+            const limite = setTimeout(() => fin(ultimo || new Error("tiempo agotado")), LIMITE_RONDA);
+            lanzar();
+        });
+    }
+
+    // ---------- Construir el grafo ----------
+    function velocidad(t) {
+        const m = /^(\d+)/.exec(t.maxspeed || "");
+        if (m) return Math.max(5, Number(m[1]));
+        const base = t.highway.replace("_link", "");
+        return t.highway.endsWith("_link") ? 30 : (VEL_TIPICA[base] || 30);
+    }
+    function claseVia(hw) {
+        const b = hw.replace("_link", "");
+        if (b === "motorway" || b === "trunk" || b === "primary") return 3;
+        if (b === "secondary" || b === "tertiary") return 2;
+        return 1;
+    }
+
+    // ---------- Descarga de la Malla Vial Integral (servicio ArcGIS de la SDM) ----------
+    async function descargarMVI(caja) {
+        const base = `${MVI}?where=MVITM%3D0&geometry=${caja.w},${caja.s},${caja.e},${caja.n}&geometryType=esriGeometryEnvelope&inSR=4326` +
+            `&spatialRel=esriSpatialRelIntersects&outSR=4326`;
+        const total = (await (await fetch(base + "&returnCountOnly=true&f=json")).json()).count || 0;
+        const paginas = Math.ceil(total / 2000), feats = [];
+        let hechas = 0;
+        mensaje(`Descargando ${fmt(total)} tramos de la Malla Vial Integral…`);
+        // de a 4 paginas en paralelo
+        for (let i = 0; i < paginas; i += 4) {
+            const lote = [];
+            for (let p = i; p < Math.min(paginas, i + 4); p++) {
+                lote.push(fetch(`${base}&outFields=MVISVIA,MVIETIQUET,MVI_VELREG,MVITIPO,MVINUMC&geometryPrecision=7&orderByFields=OBJECTID` +
+                    `&resultOffset=${p * 2000}&resultRecordCount=2000&f=geojson`).then((r) => r.json()).then((d) => {
+                        if (d.error) throw new Error(d.error.message || "error del servicio");
+                        hechas++;
+                        progreso("progresoCarga", 0.1 + 0.6 * hechas / paginas);
+                        return d.features || [];
+                    }));
+            }
+            (await Promise.all(lote)).forEach((f) => feats.push(...f));
+        }
+        return feats;
+    }
+
+    // Grafo desde la MVI: los tramos ya vienen cortados en las intersecciones, asi que los nodos son
+    // los extremos de cada tramo (los que coinciden en el mismo punto son la misma interseccion).
+    function grafoMVI(feats) {
+        const indice = new Map(), coords = [], aristas = [];
+        const nodo = (c) => {
+            const clave = c[0].toFixed(6) + "," + c[1].toFixed(6);
+            let k = indice.get(clave);
+            if (k === undefined) { k = coords.length; indice.set(clave, k); coords.push(c); }
+            return k;
+        };
+        feats.forEach((f) => {
+            if (!f.geometry) return;
+            const p = f.properties;
+            const partes = f.geometry.type === "MultiLineString" ? f.geometry.coordinates : [f.geometry.coordinates];
+            const sentido = p.MVISVIA === "FT" ? 1 : p.MVISVIA === "TF" ? -1 : 0;
+            const sinDato = !["B", "FT", "TF"].includes(p.MVISVIA);
+            const vel = p.MVI_VELREG || 30;
+            const tipo = (p.MVITIPO || "").trim();
+            const c = tipo === "AK" || tipo === "AC" ? 3 : vel >= 60 ? 2 : 1;
+            const nombre = (p.MVIETIQUET || "").trim();
+            partes.forEach((linea) => {
+                if (!linea || linea.length < 2) return;
+                let cs = linea, a = nodo(cs[0]), b = nodo(cs[cs.length - 1]);
+                if (sentido === -1) { cs = cs.slice().reverse(); [a, b] = [b, a]; }
+                let len = 0;
+                for (let k = 1; k < cs.length; k++) len += distancia(cs[k - 1], cs[k]);
+                if (a !== b && len > 0) aristas.push({ a, b, coords: cs, len, uno: sentido !== 0, sd: sinDato, vel, c, nombre });
+            });
+        });
+        return { coords, aristas };
+    }
+
+    function grafoOSM(vias) {
+        // nodos del grafo = extremos de las vias y puntos compartidos por dos o mas vias (intersecciones)
+        const usos = new Map();
+        vias.forEach((w) => w.nodes.forEach((id, i) => usos.set(id, (usos.get(id) || 0) + (i === 0 || i === w.nodes.length - 1 ? 2 : 1))));
+        const indice = new Map(), coords = [];
+        const nodo = (id, c) => { let k = indice.get(id); if (k === undefined) { k = coords.length; indice.set(id, k); coords.push(c); } return k; };
+        const aristas = [];
+        vias.forEach((w) => {
+            const t = w.tags || {};
+            if (!w.geometry || w.geometry.length < 2 || w.geometry.some((g) => !g)) return;
+            const ow = String(t.oneway || "").toLowerCase();
+            let sentido = 0;   // 0 doble, 1 en el sentido del dibujo, -1 contrario
+            if (["yes", "true", "1"].includes(ow)) sentido = 1;
+            else if (ow === "-1" || ow === "reverse") sentido = -1;
+            else if (ow !== "no" && (t.junction === "roundabout" || t.junction === "circular" || t.highway === "motorway" || t.highway === "motorway_link")) sentido = 1;
+            const vel = velocidad(t), c = claseVia(t.highway), nombre = t.name || t.ref || "";
+            let ini = 0;
+            for (let i = 1; i < w.nodes.length; i++) {
+                if (i < w.nodes.length - 1 && usos.get(w.nodes[i]) < 2) continue;
+                let cs = w.geometry.slice(ini, i + 1).map((g) => [g.lon, g.lat]);
+                let a = nodo(w.nodes[ini], cs[0]), b = nodo(w.nodes[i], cs[cs.length - 1]);
+                if (sentido === -1) { cs = cs.reverse(); [a, b] = [b, a]; }
+                let len = 0;
+                for (let k = 1; k < cs.length; k++) len += distancia(cs[k - 1], cs[k]);
+                if (a !== b && len > 0) aristas.push({ a, b, coords: cs, len, uno: sentido !== 0, sd: false, vel, c, nombre });
+                ini = i;
+            }
+        });
+        return { coords, aristas };
+    }
+
+    function terminarGrafo({ coords, aristas }, poligono) {
+        // recortar a la localidad (por el punto medio de cada tramo) y renumerar los nodos
+        if (poligono) aristas = aristas.filter((e) => dentro(e.coords[Math.floor(e.coords.length / 2)], poligono));
+        const nuevo = new Int32Array(coords.length).fill(-1), nodos = [];
+        aristas.forEach((e) => {
+            [e.a, e.b] = [e.a, e.b].map((k) => { if (nuevo[k] < 0) { nuevo[k] = nodos.length; nodos.push(coords[k]); } return nuevo[k]; });
+        });
+        const g = { nodos, n: nodos.length, aristas };
+        g.dirigido = csr(g, true);   // respeta los sentidos
+        g.libre = csr(g, false);     // como si todas las calles fueran de doble sentido
+        g.velMax = aristas.reduce((m, e) => Math.max(m, e.vel), 1) / 3.6;
+        return g;
+    }
+
+    // Grafo en formato CSR (listas de adyacencia compactas): arcos que salen de cada nodo
+    function csr(g, respetarSentido) {
+        const n = g.n, cuenta = new Int32Array(n + 1);
+        const arcos = [];
+        g.aristas.forEach((e, i) => {
+            arcos.push(e.a, e.b, i);
+            if (!respetarSentido || !e.uno) arcos.push(e.b, e.a, i);
+        });
+        const m = arcos.length / 3;
+        for (let k = 0; k < m; k++) cuenta[arcos[3 * k] + 1]++;
+        for (let i = 0; i < n; i++) cuenta[i + 1] += cuenta[i];
+        const inicio = Int32Array.from(cuenta), pos = Int32Array.from(cuenta);
+        const origen = new Int32Array(m), destino = new Int32Array(m), arista = new Int32Array(m);
+        const costoDist = new Float64Array(m), costoTiempo = new Float64Array(m);
+        for (let k = 0; k < m; k++) {
+            const u = arcos[3 * k], j = pos[u]++, e = g.aristas[arcos[3 * k + 2]];
+            origen[j] = u; destino[j] = arcos[3 * k + 1]; arista[j] = arcos[3 * k + 2];
+            costoDist[j] = e.len; costoTiempo[j] = e.len / (e.vel / 3.6);
+        }
+        return { inicio, origen, destino, arista, costoDist, costoTiempo, m };
+    }
+
+    // ---------- Dijkstra / A* ----------
+    // Devuelve distancias, el arco por el que se llego a cada nodo y el orden en que se cerraron los nodos.
+    function dijkstra(R, origen, costo, { destino = -1, limite = Infinity, heuristica = null } = {}) {
+        const n = G.n, dist = new Float64Array(n).fill(Infinity), prevArco = new Int32Array(n).fill(-1);
+        const cerrado = new Uint8Array(n), orden = [];
+        const h = new Monticulo();
+        dist[origen] = 0;
+        h.push(heuristica ? heuristica(origen) : 0, origen);
+        while (h.size) {
+            const u = h.pop();
+            if (cerrado[u]) continue;
+            if (dist[u] > limite) break;
+            cerrado[u] = 1;
+            orden.push(u);
+            if (u === destino) break;
+            for (let k = R.inicio[u]; k < R.inicio[u + 1]; k++) {
+                const v = R.destino[k], nd = dist[u] + costo[k];
+                if (nd < dist[v]) { dist[v] = nd; prevArco[v] = k; h.push(heuristica ? nd + heuristica(v) : nd, v); }
+            }
+        }
+        return { dist, prevArco, orden };
+    }
+
+    function caminoHasta(R, res, destino) {
+        const arcos = [];
+        for (let v = destino; res.prevArco[v] >= 0; v = R.origen[res.prevArco[v]]) arcos.push(res.prevArco[v]);
+        return arcos.reverse();
+    }
+    function lineaDe(R, arcos) {
+        const coords = [];
+        arcos.forEach((k) => {
+            const e = G.aristas[R.arista[k]];
+            const cs = R.origen[k] === e.a ? e.coords : e.coords.slice().reverse();
+            coords.push(...(coords.length ? cs.slice(1) : cs));
+        });
+        return coords;
+    }
+    function medir(R, arcos) {
+        let len = 0, t = 0;
+        arcos.forEach((k) => { len += R.costoDist[k]; t += R.costoTiempo[k]; });
+        return { len, t };
+    }
+
+    function nodoMasCercano(lngLat) {
+        const p = [lngLat.lng, lngLat.lat], kx = Math.cos(p[1] * Math.PI / 180);
+        let mejor = -1, md = Infinity;
+        G.nodos.forEach((c, i) => {
+            const dx = (c[0] - p[0]) * kx, dy = c[1] - p[1], d = dx * dx + dy * dy;
+            if (d < md) { md = d; mejor = i; }
+        });
+        return distancia(p, G.nodos[mejor]) < 400 ? mejor : -1;
+    }
+
+    function nodoCercanoA(p) {
+        const kx = Math.cos(p[1] * Math.PI / 180);
+        let mejor = -1, md = Infinity;
+        G.nodos.forEach((c, i) => {
+            const dx = (c[0] - p[0]) * kx, dy = c[1] - p[1], d = dx * dx + dy * dy;
+            if (d < md) { md = d; mejor = i; }
+        });
+        return mejor;
+    }
+
+    function calcularRuta(a, b, alg) {
+        const R = G.dirigido, costo = criterio === "tiempo" ? R.costoTiempo : R.costoDist;
+        const fin = G.nodos[b];
+        const heuristica = alg === "astar"
+            ? (criterio === "tiempo" ? (v) => distancia(G.nodos[v], fin) / G.velMax : (v) => distancia(G.nodos[v], fin))
+            : null;
+        const t0 = performance.now();
+        const res = dijkstra(R, a, costo, { destino: b, heuristica });
+        const ms = performance.now() - t0;
+        if (!isFinite(res.dist[b])) return { ok: false, ms, explorados: res.orden.length, res };
+        const arcos = caminoHasta(R, res, b);
+        return { ok: true, ms, explorados: res.orden.length, res, arcos, ...medir(R, arcos) };
+    }
+
+    // ---------- Clics en el mapa segun el modo ----------
+    function clicMapa(e) {
+        if (fuente === "esri") return clicEsri(e.lngLat);
+        if (!G) return;
+        if (modo === "cierre") return clicCierre(e);
+        if (modo !== "ruta" && modo !== "isocrona") return;
+        const v = nodoMasCercano(e.lngLat);
+        if (v < 0) { mensaje("Toca más cerca de una calle de la zona cargada.", true); return; }
+        if (modo === "isocrona") return isocrona(v);
+        if (puntoA === null || $("resRuta").dataset.lista === "1") {
+            limpiarRuta();
+            puntoA = v;
+            pintarPuntos([["A", v]]);
+            $("instrRuta").textContent = "Ahora toca el destino (B).";
+        } else {
+            rutaEntre(puntoA, v);
+        }
+    }
+
+    function pintarPuntos(lista) {
+        mapa.getSource("puntos").setData({ type: "FeatureCollection", features: lista.map(([t, v]) => ({
+            type: "Feature", properties: { t }, geometry: { type: "Point", coordinates: G.nodos[v] } })) });
+    }
+
+    async function rutaEntre(a, b) {
+        pintarPuntos([["A", a], ["B", b]]);
+        $("instrRuta").textContent = "Calculando…";
+        const r = calcularRuta(a, b, algoritmo);
+        const id = ++animando;
+        if ($("chkAnimar").checked) await animarBusqueda(r.res, id);
+        if (id !== animando) return;
+        $("resRuta").hidden = false;
+        $("resRuta").dataset.lista = "1";
+        $("instrRuta").textContent = "Toca el mapa para empezar otra ruta.";
+        if (!r.ok) {
+            mapa.getSource("ruta").setData(vacio());
+            $("resRuta").innerHTML = `<h4>No hay ruta respetando los sentidos</h4>
+                <p>Desde A no se puede llegar a B sin ir en contravía dentro de esta zona (pasa en los bordes de la zona cargada).
+                   Se revisaron ${fmt(r.explorados)} intersecciones.</p>`;
+            return;
+        }
+        // misma ruta si todas las calles fueran de doble sentido, para ver cuanto pesan los sentidos
+        const L = G.libre, costoL = criterio === "tiempo" ? L.costoTiempo : L.costoDist;
+        const rl = dijkstra(L, a, costoL, { destino: b });
+        const arcosL = caminoHasta(L, rl, b), libre = medir(L, arcosL);
+        const feats = [{ type: "Feature", properties: { tipo: "principal" }, geometry: { type: "LineString", coordinates: lineaDe(G.dirigido, r.arcos) } }];
+        const extra = criterio === "tiempo" ? (r.t - libre.t) / libre.t : (r.len - libre.len) / libre.len;
+        if (extra > 0.02) feats.push({ type: "Feature", properties: { tipo: "libre" }, geometry: { type: "LineString", coordinates: lineaDe(L, arcosL) } });
+        mapa.getSource("ruta").setData({ type: "FeatureCollection", features: feats });
+        const nombreAlg = algoritmo === "astar" ? "A*" : "Dijkstra";
+        $("resRuta").innerHTML = `
+            <h4>Ruta ${criterio === "tiempo" ? "más rápida" : "más corta"} con ${nombreAlg}</h4>
+            <div class="tiles">
+                <div class="tile"><b>${fmt(r.len / 1000, 2)} km</b><span>distancia</span></div>
+                <div class="tile"><b>${minutos(r.t)}</b><span>tiempo sin tráfico</span></div>
+                <div class="tile"><b>${fmt(r.arcos.length)}</b><span>tramos de calle</span></div>
+            </div>
+            <p>${nombreAlg} revisó <b>${fmt(r.explorados)}</b> de ${fmt(G.n)} intersecciones en ${fmt(r.ms, 1)} ms.</p>
+            <p>${extra > 0.02
+                ? `<span style="color:#7b3fb0;font-weight:700">Sin respetar los sentidos</span> (línea morada punteada) sería
+                   ${fmt(libre.len / 1000, 2)} km y ${minutos(libre.t)}: los sentidos de las calles alargan este viaje un <b>${fmt(extra * 100)}%</b>.`
+                : "Los sentidos de las calles casi no cambian este viaje."}</p>
+            <button type="button" class="btn ancho" id="btnComparar" style="margin-top:8px"><i data-lucide="scale"></i> Comparar Dijkstra y A* en esta ruta</button>
+            <div id="tablaComparar"></div>`;
+        iconos();
+        $("btnComparar").addEventListener("click", () => {
+            const d = calcularRuta(a, b, "dijkstra"), s = calcularRuta(a, b, "astar");
+            $("tablaComparar").innerHTML = `
+                <table class="comparar">
+                    <tr><th>Algoritmo</th><th>Intersecciones revisadas</th><th>Tiempo</th><th>Resultado</th></tr>
+                    <tr><td>Dijkstra</td><td>${fmt(d.explorados)}</td><td>${fmt(d.ms, 1)} ms</td><td>${fmt(d.len / 1000, 2)} km</td></tr>
+                    <tr><td>A*</td><td>${fmt(s.explorados)}</td><td>${fmt(s.ms, 1)} ms</td><td>${fmt(s.len / 1000, 2)} km</td></tr>
+                </table>
+                <p>Los dos encuentran la misma ruta; A* revisa ${fmt(100 - s.explorados / Math.max(1, d.explorados) * 100)}% menos intersecciones
+                   porque busca primero en dirección al destino.</p>`;
+        });
+    }
+
+    // Dibuja poco a poco los tramos que el algoritmo fue revisando (unos 2,5 s en total)
+    async function animarBusqueda(res, id) {
+        const R = G.dirigido, orden = res.orden, feats = [];
+        const paso = Math.max(1, Math.ceil(orden.length / 90));
+        for (let i = 0; i < orden.length; i += paso) {
+            if (id !== animando) return;
+            for (let j = i; j < Math.min(orden.length, i + paso); j++) {
+                const k = res.prevArco[orden[j]];
+                if (k >= 0) feats.push({ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: G.aristas[R.arista[k]].coords } });
+            }
+            mapa.getSource("explorado").setData({ type: "FeatureCollection", features: feats });
+            await new Promise((r) => setTimeout(r, 28));
+        }
+    }
+
+    function limpiarRuta() {
+        animando++;
+        puntoA = null;
+        $("resRuta").hidden = true;
+        $("resRuta").dataset.lista = "";
+        $("instrRuta").textContent = "Toca el mapa para poner el origen (A).";
+        esriA = null;
+        if (mapa.getSource("ruta")) ["ruta", "explorado", "puntos", "esri-area"].forEach((s) => mapa.getSource(s).setData(vacio()));
+    }
+
+    // ---------- Esri: rutas e isocronas por API ----------
+    function puntosCoords(lista) {
+        mapa.getSource("puntos").setData({ type: "FeatureCollection", features: lista.map(([t, c]) => ({
+            type: "Feature", properties: { t }, geometry: { type: "Point", coordinates: c } })) });
+    }
+    async function esriPedir(url, params) {
+        const clave = $("claveEsri").value.trim();
+        if (!clave) throw new Error("Pega primero tu clave API de ArcGIS (arriba).");
+        const r = await fetch(url, { method: "POST", body: new URLSearchParams({ f: "json", token: clave, ...params }) });
+        const j = await r.json();
+        if (j.error) throw new Error(j.error.message + (j.error.details && j.error.details.length ? ": " + j.error.details.join(" ") : ""));
+        return j;
+    }
+    async function clicEsri(ll) {
+        const p = [ll.lng, ll.lat];
+        if (modo === "isocrona") {
+            puntosCoords([["A", p]]);
+            $("resIsocrona").hidden = false;
+            $("resIsocrona").innerHTML = "Calculando con Esri…";
+            try {
+                const j = await esriPedir(ESRI_AREA, { facilities: `${p[0]},${p[1]}`, defaultBreaks: "3,6,10,15", outSR: 4326,
+                    travelDirection: "esriNATravelDirectionFromFacility", splitPolygonsAtBreaks: "true", trimOuterPolygon: "true" });
+                const feats = ((j.saPolygons || {}).features || [])
+                    .sort((a, b) => b.attributes.ToBreak - a.attributes.ToBreak)
+                    .map((f) => ({ type: "Feature", properties: { hasta: f.attributes.ToBreak }, geometry: { type: "Polygon", coordinates: f.geometry.rings } }));
+                mapa.getSource("esri-area").setData({ type: "FeatureCollection", features: feats });
+                $("resIsocrona").innerHTML = `<h4>Isócrona de Esri</h4><p>Áreas alcanzables en 3, 6, 10 y 15 min en carro con la red y el tráfico típico de Esri.</p>`;
+            } catch (err) {
+                $("resIsocrona").innerHTML = `<p style="color:#b42318">${escapar(err.message)}</p>`;
+            }
+            return;
+        }
+        if (modo !== "ruta") return;
+        if (!esriA || $("resRuta").dataset.lista === "1") {
+            limpiarRuta();
+            esriA = p;
+            puntosCoords([["A", p]]);
+            $("instrRuta").textContent = "Ahora el destino (B).";
+            return;
+        }
+        puntosCoords([["A", esriA], ["B", p]]);
+        $("instrRuta").textContent = "Calculando con Esri…";
+        $("resRuta").hidden = false;
+        $("resRuta").dataset.lista = "1";
+        try {
+            const j = await esriPedir(ESRI_RUTA, { stops: `${esriA[0]},${esriA[1]};${p[0]},${p[1]}`, outSR: 4326,
+                returnDirections: "false", returnRoutes: "true" });
+            const ruta = j.routes.features[0], at = ruta.attributes;
+            mapa.getSource("ruta").setData({ type: "FeatureCollection", features: ruta.geometry.paths.map((cs) => ({
+                type: "Feature", properties: { tipo: "principal" }, geometry: { type: "LineString", coordinates: cs } })) });
+            $("resRuta").innerHTML = `<h4>Ruta más rápida de Esri</h4>
+                <div class="tiles">
+                    <div class="tile"><b>${fmt(at.Total_Kilometers, 2)} km</b><span>distancia</span></div>
+                    <div class="tile"><b>${minutos(at.Total_TravelTime * 60)}</b><span>tiempo</span></div>
+                </div>`;
+        } catch (err) {
+            $("resRuta").innerHTML = `<p style="color:#b42318">${escapar(err.message)}</p>`;
+        }
+        $("instrRuta").textContent = "Toca el mapa para otra ruta.";
+    }
+
+    // Muestra u oculta lo que corresponde a cada fuente
+    function aplicarFuente() {
+        const esri = fuente === "esri";
+        $("fuenteInfo").innerHTML = INFO_FUENTE[fuente];
+        $("bloqueEsri").hidden = !esri;
+        $("bloqueZona").hidden = esri;
+        $("opcionesRuta").hidden = esri;
+        $("explicaRuta").innerHTML = esri ? "Ruta más rápida calculada por el servicio de Esri."
+            : "<b>Dijkstra</b> revisa el grafo en orden de costo; <b>A*</b> va primero hacia el destino y revisa menos.";
+        document.querySelectorAll('.pestanas button[data-modo="central"], .pestanas button[data-modo="conect"], .pestanas button[data-modo="cierre"]')
+            .forEach((b) => { b.disabled = esri; });
+        if (esri && (modo === "central" || modo === "conect" || modo === "cierre")) document.querySelector('.pestanas button[data-modo="ruta"]').click();
+        if (mapa.getLayer("esri-calles")) {
+            mapa.setLayoutProperty("esri-calles", "visibility", esri ? "visible" : "none");
+            ["red", "flechas", "zona"].forEach((id) => mapa.setLayoutProperty(id, "visibility", esri ? "none" : "visible"));
+        }
+        $("bloqueRed").hidden = esri;
+        $("resumen").hidden = !(esri || G);
+        $("atribucion").textContent = esri ? "Mapa y rutas: Esri" : fuente === "mvi"
+            ? "Red vial: Malla Vial Integral · SDM, IDU, Catastro (CC BY 4.0)" : "Red vial © colaboradores de OpenStreetMap (ODbL)";
+        mensaje(esri ? "Pega tu clave y toca el mapa." : G ? "" : "Elige una localidad o usa la zona visible.");
+    }
+
+    // ---------- Isocrona ----------
+    function isocrona(v) {
+        const R = G.dirigido;
+        const res = dijkstra(R, v, R.costoTiempo, { limite: 15 * 60 });
+        const valores = G.aristas.map((e) => {
+            const t = e.uno ? res.dist[e.a] : Math.min(res.dist[e.a], res.dist[e.b]);
+            return isFinite(t) && t <= 15 * 60 ? t / 60 : -1;
+        });
+        pintarAnalisis(valores, ["step", ["get", "v"], "#b42318", 3, "#e8590c", 6, "#f59e42", 10, "#fcd29a"], 3.5);
+        pintarPuntos([["A", v]]);
+        const km = [0, 0, 0, 0], cortes = [3, 6, 10, 15];
+        G.aristas.forEach((e, i) => { const m = valores[i]; if (m >= 0) km[cortes.findIndex((c) => m < c || c === 15)] += e.len / 1000; });
+        $("resIsocrona").hidden = false;
+        $("resIsocrona").innerHTML = `
+            <h4>Kilómetros de calle alcanzables</h4>
+            <div class="tiles">
+                <div class="tile"><b>${fmt(km[0], 1)}</b><span>en 3 min</span></div>
+                <div class="tile"><b>${fmt(km[0] + km[1], 1)}</b><span>en 6 min</span></div>
+                <div class="tile"><b>${fmt(km[0] + km[1] + km[2], 1)}</b><span>en 10 min</span></div>
+                <div class="tile"><b>${fmt(km.reduce((s, x) => s + x, 0), 1)}</b><span>en 15 min</span></div>
+                <div class="tile"><b>${fmt(res.orden.length)}</b><span>intersecciones alcanzadas</span></div>
+            </div>
+            <p>Solo dentro de la zona cargada y a la velocidad de cada vía, sin semáforos ni tráfico.</p>`;
+    }
+
+    // ---------- Centralidad de intermediacion (Brandes, muestreada) ----------
+    async function centralidad() {
+        const R = G.dirigido, k = Number($("rngFuentes").value);
+        const bc = new Float64Array(G.aristas.length);
+        // fuentes al azar (semilla fija para que el resultado se repita)
+        let semilla = 12345;
+        const azar = () => (semilla = (semilla * 16807) % 2147483647) / 2147483647;
+        const fuentes = Array.from({ length: Math.min(k, G.n) }, () => Math.floor(azar() * G.n));
+        $("btnCentral").disabled = true;
+        const delta = new Float64Array(G.n);
+        for (let j = 0; j < fuentes.length; j++) {
+            const res = dijkstra(R, fuentes[j], R.costoTiempo);
+            delta.fill(0);
+            // de lo mas lejano a lo mas cercano: cada nodo le pasa a su antecesor las rutas que lo atraviesan
+            for (let q = res.orden.length - 1; q > 0; q--) {
+                const w = res.orden[q], a = res.prevArco[w];
+                if (a < 0) continue;
+                const c = 1 + delta[w];
+                delta[R.origen[a]] += c;
+                bc[R.arista[a]] += c;
+            }
+            if (j % 4 === 0) { progreso("progresoCentral", j / fuentes.length); await esperar(); }
+        }
+        progreso("progresoCentral", null);
+        $("btnCentral").disabled = false;
+        const max = bc.reduce((m, x) => Math.max(m, x), 0) || 1;
+        const valores = Array.from(bc, (x) => Math.sqrt(x / max));   // raiz: deja ver tambien las calles medianas
+        pintarAnalisis(valores,
+            ["interpolate", ["linear"], ["get", "v"], 0, "#fde2c4", 0.3, "#f59e42", 0.6, "#e8590c", 1, "#b42318"],
+            ["interpolate", ["linear"], ["get", "v"], 0, 1, 0.5, 4, 1, 8]);
+        // calles con mas paso, agrupadas por nombre
+        const porNombre = new Map();
+        G.aristas.forEach((e, i) => {
+            const nombre = e.nombre || "Calle sin nombre";
+            const x = porNombre.get(nombre);
+            if (!x || valores[i] > x.v) porNombre.set(nombre, { v: valores[i], i });
+        });
+        const top = [...porNombre.entries()].filter(([n]) => n !== "Calle sin nombre").sort((a, b) => b[1].v - a[1].v).slice(0, 10);
+        $("resCentral").hidden = false;
+        $("resCentral").innerHTML = `<h4>Las 10 calles por donde más rutas pasan</h4>
+            <ol>${top.map(([n, x]) => `<li data-i="${x.i}">${escapar(n)} <small>· ${fmt(x.v * 100)}</small></li>`).join("")}</ol>
+            <p>Se calcularon ${fmt(fuentes.length)} árboles de rutas más rápidas (uno por punto de partida) sobre ${fmt(G.n)} intersecciones.
+               El número es un índice de 0 a 100. Toca una calle del mapa para ver su valor.</p>`;
+        $("resCentral").querySelectorAll("li").forEach((li) => li.addEventListener("click", () => {
+            const e = G.aristas[Number(li.dataset.i)];
+            mapa.flyTo({ center: e.coords[Math.floor(e.coords.length / 2)], zoom: 16, duration: 900 });
+        }));
+    }
+
+    // ---------- Conectividad: Tarjan (componentes fuertemente conexas) ----------
+    function tarjan(R) {
+        const n = G.n, indiceDe = new Int32Array(n).fill(-1), bajo = new Int32Array(n), enPila = new Uint8Array(n);
+        const comp = new Int32Array(n).fill(-1), pila = [], llamadas = [];
+        let contador = 0, nComp = 0;
+        for (let s = 0; s < n; s++) {
+            if (indiceDe[s] >= 0) continue;
+            llamadas.push([s, R.inicio[s]]);
+            indiceDe[s] = bajo[s] = contador++; pila.push(s); enPila[s] = 1;
+            while (llamadas.length) {
+                const marco = llamadas[llamadas.length - 1], u = marco[0];
+                if (marco[1] < R.inicio[u + 1]) {
+                    const v = R.destino[marco[1]++];
+                    if (indiceDe[v] < 0) {
+                        indiceDe[v] = bajo[v] = contador++; pila.push(v); enPila[v] = 1;
+                        llamadas.push([v, R.inicio[v]]);
+                    } else if (enPila[v]) bajo[u] = Math.min(bajo[u], indiceDe[v]);
+                } else {
+                    llamadas.pop();
+                    if (llamadas.length) { const p = llamadas[llamadas.length - 1][0]; bajo[p] = Math.min(bajo[p], bajo[u]); }
+                    if (bajo[u] === indiceDe[u]) {
+                        let w;
+                        do { w = pila.pop(); enPila[w] = 0; comp[w] = nComp; } while (w !== u);
+                        nComp++;
+                    }
+                }
+            }
+        }
+        return { comp, nComp };
+    }
+
+    function conectividad() {
+        const { comp, nComp } = tarjan(G.dirigido);
+        const tam = new Int32Array(nComp);
+        comp.forEach((c) => tam[c]++);
+        let grande = 0;
+        tam.forEach((t, c) => { if (t > tam[grande]) grande = c; });
+        const fuera = G.aristas.map((e) => (comp[e.a] !== grande || comp[e.b] !== grande ? 1 : -1));
+        pintarAnalisis(fuera, "#b42318", 3.5);
+        const nFuera = fuera.filter((x) => x > 0).length;
+        const sinSalida = G.grado.map((g, i) => (g === 1 ? i : -1)).filter((i) => i >= 0);
+        mapa.getSource("sinsalida").setData({ type: "FeatureCollection", features: sinSalida.map((i) => ({
+            type: "Feature", properties: {}, geometry: { type: "Point", coordinates: G.nodos[i] } })) });
+        $("resConect").hidden = false;
+        $("resConect").innerHTML = `
+            <h4>Resultado</h4>
+            <div class="tiles">
+                <div class="tile"><b>${fmt(tam[grande] / G.n * 100, 1)}%</b><span>de intersecciones en la componente principal</span></div>
+                <div class="tile"><b>${fmt(nComp)}</b><span>componentes en total</span></div>
+                <div class="tile"><b>${fmt(nFuera)}</b><span>tramos fuera de la principal</span></div>
+                <div class="tile"><b>${fmt(sinSalida.length)}</b><span>calles sin salida</span></div>
+            </div>
+            <p>Muchos tramos rojos y "sin salida" aparecen en el <b>borde de la zona</b>, porque ahí se cortó la red. Los que están
+               adentro suelen ser calles cerradas, conjuntos o errores de sentido en OpenStreetMap.</p>`;
+    }
+
+    // ---------- Escenario: ¿y si se cierra una via o un paradero? ----------
+    // Las vias cerradas se quitan del grafo (costo infinito) y se vuelve a correr Dijkstra.
+    const cierre = { sub: "vias", cerradas: new Set(), A: null, paradero: null, paraderosZona: [] };
+    let paraderosTM = null;   // promesa: cenefa -> { c, nombre }
+    let diaSITP = null;       // promesa: pasajes del ultimo dia por paradero y por ruta
+
+    async function pedirAPI(r) {
+        const resp = await fetch(API + r + (r.includes("?") ? "&" : "?") + "v=2");
+        const j = await resp.json();
+        if (!j.ok) throw new Error(j.error || "Error de la API");
+        return j;
+    }
+    // OJO: en el servicio de TransMilenio la geometria de cada fila es la del paradero que aparece entre
+    // parentesis en su campo "consola" (igual que en Buses.html).
+    function cargarParaderosTM() {
+        if (!paraderosTM) {
+            paraderosTM = fetch(PARADEROS_TM).then((r) => r.json()).then((d) => {
+                const coords = {}, lista = {};
+                d.features.forEach((f) => {
+                    const m = /\((\w+)\)\s*$/.exec(f.properties.consola || "");
+                    if (m && f.geometry) coords[m[1]] = f.geometry.coordinates;
+                });
+                d.features.forEach((f) => {
+                    const p = f.properties;
+                    if (coords[p.cenefa]) lista[p.cenefa] = { c: coords[p.cenefa], nombre: p.nombre || p.via || p.cenefa };
+                });
+                return lista;
+            });
+            paraderosTM.catch(() => { paraderosTM = null; });
+        }
+        return paraderosTM;
+    }
+    function cargarDiaSITP() {
+        if (!diaSITP) {
+            diaSITP = (async () => {
+                const f = await pedirAPI("/fechas");
+                const d = await pedirAPI("/sitp/indice?fecha=" + f.fechas[0]);
+                const nombres = {}, porRuta = {};
+                d.rutas.forEach((r) => { nombres[r.id] = r.nombre || r.id; });
+                const porParadero = d.paraderosDia || {};
+                Object.entries(porParadero).forEach(([cen, x]) => Object.keys(x.rutas).forEach((rid) => {
+                    (porRuta[rid] = porRuta[rid] || new Set()).add(cen);
+                }));
+                return { fecha: d.fecha, porParadero, porRuta, nombres };
+            })();
+            diaSITP.catch(() => { diaSITP = null; });
+        }
+        return diaSITP;
+    }
+    const fechaTexto = (f) => new Date(f + "T12:00:00").toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" });
+    const sinAPI = () => esLocal ? "Para ver rutas y pasajeros corre la API local (python -m flask run --port 5000)."
+                                 : "No se pudieron leer los pasajes del SITP.";
+    function avisoCierre(t) { $("instrCierre").textContent = t; }
+
+    async function entrarCierre() {
+        aplicarSubCierre();
+        if (!G) return;
+        pintarCerradas();
+        ["paraderos", "paraderos-x"].forEach((id) => mapa.setLayoutProperty(id, "visibility", "visible"));
+        try {
+            const lista = await cargarParaderosTM();
+            if (modo === "cierre") prepararParaderosZona(lista);
+        } catch (err) {
+            avisoCierre("No se pudieron cargar los paraderos del SITP (servicio de TransMilenio).");
+        }
+        cargarDiaSITP().catch(() => {});   // se va cargando mientras tanto
+    }
+    function salirCierre() {
+        if (!mapa.getLayer("paraderos")) return;
+        ["paraderos", "paraderos-x"].forEach((id) => mapa.setLayoutProperty(id, "visibility", "none"));
+        mapa.getSource("cerradas").setData(vacio());
+    }
+    function reiniciarCierre() {
+        cierre.cerradas.clear();
+        cierre.A = null;
+        cierre.paradero = null;
+        cierre.paraderosZona = [];
+        $("resCierre").hidden = true;
+        if (mapa.getSource("cerradas")) { mapa.getSource("cerradas").setData(vacio()); mapa.getSource("paraderos").setData(vacio()); }
+    }
+    function prepararParaderosZona(lista) {
+        const z = G.zona;
+        if (cierre.paraderosZona.length && cierre.paraderosZona.zona === z) return pintarParaderos();
+        cierre.paraderosZona = Object.entries(lista)
+            .filter(([, p]) => p.c[0] >= z.caja.w && p.c[0] <= z.caja.e && p.c[1] >= z.caja.s && p.c[1] <= z.caja.n &&
+                               (!z.poligono || dentro(p.c, z.poligono)))
+            .map(([cen, p]) => ({ cen, c: p.c, nombre: p.nombre, v: nodoCercanoA(p.c) }));
+        cierre.paraderosZona.zona = z;
+        pintarParaderos();
+    }
+    function pintarParaderos(alternas = new Set()) {
+        mapa.getSource("paraderos").setData({ type: "FeatureCollection", features: cierre.paraderosZona.map((p) => ({
+            type: "Feature",
+            properties: { cen: p.cen, e: p.cen === cierre.paradero ? "cerrado" : alternas.has(p.cen) ? "alterna" : "normal" },
+            geometry: { type: "Point", coordinates: p.c } })) });
+    }
+
+    function aplicarSubCierre() {
+        const s = cierre.sub;
+        avisoCierre(s === "vias" ? "Toca una calle para cerrarla (otra vez para abrirla)."
+            : s === "viaje" ? (cierre.cerradas.size ? "Toca el origen (A) y luego el destino (B)." : "Primero cierra al menos una vía (paso 1).")
+            : "Toca un paradero azul para cerrarlo.");
+        $("filaCalleCompleta").hidden = s !== "vias";
+        $("botonesCierre").hidden = s === "paradero";
+        $("listaCierres").hidden = s === "paradero";
+    }
+
+    function clicCierre(e) {
+        const caja = (r) => [[e.point.x - r, e.point.y - r], [e.point.x + r, e.point.y + r]];
+        if (cierre.sub === "vias") {
+            const f = mapa.queryRenderedFeatures(caja(7), { layers: ["red"] })[0];
+            if (!f) { avisoCierre("Toca justo encima de una calle."); return; }
+            alternarCierre(f.properties.i);
+        } else if (cierre.sub === "viaje") {
+            if (!cierre.cerradas.size) { avisoCierre("Primero cierra al menos una vía (paso 1)."); return; }
+            const v = nodoMasCercano(e.lngLat);
+            if (v < 0) { avisoCierre("Toca más cerca de una calle de la zona cargada."); return; }
+            if (cierre.A === null || $("resCierre").dataset.viaje === "1") {
+                cierre.A = v;
+                $("resCierre").dataset.viaje = "";
+                $("resCierre").hidden = true;
+                mapa.getSource("ruta").setData(vacio());
+                pintarPuntos([["A", v]]);
+                avisoCierre("Ahora toca el destino (B).");
+            } else {
+                viajeConCierre(cierre.A, v);
+            }
+        } else {
+            const f = mapa.queryRenderedFeatures(caja(9), { layers: ["paraderos"] })[0];
+            if (!f) { avisoCierre("Toca un paradero (punto azul)."); return; }
+            cerrarParadero(f.properties.cen);
+        }
+    }
+
+    // Tramos de la misma calle seguidos (hasta 250 m) y su otra calzada si es una avenida de dos calzadas
+    function tramosDeCalle(i) {
+        const e0 = G.aristas[i];
+        if (!$("chkCalleCompleta").checked || !e0.nombre) return [i];
+        if (!G.porNodo) {
+            G.porNodo = Array.from({ length: G.n }, () => []);
+            G.aristas.forEach((e, k) => { G.porNodo[e.a].push(k); G.porNodo[e.b].push(k); });
+        }
+        const vistos = new Set([i]), cola = [[i, e0.len]];
+        while (cola.length) {
+            const [k, acum] = cola.shift(), e = G.aristas[k];
+            [e.a, e.b].forEach((n) => G.porNodo[n].forEach((j) => {
+                const ej = G.aristas[j];
+                if (vistos.has(j) || ej.nombre !== e0.nombre || acum + ej.len > 250) return;
+                vistos.add(j);
+                cola.push([j, acum + ej.len]);
+            }));
+        }
+        const medio = (e) => e.coords[Math.floor(e.coords.length / 2)];
+        const medios = [...vistos].map((k) => medio(G.aristas[k]));
+        G.aristas.forEach((e, k) => {
+            if (!vistos.has(k) && e.nombre === e0.nombre && medios.some((m) => distancia(m, medio(e)) < 45)) vistos.add(k);
+        });
+        return [...vistos];
+    }
+
+    function alternarCierre(i) {
+        const grupo = tramosDeCalle(i);
+        const abrir = cierre.cerradas.has(i);
+        grupo.forEach((k) => (abrir ? cierre.cerradas.delete(k) : cierre.cerradas.add(k)));
+        cambiaronCierres();
+        const e = G.aristas[i];
+        avisoCierre(`${abrir ? "Abierta" : "Cerrada"}: ${e.nombre || "calle sin nombre"} (${grupo.length} tramo${grupo.length === 1 ? "" : "s"}). ` +
+                    "Toca otra calle o mira a dónde se va el tráfico.");
+    }
+    function cambiaronCierres() {
+        quitarAnalisis();
+        $("resCierre").hidden = true;
+        mapa.getSource("ruta").setData(vacio());
+        mapa.getSource("puntos").setData(vacio());
+        cierre.A = null;
+        pintarCerradas();
+    }
+
+    function pintarCerradas() {
+        if (!G) return;
+        mapa.getSource("cerradas").setData({ type: "FeatureCollection", features: modo !== "cierre" ? [] : [...cierre.cerradas].map((i) => ({
+            type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: G.aristas[i].coords } })) });
+        const grupos = new Map();
+        cierre.cerradas.forEach((i) => {
+            const e = G.aristas[i], n = e.nombre || "Calle sin nombre";
+            const g = grupos.get(n) || { len: 0, ids: [] };
+            g.len += e.len; g.ids.push(i);
+            grupos.set(n, g);
+        });
+        const lista = [...grupos];
+        $("listaCierres").innerHTML = lista.length
+            ? lista.map(([n, g], k) => `<span>${escapar(n)} · ${fmt(g.len)} m<button type="button" data-k="${k}" title="Abrir esta vía">✕</button></span>`).join("")
+            : `<small style="color:var(--tenue)">Todavía no hay vías cerradas.</small>`;
+        $("listaCierres").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+            lista[Number(b.dataset.k)][1].ids.forEach((i) => cierre.cerradas.delete(i));
+            cambiaronCierres();
+        }));
+        $("btnImpacto").disabled = !cierre.cerradas.size;
+    }
+
+    function costoConCierre(R, base) {
+        const c = Float64Array.from(base);
+        for (let k = 0; k < R.m; k++) if (cierre.cerradas.has(R.arista[k])) c[k] = Infinity;
+        return c;
+    }
+
+    // Un viaje de A a B antes y despues del cierre
+    function viajeConCierre(a, b) {
+        pintarPuntos([["A", a], ["B", b]]);
+        const R = G.dirigido, base = R.costoTiempo;
+        const r0 = dijkstra(R, a, base, { destino: b }), r1 = dijkstra(R, a, costoConCierre(R, base), { destino: b });
+        const res = $("resCierre");
+        res.hidden = false;
+        res.dataset.viaje = "1";
+        avisoCierre("Toca el mapa para probar otro viaje.");
+        if (!isFinite(r0.dist[b])) {
+            mapa.getSource("ruta").setData(vacio());
+            res.innerHTML = `<h4>No hay ruta entre A y B</h4><p>Ni siquiera sin cierres se puede llegar respetando los sentidos dentro de la zona.</p>`;
+            return;
+        }
+        const arcos0 = caminoHasta(R, r0, b), m0 = medir(R, arcos0);
+        const feats = [{ type: "Feature", properties: { tipo: "antes" }, geometry: { type: "LineString", coordinates: lineaDe(R, arcos0) } }];
+        const usaba = arcos0.some((k) => cierre.cerradas.has(R.arista[k]));
+        if (!isFinite(r1.dist[b])) {
+            mapa.getSource("ruta").setData({ type: "FeatureCollection", features: feats });
+            res.innerHTML = `<h4>Con el cierre, B queda incomunicado desde A</h4>
+                <p>No hay otra forma de llegar respetando los sentidos de las calles.</p>
+                <div class="recomendacion"><b>Recomendación:</b> habilitar un desvío provisional o cambiar el sentido de
+                    alguna calle vecina mientras dure el cierre.</div>`;
+            return;
+        }
+        const arcos1 = caminoHasta(R, r1, b), m1 = medir(R, arcos1);
+        if (!usaba) {
+            mapa.getSource("ruta").setData({ type: "FeatureCollection", features: [{ ...feats[0], properties: { tipo: "principal" } }] });
+            res.innerHTML = `<h4>Este viaje no pasa por las vías cerradas</h4>
+                <p>Toma ${minutos(m0.t)} y ${fmt(m0.len / 1000, 2)} km con o sin el cierre. Prueba un viaje que cruce la vía cerrada.</p>`;
+            return;
+        }
+        feats.push({ type: "Feature", properties: { tipo: "principal" }, geometry: { type: "LineString", coordinates: lineaDe(R, arcos1) } });
+        mapa.getSource("ruta").setData({ type: "FeatureCollection", features: feats });
+        // calles del desvio: las que el viaje usa ahora y antes no
+        const antes = new Set(arcos0.map((k) => R.arista[k])), porNombre = new Map();
+        arcos1.forEach((k) => {
+            const e = G.aristas[R.arista[k]];
+            if (antes.has(R.arista[k]) || !e.nombre) return;
+            porNombre.set(e.nombre, (porNombre.get(e.nombre) || 0) + e.len);
+        });
+        const desvio = [...porNombre].sort((x, y) => y[1] - x[1]).slice(0, 3).map(([n]) => `<b>${escapar(n)}</b>`);
+        const extraT = m1.t - m0.t, extraL = m1.len - m0.len;
+        res.innerHTML = `<h4>El viaje de A a B con el cierre</h4>
+            <table class="comparar">
+                <tr><th></th><th>Antes</th><th>Con cierre</th><th>Diferencia</th></tr>
+                <tr><td>Tiempo</td><td>${minutos(m0.t)}</td><td>${minutos(m1.t)}</td><td>+${minutos(extraT)}</td></tr>
+                <tr><td>Distancia</td><td>${fmt(m0.len / 1000, 2)} km</td><td>${fmt(m1.len / 1000, 2)} km</td>
+                    <td>${extraL >= 0 ? "+" : ""}${fmt(extraL / 1000, 2)} km</td></tr>
+            </table>
+            <div class="recomendacion"><b>Recomendación:</b> ${desvio.length ? "desviar por " + desvio.join(", ") : "seguir la ruta naranja"}.
+                El viaje toma un ${fmt(extraT / m0.t * 100)}% más (sin tráfico ni semáforos).</div>`;
+    }
+
+    // Brandes antes y despues del cierre con los mismos puntos de partida: la diferencia es el trafico desviado
+    async function impactoCierre() {
+        if (!G || !cierre.cerradas.size) return;
+        const R = G.dirigido, base = R.costoTiempo, conCierre = costoConCierre(R, base);
+        let semilla = 2024;
+        const azar = () => (semilla = (semilla * 16807) % 2147483647) / 2147483647;
+        const fuentes = Array.from({ length: Math.min(120, G.n) }, () => Math.floor(azar() * G.n));
+        const bc0 = new Float64Array(G.aristas.length), bc1 = new Float64Array(G.aristas.length), delta = new Float64Array(G.n);
+        const acumular = (res, bc) => {
+            delta.fill(0);
+            for (let q = res.orden.length - 1; q > 0; q--) {
+                const w = res.orden[q], a = res.prevArco[w];
+                if (a < 0) continue;
+                const c = 1 + delta[w];
+                delta[R.origen[a]] += c;
+                bc[R.arista[a]] += c;
+            }
+        };
+        $("btnImpacto").disabled = true;
+        let viajes = 0, perdidos = 0;
+        for (let j = 0; j < fuentes.length; j++) {
+            const r0 = dijkstra(R, fuentes[j], base), r1 = dijkstra(R, fuentes[j], conCierre);
+            acumular(r0, bc0);
+            acumular(r1, bc1);
+            viajes += r0.orden.length - 1;
+            perdidos += r0.orden.length - r1.orden.length;
+            if (j % 3 === 0) { progreso("progresoCierre", j / fuentes.length); await esperar(); }
+        }
+        progreso("progresoCierre", null);
+        $("btnImpacto").disabled = false;
+        if (modo !== "cierre") return;
+        // viajes de la muestra que pasaban por las vias cerradas (la mas usada de ellas)
+        let flujo = 0;
+        cierre.cerradas.forEach((i) => { flujo = Math.max(flujo, bc0[i]); });
+        const diff = Array.from(bc0, (x, i) => (cierre.cerradas.has(i) ? 0 : bc1[i] - x));
+        const maxD = diff.reduce((m, d) => Math.max(m, d), 0) || 1;
+        pintarAnalisis(diff.map((d) => (d > maxD * 0.04 ? Math.sqrt(d / maxD) : -1)),
+            ["interpolate", ["linear"], ["get", "v"], 0, "#fde2c4", 0.3, "#f59e42", 0.6, "#e8590c", 1, "#b42318"],
+            ["interpolate", ["linear"], ["get", "v"], 0, 2, 1, 9]);
+        // calles que reciben el trafico, por nombre
+        const porNombre = new Map();
+        diff.forEach((d, i) => {
+            const n = G.aristas[i].nombre;
+            if (n && d > 0 && d > (porNombre.get(n) || 0)) porNombre.set(n, d);
+        });
+        const top = [...porNombre].sort((a, b) => b[1] - a[1]).slice(0, 6);
+        const pct = (d) => Math.min(100, Math.round(d / Math.max(1, flujo) * 100));
+        const sitp = await sitpEnCierres();
+        $("resCierre").hidden = false;
+        $("resCierre").dataset.viaje = "";
+        $("resCierre").innerHTML = `<h4>¿A dónde se va el tráfico?</h4>
+            <div class="tiles">
+                <div class="tile"><b>${fmt(flujo / Math.max(1, viajes) * 100, 1)}%</b><span>de los viajes de prueba pasaba por la vía cerrada</span></div>
+                <div class="tile"><b>${fmt(perdidos / Math.max(1, viajes) * 100, 1)}%</b><span>de los viajes ya no tiene cómo llegar</span></div>
+                <div class="tile"><b>${fmt([...cierre.cerradas].reduce((s, i) => s + G.aristas[i].len, 0))} m</b><span>de vía cerrada</span></div>
+            </div>
+            ${top.length ? `<p>Calles que reciben más tráfico desviado (en el mapa, más rojo = más):</p>
+            <ol class="top">${top.map(([n, d]) => `<li>${escapar(n)} <small>· ~${pct(d)}% de los viajes desviados</small></li>`).join("")}</ol>` : ""}
+            <div class="recomendacion"><b>Recomendación:</b> ${top.length
+                ? `señalizar el desvío por <b>${escapar(top[0][0])}</b>${top[1] ? ` y vigilar <b>${escapar(top[1][0])}</b>, que también se carga` : ""}.`
+                : "el cierre casi no cambia los recorridos de la zona."}
+                ${perdidos > 0 ? " Algunos destinos quedan sin acceso respetando los sentidos: revisa un contraflujo provisional." : ""}</div>
+            ${sitp}
+            <p>Se compararon ${fmt(fuentes.length)} árboles de rutas más rápidas (Dijkstra) antes y después del cierre, sin tráfico.</p>`;
+    }
+
+    // Paraderos del SITP que quedan sobre las vias cerradas y sus rutas
+    function distanciaATramo(p, cs) {
+        const kx = 111320 * Math.cos(p[1] * Math.PI / 180), ky = 110540;
+        let m = Infinity;
+        for (let i = 1; i < cs.length; i++) {
+            const ax = (cs[i - 1][0] - p[0]) * kx, ay = (cs[i - 1][1] - p[1]) * ky;
+            const bx = (cs[i][0] - p[0]) * kx, by = (cs[i][1] - p[1]) * ky;
+            const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+            const t = l2 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / l2)) : 0;
+            m = Math.min(m, Math.hypot(ax + t * dx, ay + t * dy));
+        }
+        return m;
+    }
+    async function sitpEnCierres() {
+        const cerca = cierre.paraderosZona.filter((p) => [...cierre.cerradas].some((i) => distanciaATramo(p.c, G.aristas[i].coords) < 30));
+        if (!cerca.length) return `<p>No hay paraderos del SITP sobre las vías cerradas.</p>`;
+        const nombres = cerca.slice(0, 5).map((p) => escapar(p.nombre)).join(", ") + (cerca.length > 5 ? "…" : "");
+        let dia = null;
+        try { dia = await cargarDiaSITP(); } catch (err) { /* sin API */ }
+        if (!dia) return `<p><b>${cerca.length} paradero${cerca.length === 1 ? "" : "s"} del SITP</b> sobre las vías cerradas: ${nombres}. ${sinAPI()}</p>`;
+        const rutas = new Map();
+        let pasajes = 0;
+        cerca.forEach((p) => {
+            const x = dia.porParadero[p.cen];
+            if (!x) return;
+            pasajes += x.n;
+            Object.entries(x.rutas).forEach(([rid, n]) => rutas.set(rid, (rutas.get(rid) || 0) + n));
+        });
+        const lista = [...rutas].sort((a, b) => b[1] - a[1]);
+        return `<h4 style="margin-top:12px">SITP afectado</h4>
+            <p><b>${cerca.length} paradero${cerca.length === 1 ? "" : "s"}</b> sobre las vías cerradas (${nombres}): ${fmt(pasajes)} personas subieron ahí el
+               ${fechaTexto(dia.fecha)}, en ${fmt(lista.length)} ruta${lista.length === 1 ? "" : "s"}.</p>
+            ${lista.length ? `<ul>${lista.slice(0, 8).map(([rid, n]) => `<li>${escapar(dia.nombres[rid] || rid)} · ${fmt(n)} pasajes</li>`).join("")}</ul>` : ""}`;
+    }
+
+    // Cerrar un paradero: rutas y personas afectadas y el paradero alterno mas cercano caminando
+    async function cerrarParadero(cen) {
+        const p = cierre.paraderosZona.find((x) => x.cen === cen);
+        if (!p) return;
+        cierre.paradero = cen;
+        const res = $("resCierre");
+        res.hidden = false;
+        res.dataset.viaje = "";
+        res.innerHTML = "Buscando paraderos alternos…";
+        // caminata por la red de calles (sin importar los sentidos)
+        const L = G.libre, r = dijkstra(L, p.v, L.costoDist, { limite: CAMINATA_MAX });
+        const extra0 = distancia(p.c, G.nodos[p.v]);
+        const otros = cierre.paraderosZona.filter((x) => x.cen !== cen)
+            .map((x) => ({ ...x, d: r.dist[x.v] + extra0 + distancia(x.c, G.nodos[x.v]) }))
+            .filter((x) => x.d <= CAMINATA_MAX).sort((a, b) => a.d - b.d);
+        let dia = null;
+        try { dia = await cargarDiaSITP(); } catch (err) { /* sin API */ }
+        if (cierre.paradero !== cen) return;
+        const info = dia && dia.porParadero[cen];
+        let recomendado = otros[0] || null, html = "";
+        if (info) {
+            const rutas = Object.entries(info.rutas).sort((a, b) => b[1] - a[1]);
+            // para cada ruta, el paradero de la misma ruta mas cercano caminando
+            const alternas = rutas.map(([rid, n]) => ({ rid, n, alt: otros.find((x) => dia.porRuta[rid] && dia.porRuta[rid].has(x.cen)) }));
+            const peso = new Map();
+            alternas.forEach((a) => { if (a.alt) peso.set(a.alt.cen, (peso.get(a.alt.cen) || 0) + a.n); });
+            const mejor = [...peso].sort((a, b) => b[1] - a[1])[0];
+            if (mejor) recomendado = otros.find((x) => x.cen === mejor[0]);
+            const sinAlt = alternas.filter((a) => !a.alt);
+            const cubre = recomendado ? alternas.filter((a) => a.alt && a.alt.cen === recomendado.cen) : [];
+            html = `<h4>Cerrar el paradero ${escapar(p.nombre)}</h4>
+                <div class="tiles">
+                    <div class="tile"><b>${fmt(info.n)}</b><span>personas subieron aquí el ${fechaTexto(dia.fecha)}</span></div>
+                    <div class="tile"><b>${fmt(rutas.length)}</b><span>rutas paraban aquí</span></div>
+                    <div class="tile"><b>${recomendado ? minutos(recomendado.d / VEL_PIE * 60) : "—"}</b><span>caminando al alterno</span></div>
+                </div>
+                <ul>${alternas.slice(0, 10).map((a) => `<li><b>${escapar(dia.nombres[a.rid] || a.rid)}</b> · ${fmt(a.n)} pasajes →
+                    ${a.alt ? `${escapar(a.alt.nombre)} (${fmt(a.alt.d)} m, ${minutos(a.alt.d / VEL_PIE * 60)})` : "sin paradero de la ruta a menos de 1,5 km"}</li>`).join("")}</ul>
+                <div class="recomendacion"><b>Recomendación:</b> ${recomendado
+                    ? `enviar a los usuarios al paradero <b>${escapar(recomendado.nombre)}</b>, a ${fmt(recomendado.d)} m
+                       (${minutos(recomendado.d / VEL_PIE * 60)} caminando), donde paran ${fmt(cubre.length)} de las ${fmt(rutas.length)} rutas.`
+                    : "no hay paraderos de estas rutas cerca; conviene un paradero provisional."}
+                    ${sinAlt.length ? ` Para ${sinAlt.map((a) => escapar(dia.nombres[a.rid] || a.rid)).join(", ")} habría que poner un paradero provisional.` : ""}</div>`;
+        } else {
+            html = `<h4>Cerrar el paradero ${escapar(p.nombre)}</h4>
+                <p>${dia ? "No hubo pasajes registrados en este paradero ese día." : sinAPI()}</p>
+                <p>Paraderos más cercanos caminando:</p>
+                <ul>${otros.slice(0, 4).map((x) => `<li>${escapar(x.nombre)} · ${fmt(x.d)} m (${minutos(x.d / VEL_PIE * 60)})</li>`).join("") || "<li>Ninguno a menos de 1,5 km.</li>"}</ul>
+                ${recomendado ? `<div class="recomendacion"><b>Recomendación:</b> usar el paradero <b>${escapar(recomendado.nombre)}</b>
+                    (${minutos(recomendado.d / VEL_PIE * 60)} caminando).</div>` : ""}`;
+        }
+        res.innerHTML = html + `<p>Caminata por la red de calles a 4,5 km/h (no incluye senderos peatonales).</p>`;
+        pintarParaderos(new Set(recomendado ? [recomendado.cen] : []));
+        // camino a pie hasta el paradero recomendado
+        if (recomendado && isFinite(r.dist[recomendado.v])) {
+            const linea = [p.c, ...lineaDe(L, caminoHasta(L, r, recomendado.v)), recomendado.c];
+            mapa.getSource("ruta").setData({ type: "FeatureCollection", features: [
+                { type: "Feature", properties: { tipo: "caminata" }, geometry: { type: "LineString", coordinates: linea } }] });
+        } else {
+            mapa.getSource("ruta").setData(vacio());
+        }
+        avisoCierre("Toca otro paradero para comparar.");
+    }
+
+    // ---------- Pintar resultados sobre la red ----------
+    function pintarAnalisis(valores, color, ancho) {
+        G.capa.features.forEach((f, i) => { f.properties.v = valores[i]; });
+        mapa.getSource("red").setData(G.capa);
+        mapa.setPaintProperty("analisis", "line-color", color);
+        mapa.setPaintProperty("analisis", "line-width", ancho);
+        mapa.setLayoutProperty("analisis", "visibility", "visible");
+        mapa.setPaintProperty("red", "line-opacity", 0.35);
+    }
+    function quitarAnalisis() {
+        if (!mapa.getLayer("analisis")) return;
+        mapa.setLayoutProperty("analisis", "visibility", "none");
+        mapa.setPaintProperty("red", "line-opacity", 1);
+        mapa.getSource("sinsalida").setData(vacio());
+        mapa.getSource("esri-area").setData(vacio());
+        ["resIsocrona", "resCentral", "resConect"].forEach((id) => { $(id).hidden = true; });
+    }
+
+    // ---------- Cargar una zona ----------
+    async function cargarZona(caja, poligono, nombre) {
+        await mapaListo;
+        limpiarRuta();
+        quitarAnalisis();
+        reiniciarCierre();
+        mapa.getSource("zona").setData(poligono ? { type: "Feature", properties: {}, geometry: poligono }
+            : { type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [[[caja.w, caja.s], [caja.e, caja.s], [caja.e, caja.n], [caja.w, caja.n], [caja.w, caja.s]]] } });
+        mapa.fitBounds([[caja.w, caja.s], [caja.e, caja.n]], { padding: 30, duration: 800 });
+        $("btnVisible").disabled = true;
+        $("selLocalidad").disabled = true;
+        progreso("progresoCarga", 0.1);
+        const esMVI = fuente === "mvi";
+        mensaje(`Descargando las calles de ${nombre} desde ${esMVI ? "la Malla Vial Integral" : "OpenStreetMap"}…`);
+        try {
+            const t0 = performance.now();
+            const datos = esMVI ? await descargarMVI(caja) : await overpass(caja);
+            progreso("progresoCarga", 0.75);
+            mensaje(`Construyendo el grafo (${fmt(datos.length)} ${esMVI ? "tramos" : "vías"})…`);
+            await esperar();
+            G = terminarGrafo(esMVI ? grafoMVI(datos) : grafoOSM(datos), poligono);
+            G.zona = { caja, poligono, nombre };
+            G.fuente = fuente;
+            // grado (sin importar el sentido) para encontrar intersecciones y calles sin salida
+            const vecinos = Array.from({ length: G.n }, () => new Set());
+            G.aristas.forEach((e) => { vecinos[e.a].add(e.b); vecinos[e.b].add(e.a); });
+            G.grado = vecinos.map((s) => s.size);
+            G.capa = { type: "FeatureCollection", features: G.aristas.map((e, i) => ({
+                type: "Feature", properties: { i, c: e.c, u: e.uno ? 1 : 0, sd: e.sd ? 1 : 0, v: -1 }, geometry: { type: "LineString", coordinates: e.coords } })) };
+            mapa.getSource("red").setData(G.capa);
+            // leyenda y atribucion segun la fuente
+            $("leyClase3").textContent = esMVI ? "Avenidas (AK y AC)" : "Vías arteriales (autopistas, avenidas principales)";
+            $("leyClase2").textContent = esMVI ? "Otras vías de 60 km/h" : "Vías secundarias";
+            $("filaSD").hidden = !esMVI;
+            $("atribucion").textContent = esMVI ? "Red vial: Malla Vial Integral · SDM, IDU, Catastro (CC BY 4.0)"
+                                                : "Red vial © colaboradores de OpenStreetMap (ODbL)";
+            pintarResumen(((performance.now() - t0) / 1000));
+            progreso("progresoCarga", null);
+            $("resumen").hidden = false;
+            if (modo === "cierre") entrarCierre();
+        } catch (err) {
+            progreso("progresoCarga", null);
+            mensaje(`No se pudo descargar la red de ${esMVI ? "la Malla Vial Integral" : "OpenStreetMap"} (${err.message}). ` +
+                "Intenta de nuevo en un minuto o con una zona más pequeña.", true);
+        } finally {
+            $("btnVisible").disabled = false;
+            $("selLocalidad").disabled = false;
+        }
+    }
+
+    function pintarResumen(segundos) {
+        const km = G.aristas.reduce((s, e) => s + e.len, 0) / 1000;
+        const kmUno = G.aristas.reduce((s, e) => s + (e.uno ? e.len : 0), 0) / 1000;
+        const inter = G.grado.filter((g) => g >= 3).length, sinSalida = G.grado.filter((g) => g === 1).length;
+        const area = G.zona.poligono ? areaPoligono(G.zona.poligono) : areaKm2(G.zona.caja);
+        const gradoMedio = G.aristas.length * 2 / G.n;
+        const kmSD = G.aristas.reduce((s, e) => s + (e.sd ? e.len : 0), 0) / 1000;
+        mensaje(`Red de ${G.zona.nombre} lista en ${fmt(segundos, 1)} s (${G.fuente === "mvi" ? "Malla Vial Integral" : "OpenStreetMap"}). ` +
+            "Ya puedes elegir un algoritmo." + (kmSD > 0 ? ` Ojo: el ${fmt(kmSD / km * 100)}% de los km no tiene dato de sentido y se toma como doble sentido.` : ""));
+        $("tiles").innerHTML = `
+            <div class="tile"><b>${fmt(inter)}</b><span>intersecciones (3 o más calles)</span></div>
+            <div class="tile"><b>${fmt(G.aristas.length)}</b><span>tramos de calle (aristas)</span></div>
+            <div class="tile"><b>${fmt(km)}</b><span>km de vías</span></div>
+            <div class="tile"><b>${fmt(kmUno / km * 100)}%</b><span>de los km son de un solo sentido</span></div>
+            <div class="tile"><b>${fmt(sinSalida)}</b><span>calles sin salida</span></div>
+            <div class="tile"><b>${fmt(inter / Math.max(0.1, area))}</b><span>intersecciones por km²</span></div>
+            <div class="tile"><b>${fmt(G.n)}</b><span>nodos del grafo</span></div>
+            <div class="tile"><b>${fmt(gradoMedio, 2)}</b><span>grado medio (calles por nodo)</span></div>
+            <div class="tile"><b>${fmt(area, 1)}</b><span>km² de la zona</span></div>`;
+    }
+    function areaPoligono(geom) {
+        // area aproximada en km2 (proyeccion local equirectangular)
+        const polis = geom.type === "Polygon" ? [geom.coordinates] : geom.coordinates;
+        let total = 0;
+        polis.forEach((anillos) => anillos.forEach((anillo, k) => {
+            const lat0 = anillo[0][1] * Math.PI / 180, kx = 111.32 * Math.cos(lat0), ky = 110.57;
+            let a = 0;
+            for (let i = 0, j = anillo.length - 1; i < anillo.length; j = i++) a += (anillo[j][0] * kx) * (anillo[i][1] * ky) - (anillo[i][0] * kx) * (anillo[j][1] * ky);
+            total += (k === 0 ? 1 : -1) * Math.abs(a / 2);
+        }));
+        return total;
+    }
+
+    // ---------- Eventos ----------
+    $("selLocalidad").addEventListener("change", (e) => {
+        if (e.target.value === "") return;
+        const f = localidades[Number(e.target.value)];
+        const nombre = f.properties.LOCNOMBRE.charAt(0) + f.properties.LOCNOMBRE.slice(1).toLowerCase();
+        cargarZona(cajaDe(f.geometry), f.geometry, nombre);
+    });
+    $("btnVisible").addEventListener("click", () => {
+        const b = mapa.getBounds();
+        const caja = { w: b.getWest(), s: b.getSouth(), e: b.getEast(), n: b.getNorth() };
+        const a = areaKm2(caja);
+        if (a > AREA_MAX_KM2) { mensaje(`La zona visible tiene ${fmt(a)} km²; acerca el mapa hasta menos de ${AREA_MAX_KM2} km².`, true); return; }
+        $("selLocalidad").value = "";
+        cargarZona(caja, null, "la zona visible");
+    });
+    document.querySelectorAll(".pestanas button").forEach((b) => b.addEventListener("click", () => {
+        modo = b.dataset.modo;
+        document.querySelectorAll(".pestanas button").forEach((x) => x.classList.toggle("activo", x === b));
+        $("modoRuta").hidden = modo !== "ruta";
+        $("modoIsocrona").hidden = modo !== "isocrona";
+        $("modoCentral").hidden = modo !== "central";
+        $("modoConect").hidden = modo !== "conect";
+        $("modoCierre").hidden = modo !== "cierre";
+        limpiarRuta();
+        quitarAnalisis();
+        if (modo === "cierre") entrarCierre(); else salirCierre();
+    }));
+    const segmento = (id, cb) => document.querySelectorAll(`#${id} button`).forEach((b) => b.addEventListener("click", () => {
+        document.querySelectorAll(`#${id} button`).forEach((x) => x.classList.toggle("activo", x === b));
+        cb(b.dataset.v);
+    }));
+    segmento("segCriterio", (v) => { criterio = v; limpiarRuta(); });
+    segmento("segAlgoritmo", (v) => { algoritmo = v; limpiarRuta(); });
+    $("btnLimpiarRuta").addEventListener("click", limpiarRuta);
+    segmento("segCierre", (v) => {
+        cierre.sub = v;
+        cierre.A = null;
+        limpiarRuta();
+        $("resCierre").hidden = true;
+        if (v !== "paradero" && cierre.paradero) { cierre.paradero = null; pintarParaderos(); }
+        if (v === "paradero") quitarAnalisis();
+        aplicarSubCierre();
+    });
+    $("btnImpacto").addEventListener("click", () => impactoCierre());
+    $("btnQuitarCierres").addEventListener("click", () => { cierre.cerradas.clear(); cambiaronCierres(); });
+    $("rngFuentes").addEventListener("input", (e) => { $("txtFuentes").textContent = e.target.value; });
+    $("btnCentral").addEventListener("click", () => G && centralidad());
+    $("btnConect").addEventListener("click", () => G && conectividad());
+    $("chkSD").addEventListener("change", (e) => mapa.setLayoutProperty("sd", "visibility", e.target.checked ? "visible" : "none"));
+    segmento("segFuente", async (v) => {
+        fuente = v;
+        limpiarRuta();
+        quitarAnalisis();
+        await mapaListo;
+        aplicarFuente();
+        // si ya hay una zona cargada, se vuelve a cargar con la otra fuente
+        if (v !== "esri" && G && G.fuente !== v) cargarZona(G.zona.caja, G.zona.poligono, G.zona.nombre);
+    });
+    // la clave se recuerda solo en este navegador
+    try { $("claveEsri").value = localStorage.getItem("claveEsriRedVial") || ""; } catch (err) { /* sin almacenamiento */ }
+    $("claveEsri").addEventListener("change", (e) => {
+        try { localStorage.setItem("claveEsriRedVial", e.target.value.trim()); } catch (err) { /* sin almacenamiento */ }
+    });
+    aplicarFuente();
+    iconos();
+    const localidadesListas = cargarLocalidades();
+
+    // Prueba: Usaquen con OpenStreetMap y el escenario de cierres abierto
+    $("btnPrueba").addEventListener("click", async () => {
+        await localidadesListas;
+        const sinTildes = (t) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+        const i = localidades.findIndex((f) => sinTildes(f.properties.LOCNOMBRE) === "USAQUEN");
+        if (i < 0) { mensaje("No se encontró la localidad de Usaquén.", true); return; }
+        if (!(G && G.fuente === "osm" && G.zona.nombre === "Usaquén")) {
+            fuente = "osm";
+            document.querySelectorAll("#segFuente button").forEach((x) => x.classList.toggle("activo", x.dataset.v === "osm"));
+            aplicarFuente();
+            $("selLocalidad").value = String(i);
+            await cargarZona(cajaDe(localidades[i].geometry), localidades[i].geometry, "Usaquén");
+        }
+        if (!G) return;
+        document.querySelector('.pestanas button[data-modo="cierre"]').click();
+        $("modoCierre").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+})();
+</script>
+</body>
+</html>

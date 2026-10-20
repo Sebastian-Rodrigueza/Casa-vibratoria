@@ -59,6 +59,9 @@
     header nav a:hover { background: #fff3ad; }
 
     #map { position: absolute; top: 76px; left: 0; right: 0; bottom: 0; background: #0d1117; }
+    .seg-fuente { display: flex; gap: 6px; margin: 2px 0 6px; }
+    .panel .seg-fuente button { flex: 1; margin: 0; text-align: center; padding: 7px 0; }
+    .nota-fuente { margin: 0 0 6px; font-size: 11.5px; color: #6b7076; }
 
     /* Panel izquierdo: capas y recorridos */
     .panel {
@@ -248,6 +251,7 @@
 <header>
     <span class="logo-box">
         <img src="../../Imagenes/logo-uniandes.png" alt="Universidad de los Andes">
+        <img class="logo-sinergia" src="../../Imagenes/SinerGIA-oscuro.png" alt="Lab SinergIA" style="height:40px;width:auto;max-width:none;max-height:none;flex:none;margin-left:12px;display:block">
     </span>
     <span class="brand-copy">
         <small>Geodata de Bogotá</small>
@@ -328,7 +332,11 @@
             </a>
             <a class="btn-demanda" href="Buses.html">
                 <i data-lucide="bus"></i>
-                <span><b>Buses del SITP</b><small>Recorrido, paradas y hora de salida de cada bus</small></span>
+                <span><b>Rutas y buses del SITP</b><small>Cómo llegar de A a B, recorrido y horario de cada ruta</small></span>
+            </a>
+            <a class="btn-demanda" href="RedVial.html">
+                <i data-lucide="waypoints"></i>
+                <span><b>Red vial y algoritmos</b><small>Calles como grafo: rutas, isócronas y calles clave</small></span>
             </a>
             <button type="button" id="btnRedTM"></button>
             <button type="button" id="btnCable"></button>
@@ -387,6 +395,11 @@
         <div class="cuerpo">
             <label><input type="checkbox" id="chkSatelital" checked> Imagen satelital</label>
             <label><input type="checkbox" id="chkEdificios" checked> Edificios 3D</label>
+            <div class="seg-fuente" id="segEdificios">
+                <button type="button" data-fuente="osm" class="activo">OpenStreetMap</button>
+                <button type="button" data-fuente="esri">Esri</button>
+            </div>
+            <p class="nota-fuente" id="notaEdificios">Edificios de OpenStreetMap (OpenFreeMap).</p>
             <label><input type="checkbox" id="chkTerreno" autocomplete="off"> Terreno 3D (pesado)</label>
             <button type="button" id="btnGirar" style="margin-top:8px"></button>
         </div>
@@ -403,6 +416,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/lucide@1.52.0/dist/umd/lucide.min.js"></script>
+<script src="../../esri3d-edificios.js"></script>
 <script>
     // ---------- Configuracion ----------
     const SERVICIO_METRO =
@@ -1956,16 +1970,62 @@
     ponerBoton(document.getElementById("btnRedTM"), "map", "Ver toda la red");
     ponerBoton(document.getElementById("btnCable"), "mountain", "TransMiCable en 3D");
 
+    // ---------- Edificios 3D: OpenStreetMap o Esri ----------
+    // Con Esri se pone debajo del mapa la escena de ArcGIS (ver esri3d-edificios.js)
+    const CIELO = {
+        "sky-color": "#87ceeb",
+        "sky-horizon-blend": 0.5,
+        "horizon-color": "#ffffff",
+        "horizon-fog-blend": 0.6,
+        "fog-color": "#d8e6ec",
+        "fog-ground-blend": 0.5
+    };
+    const NOTA_EDIFICIOS = {
+        osm: "Edificios de OpenStreetMap (OpenFreeMap).",
+        esri: "Esri 3D Buildings: alturas de Overture/OSM y Microsoft, se actualiza cada trimestre."
+    };
+    let esri = null; // se crea al cargar el mapa, con las capas del mapa base
+
+    async function ponerFuenteEdificios(fuente) {
+        if (!esri || fuente === (esri.activo ? "esri" : "osm")) return;
+        const botones = document.querySelectorAll("#segEdificios button");
+        const nota = document.getElementById("notaEdificios");
+        const marcar = (f) => botones.forEach((b) => b.classList.toggle("activo", b.dataset.fuente === f));
+        if (fuente === "osm") {
+            esri.desactivar();
+            chkTerreno.disabled = false;
+            chkTerreno.checked = !!map.getTerrain();
+            // devolver el mapa base segun las casillas
+            map.setLayoutProperty("satelital", "visibility", document.getElementById("chkSatelital").checked ? "visible" : "none");
+            if (map.getLayer("building-3d")) {
+                map.setLayoutProperty("building-3d", "visibility", document.getElementById("chkEdificios").checked ? "visible" : "none");
+            }
+            marcar("osm");
+            nota.textContent = NOTA_EDIFICIOS.osm;
+            return;
+        }
+        marcar("esri");
+        nota.textContent = "Cargando ArcGIS…";
+        botones.forEach((b) => b.disabled = true);
+        try {
+            esri.verImagen(document.getElementById("chkSatelital").checked);
+            esri.verEdificios(document.getElementById("chkEdificios").checked);
+            await esri.activar();
+            chkTerreno.checked = true;
+            chkTerreno.disabled = true; // con Esri el relieve siempre esta puesto
+            nota.textContent = NOTA_EDIFICIOS.esri;
+        } catch (e) {
+            marcar("osm");
+            nota.textContent = "No se pudo cargar Esri. " + NOTA_EDIFICIOS.osm;
+        }
+        botones.forEach((b) => b.disabled = false);
+    }
+
     // ---------- Inicio ----------
     map.on("load", async () => {
-        map.setSky({
-            "sky-color": "#87ceeb",
-            "sky-horizon-blend": 0.5,
-            "horizon-color": "#ffffff",
-            "horizon-fog-blend": 0.6,
-            "fog-color": "#d8e6ec",
-            "fog-ground-blend": 0.5
-        });
+        // capas del mapa base (se ocultan al ver los edificios de Esri)
+        esri = EsriBajoMapa(map, { capasBase: map.getStyle().layers.map((l) => l.id).concat("satelital"), terreno: "terreno" });
+        map.setSky(CIELO);
         map.setLight({ anchor: "map", color: "#fff2d9", intensity: 0.55, position: [1.6, 200, 40] });
 
         // Terreno real (apagado por defecto: es lo mas pesado de dibujar)
@@ -1991,13 +2051,17 @@
             map.getLayer("building-3d") ? "building-3d" : undefined);
 
         document.getElementById("chkSatelital").addEventListener("change", (e) => {
+            if (esri.activo) { esri.verImagen(e.target.checked); return; }
             map.setLayoutProperty("satelital", "visibility", e.target.checked ? "visible" : "none");
         });
         document.getElementById("chkEdificios").addEventListener("change", (e) => {
+            if (esri.activo) { esri.verEdificios(e.target.checked); return; }
             if (map.getLayer("building-3d")) {
                 map.setLayoutProperty("building-3d", "visibility", e.target.checked ? "visible" : "none");
             }
         });
+        document.querySelectorAll("#segEdificios button").forEach((b) =>
+            b.addEventListener("click", () => ponerFuenteEdificios(b.dataset.fuente)));
 
         // Datos de TransMilenio y del Metro en paralelo
         const nombresTM = ["troncales", "estaciones", "patios", "cableTrazado", "cablePilonas", "cableEstaciones"];
