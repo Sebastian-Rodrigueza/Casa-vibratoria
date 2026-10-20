@@ -1,0 +1,2424 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LiDAR sobre el mapa — Universidad de los Andes</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Sans+3:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css" rel="stylesheet">
+
+<style>
+    html, body { margin: 0; height: 100%; font-family: "Inter", sans-serif; color: #34383d; background: #111; }
+    header {
+        height: 84px; display: flex; align-items: center; justify-content: center; gap: 18px;
+        padding: 0 24px; background: rgba(255,255,255,.97); border-bottom: 1px solid #e5e5de;
+        box-shadow: 0 3px 15px rgba(34,36,39,.06); position: relative; z-index: 10;
+    }
+    header .logo-box { height: 46px; display: flex; align-items: center; padding-right: 18px; border-right: 1px solid #e5e5de; }
+    header .logo-box img { max-height: 42px; width: auto; display: block; }
+    header .brand-copy small { display: block; margin-bottom: 2px; color: #898d91; font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+    header .brand-copy strong { display: block; font: 700 21px/1.1 "Source Sans 3", sans-serif; color: #26292d; }
+    header .btn-inicio {
+        position: absolute; right: 24px; top: 50%; transform: translateY(-50%);
+        display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 8px;
+        background: #f5c400; border: 1px solid #d7aa00; color: #26292d; font-size: 13px; font-weight: 700; text-decoration: none;
+    }
+    header .btn-inicio:hover { background: #ffd633; }
+    #map { position: absolute; top: 84px; left: 0; right: 0; bottom: 0; }
+
+    .panel {
+        position: absolute; top: 96px; left: 12px; bottom: 12px; z-index: 5; width: 290px;
+        overflow-y: auto; background: rgba(255,255,255,.96); border-radius: 12px;
+        box-shadow: 0 4px 14px rgba(0,0,0,.25); padding: 14px; font-size: 12.5px; box-sizing: border-box;
+    }
+    .panel h1 { margin: 0 0 4px; font: 700 17px/1.2 "Source Sans 3", sans-serif; color: #26292d; }
+    .panel p { margin: 0 0 10px; line-height: 1.45; color: #5b5f64; }
+    .panel h2 { margin: 14px 0 6px; padding-top: 12px; border-top: 1px solid #e5e5de; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: #898d91; }
+    .panel button, .panel select, .panel input[type=text] {
+        font-family: inherit; font-size: 12.5px; border: 1px solid #e5e5de; border-radius: 8px; background: #f7f7f3; box-sizing: border-box;
+    }
+    .panel button { padding: 8px 10px; cursor: pointer; }
+    .panel button:hover { background: #fff3ad; }
+    .panel button.activo { background: #f5c400; border-color: #d7aa00; font-weight: 700; }
+    .panel button.ancho { width: 100%; text-align: left; margin-bottom: 6px; }
+    .panel input[type=text] { width: 100%; padding: 7px 8px; background: #fff; }
+    .panel select { width: 100%; padding: 6px 8px; background: #fff; }
+    .fila { display: flex; gap: 6px; margin-bottom: 6px; }
+    .fila > * { flex: 1; }
+    .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+    .control { margin: 8px 0; }
+    .control label { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 3px; }
+    .control label span { font-weight: 500; color: #898d91; }
+    .control input[type=range] { width: 100%; accent-color: #d7aa00; }
+    .estado { white-space: pre-line; padding: 8px 10px; border-radius: 8px; background: #f2f6fb; color: #34495e; line-height: 1.45; }
+    .estado.error { background: #fdecec; color: #8a1f1f; }
+    .datos { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin-top: 8px; }
+    .datos b { color: #26292d; }
+    .leyenda { display: flex; flex-direction: column; gap: 3px; }
+    .leyenda label { display: flex; align-items: center; gap: 7px; cursor: pointer; }
+    .leyenda i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; flex: none; }
+    .leyenda small { margin-left: auto; color: #898d91; }
+    .rampa { height: 10px; border-radius: 5px; margin: 4px 0 2px; }
+    .rampa-txt { display: flex; justify-content: space-between; color: #898d91; }
+    .nota { font-size: 11.5px; color: #75797e; line-height: 1.45; }
+    .nota code { background: #f2f2ee; padding: 1px 4px; border-radius: 4px; }
+    .maplibregl-popup { z-index: 5; }
+    .check { display: flex; gap: 7px; align-items: flex-start; margin: 2px 0 8px; font-size: 12px; color: #5b5f64; line-height: 1.35; cursor: pointer; }
+    .check input { margin: 2px 0 0; accent-color: #d7aa00; }
+
+    /* Vista 3D propia (nubes sin georreferenciar): orbita y recorrido */
+    #vista3d { position: absolute; top: 84px; left: 0; right: 0; bottom: 0; z-index: 1; background: radial-gradient(ellipse at 55% 35%, #2d333b, #15181c); }
+    .lienzo3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+    .guia3d {
+        position: absolute; top: 50%; left: calc(50% + 150px); transform: translate(-50%, -50%); z-index: 4;
+        width: min(92%, 400px); padding: 18px 20px; border-radius: 14px; background: rgba(255,255,255,.98);
+        box-shadow: 0 10px 40px rgba(0,0,0,.45); font-size: 13px; color: #34383d;
+    }
+    .guia3d h3 { margin: 0 0 10px; font: 700 18px "Source Sans 3", sans-serif; color: #26292d; }
+    .guia3d ul { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 8px; }
+    .guia3d li { display: grid; grid-template-columns: 150px 1fr; gap: 10px; align-items: center; line-height: 1.35; }
+    .guia3d li b { padding: 5px 8px; border-radius: 7px; background: #f2f2ee; font-size: 12px; text-align: center; }
+    .guia3d button { width: 100%; padding: 9px; border: 1px solid #d7aa00; border-radius: 8px; background: #f5c400; font: 700 13px "Inter", sans-serif; cursor: pointer; }
+    svg.lucide { width: 15px; height: 15px; vertical-align: -3px; flex: none; }
+    header .btn-inicio svg.lucide { width: 16px; height: 16px; }
+    .barra3d button { display: inline-flex; align-items: center; gap: 6px; }
+    .seg button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+
+    /* Comparar dos nubes */
+    .cortina3d { position: absolute; top: 0; bottom: 0; width: 3px; margin-left: -1.5px; z-index: 2; background: #f5c400; cursor: ew-resize; touch-action: none; }
+    .cortina3d::before { content: ""; position: absolute; inset: 0 -10px; }
+    .cortina3d span {
+        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 34px; height: 34px; border-radius: 50%;
+        display: grid; place-items: center; background: #f5c400; color: #26292d; box-shadow: 0 2px 10px rgba(0,0,0,.4);
+    }
+    .cortina3d span svg.lucide { width: 18px; height: 18px; }
+    .etq3d {
+        position: absolute; top: 70px; z-index: 2; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        padding: 5px 10px; border-radius: 8px; background: rgba(0,0,0,.65); color: #fff; font-size: 12px; font-weight: 600; pointer-events: none;
+    }
+    .etq3d i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+    .etq3d.activa { outline: 2px solid #f5c400; }
+    .linea3d { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; z-index: 2; background: rgba(255,255,255,.35); pointer-events: none; }
+    .unir3d {
+        position: absolute; z-index: 3; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 6px;
+        padding: 6px 11px; border-radius: 8px; border: 1px solid #e5e5de; background: rgba(255,255,255,.96);
+        font: 600 12px "Inter", sans-serif; color: #26292d; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,.35); white-space: nowrap;
+    }
+    .unir3d[hidden], .cortina3d[hidden], .linea3d[hidden], .etq3d[hidden] { display: none; }
+    .unir3d.separadas { background: #f5c400; border-color: #d7aa00; }
+    .tarjeta-dif {
+        position: absolute; right: 12px; z-index: 3; width: 310px; max-height: calc(100% - 200px); overflow-y: auto;
+        padding: 12px 14px; border-radius: 12px; background: rgba(255,255,255,.97); box-shadow: 0 6px 24px rgba(0,0,0,.4);
+        font-size: 12px; color: #34383d; line-height: 1.45;
+    }
+    .tarjeta-dif[hidden] { display: none; }
+    .tarjeta-dif h4 { display: flex; justify-content: space-between; align-items: center; margin: 0 0 6px; font: 700 15px "Source Sans 3", sans-serif; color: #26292d; }
+    .tarjeta-dif h4 button { border: 0; background: none; padding: 2px; cursor: pointer; color: #75797e; }
+    .tarjeta-dif p { margin: 0 0 8px; }
+    .td-banda { display: grid; grid-template-columns: 14px 1fr auto; gap: 2px 8px; align-items: center; margin: 7px 0; }
+    .td-banda i { width: 14px; height: 14px; border-radius: 4px; }
+    .td-banda b { font-size: 12px; }
+    .td-banda small { grid-column: 2 / 4; color: #75797e; font-size: 11px; }
+    .td-banda .td-barra { grid-column: 2 / 4; height: 6px; border-radius: 3px; background: #ecece6; overflow: hidden; }
+    .td-banda .td-barra span { display: block; height: 100%; }
+    .td-diag { padding: 8px 10px; border-radius: 8px; background: #f2f6fb; color: #26364a; }
+    .td-diag.alerta { background: #fff4d6; color: #5c4300; }
+    .tarjeta-dif details { margin-top: 8px; }
+    .tarjeta-dif summary { cursor: pointer; font-weight: 600; }
+    .tarjeta-dif ul { margin: 6px 0 0; padding-left: 18px; }
+    .tarjeta-dif li { margin-bottom: 4px; }
+    .rampa-dif { height: 10px; border-radius: 5px; margin: 6px 0 2px; background: linear-gradient(90deg, rgb(40,110,220), rgb(60,200,140), rgb(250,215,50), rgb(225,45,35)); }
+    .barra3d #b3Todo { background: #26292d; border-color: #26292d; color: #fff; font-weight: 700; }
+    .barra3d {
+        position: absolute; top: 12px; left: calc(50% + 150px); transform: translateX(-50%); z-index: 2;
+        display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; align-items: center; padding: 6px;
+        border-radius: 10px; background: rgba(255,255,255,.96); box-shadow: 0 4px 14px rgba(0,0,0,.3);
+    }
+    .barra3d button { font-family: inherit; font-size: 12.5px; padding: 7px 10px; border: 1px solid #e5e5de; border-radius: 8px; background: #f7f7f3; cursor: pointer; white-space: nowrap; }
+    .barra3d button:hover { background: #fff3ad; }
+    .barra3d button.activo { background: #f5c400; border-color: #d7aa00; font-weight: 700; }
+    .barra3d .sep { width: 1px; height: 22px; background: #e5e5de; margin: 0 3px; }
+    .ayuda3d {
+        position: absolute; bottom: 12px; left: calc(50% + 150px); transform: translateX(-50%); z-index: 2;
+        max-width: min(80%, 640px); padding: 7px 12px; border-radius: 8px; background: rgba(0,0,0,.62);
+        color: #eef0f2; font-size: 12px; line-height: 1.45; text-align: center; pointer-events: none;
+    }
+    .ayuda3d kbd { display: inline-block; padding: 0 5px; border-radius: 4px; background: rgba(255,255,255,.18); font: 600 11px "Inter", sans-serif; }
+    .globo {
+        position: absolute; z-index: 3; transform: translate(-50%, calc(-100% - 12px)); pointer-events: none;
+        padding: 8px 10px; border-radius: 8px; background: #fff; box-shadow: 0 4px 14px rgba(0,0,0,.35); font-size: 12px; white-space: nowrap;
+    }
+    .maplibregl-popup-content { font-family: "Inter", sans-serif; font-size: 12px; }
+    @media (max-width: 640px) {
+        header .brand-copy strong { font-size: 16px; }
+        header .btn-inicio { right: 10px; padding: 7px 10px; }
+        .panel { top: auto; bottom: 8px; left: 8px; right: 8px; width: auto; max-height: 45%; }
+        .barra3d, .ayuda3d, .guia3d { left: 50%; }
+        .ayuda3d { display: none; }
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <span class="logo-box"><img src="Imagenes/logo-uniandes.png" alt="Universidad de los Andes">
+<img class="logo-sinergia" src="Imagenes/SinerGIA-oscuro.png" alt="Lab SinergIA" style="height:40px;width:auto;max-width:none;max-height:none;flex:none;margin-left:12px;display:block"></span>
+    <span class="brand-copy"><small>Universidad de los Andes</small><strong>Lab SinergIA</strong></span>
+    <a class="btn-inicio" href="Index.html" aria-label="Ir al inicio"><i data-lucide="house"></i> Inicio</a>
+</header>
+
+<div id="map"></div>
+
+<div id="vista3d" hidden>
+    <div class="barra3d">
+        <button type="button" id="b3Todo" title="Si te pierdes: vuelve a ver toda la nube"><i data-lucide="house"></i> Ver toda la nube</button>
+        <span class="sep"></span>
+        <button type="button" id="b3Orbita" class="activo" title="Girar alrededor con el mouse"><i data-lucide="rotate-3d"></i> Girar alrededor</button>
+        <button type="button" id="b3Caminar" title="Caminar en primera persona con el teclado"><i data-lucide="footprints"></i> Caminar por dentro</button>
+        <span class="sep"></span>
+        <button type="button" data-vista="frente">Frente</button>
+        <button type="button" data-vista="lado">Lado</button>
+        <button type="button" data-vista="arriba">Arriba</button>
+        <button type="button" id="b3Girar" title="La cámara da vueltas sola"><i data-lucide="rotate-cw"></i> Girar sola</button>
+        <button type="button" id="b3Ayuda" title="Cómo moverse"><i data-lucide="circle-question-mark"></i></button>
+    </div>
+    <div class="guia3d" id="guia3d" hidden>
+        <h3>Cómo moverte</h3>
+        <ul>
+            <li><b>Clic izquierdo + arrastrar</b>Girar alrededor de la nube</li>
+            <li><b>Clic derecho + arrastrar</b>Mover la vista a los lados</li>
+            <li><b>Rueda del mouse</b>Acercar y alejar, hacia donde apunta el mouse</li>
+            <li><b>Doble clic</b>Entrar caminando a ese punto (una puerta, una ventana…)</li>
+            <li><b>W A S D · flechas</b>Caminar (en modo caminar); <b style="display:inline;padding:1px 5px">Esc</b> para salir</li>
+            <li><b>Ver toda la nube</b>Si te pierdes, vuelve al inicio</li>
+        </ul>
+        <button type="button" id="guiaOk">Entendido</button>
+    </div>
+    <div class="ayuda3d" id="ayuda3d"></div>
+    <div class="globo" id="globo" hidden></div>
+    <div class="cortina3d" id="cortina3d" hidden title="Arrastra para comparar"><span><i data-lucide="chevrons-left-right"></i></span></div>
+    <div class="tarjeta-dif" id="tarjetaDif" hidden>
+        <h4>Cómo leer las diferencias <button type="button" id="tdCerrar" title="Cerrar"><i data-lucide="x"></i></button></h4>
+        <p>Cada punto de <b>B</b> tiene el color de su distancia al punto más cercano de <b>A</b>.
+            <b>Mientras más lejos, más cálido el color</b>: azul es que coincide y rojo que cambió.</p>
+        <div id="tdBandas"><p class="nota">Calculando…</p></div>
+        <p class="td-diag" id="tdDiag" hidden></p>
+        <details>
+            <summary>Ojo al interpretar</summary>
+            <ul>
+                <li><b>Primero revisa la alineación</b> (modo Superponer). Si las nubes están corridas, paredes enteras salen rojas aunque no hayan cambiado.</li>
+                <li><b>Rojo no siempre es daño</b>: también es material nuevo, objetos que se movieron (personas, conos) o zonas que el escáner de A no alcanzó a ver.</li>
+                <li><b>Lo que desapareció no sale rojo</b>: si algo estaba en A y no en B, no hay punto de B que pintar; se ve como un hueco.</li>
+                <li><b>No dice hacia dónde</b>: una pared que se abombó hacia afuera o se hundió se ven igual.</li>
+                <li><b>Nunca da 0 exacto</b>: entre punto y punto hay unos milímetros (densidad y ruido del escáner). Por eso la escala no debe ser menor que ese espaciado.</li>
+                <li><b>Patrones a buscar</b>: manchas rojas pequeñas y concentradas (grietas, desprendimientos, piezas que se movieron) son cambios reales; degradados largos de azul a rojo en una pared indican giro o inclinación entre las nubes.</li>
+            </ul>
+        </details>
+    </div>
+    <div class="linea3d" id="linea3d" hidden></div>
+    <button type="button" class="unir3d" id="b3Unir" hidden></button>
+    <div class="etq3d" id="etqA" hidden></div>
+    <div class="etq3d" id="etqB" hidden></div>
+</div>
+
+<div class="panel">
+    <h1>Nube de puntos LiDAR sobre el mapa</h1>
+    <p>Prueba con archivos <b>COPC</b> (<code>.copc.laz</code>): la nube se lee por partes desde
+        el archivo, solo lo que se ve y con más detalle al acercarse. Nada se sube a ningún servidor.</p>
+
+    <h2>Fuente</h2>
+    <button class="ancho activo" id="btnAutzen" type="button">Ejemplo: Autzen (Oregón, EE. UU.)<br>
+        <small>10,6 millones de puntos clasificados · 81 MB</small></button>
+    <div class="control">
+        <select id="selEjemplo">
+            <option value="">Más ejemplos probados…</option>
+            <option value="https://data.geopf.fr/telechargement/download/LiDARHD-NUALID/NUALHD_1-0__LAZ_LAMB93_KE_2025-06-06/LHD_FXX_0648_6863_PTS_LAMB93_IGN69.copc.laz">París, Torre Eiffel · IGN Francia · 16 M puntos</option>
+            <option value="https://s3.amazonaws.com/hobu-lidar/sofi.copc.laz">Estadio SoFi, Los Ángeles · 364 M puntos</option>
+            <option value="https://s3.amazonaws.com/hobu-lidar/millsite.copc.laz">Millsite, Utah · 375 M puntos</option>
+            <option value="https://s3.amazonaws.com/hobu-lidar/montreal-2015.copc.laz">Montreal completo (2015) · 9.700 M puntos</option>
+        </select>
+    </div>
+    <div class="fila">
+        <input type="text" id="txtUrl" placeholder="https://.../archivo.copc.laz">
+    </div>
+    <div class="fila">
+        <button type="button" id="btnUrl">Abrir URL</button>
+        <button type="button" id="btnArchivo">Archivo del PC</button>
+    </div>
+    <input type="file" id="archivo" accept=".laz,.las,.copc" hidden>
+    <div class="control">
+        <label for="selEpsg">Sistema de coordenadas <span>si el archivo no lo trae</span></label>
+        <select id="selEpsg">
+            <option value="">Usar el del archivo</option>
+            <option value="local">Coordenadas locales (sin georreferenciar)</option>
+            <option value="EPSG:9377">EPSG:9377 · MAGNA-SIRGAS Origen Nacional (Colombia)</option>
+            <option value="EPSG:3116">EPSG:3116 · MAGNA-SIRGAS Bogotá</option>
+            <option value="EPSG:3115">EPSG:3115 · MAGNA-SIRGAS Oeste</option>
+            <option value="EPSG:3117">EPSG:3117 · MAGNA-SIRGAS Este Central</option>
+            <option value="EPSG:3118">EPSG:3118 · MAGNA-SIRGAS Este</option>
+            <option value="EPSG:3114">EPSG:3114 · MAGNA-SIRGAS Oeste-Oeste</option>
+            <option value="EPSG:32618">EPSG:32618 · WGS 84 / UTM 18N</option>
+            <option value="EPSG:32617">EPSG:32617 · WGS 84 / UTM 17N</option>
+            <option value="EPSG:32619">EPSG:32619 · WGS 84 / UTM 19N</option>
+            <option value="EPSG:3857">EPSG:3857 · Web Mercator</option>
+            <option value="EPSG:4326">EPSG:4326 · Grados (lon/lat)</option>
+        </select>
+    </div>
+    <div class="estado" id="estado">Cargando…</div>
+    <div class="datos" id="datos"></div>
+
+    <h2>Color</h2>
+    <div class="seg" id="segColor">
+        <button type="button" data-modo="clase" class="activo">Clasificación</button>
+        <button type="button" data-modo="rgb">Color real</button>
+        <button type="button" data-modo="altura">Altura</button>
+        <button type="button" data-modo="intensidad">Intensidad</button>
+    </div>
+    <div id="leyenda" style="margin-top:8px"></div>
+
+    <h2>Vista</h2>
+    <div class="control">
+        <label for="rngTam">Tamaño del punto <span id="vTam">2 px</span></label>
+        <input type="range" id="rngTam" min="0.25" max="6" step="0.25" value="2">
+    </div>
+    <label class="check"><input type="checkbox" id="chkMetros"> Tamaño en centímetros: los puntos crecen al acercarse
+        (rellena paredes al recorrer por dentro)</label>
+    <div class="control">
+        <label for="rngPresupuesto">Máximo de puntos <span id="vPresupuesto">2,0 M</span></label>
+        <input type="range" id="rngPresupuesto" min="0.5" max="10" step="0.5" value="2">
+    </div>
+    <div class="control">
+        <label for="rngDetalle">Detalle al acercarse <span id="vDetalle">normal</span></label>
+        <input type="range" id="rngDetalle" min="0.5" max="2" step="0.25" value="1">
+    </div>
+    <div class="control">
+        <label for="rngExag">Exagerar altura <span id="vExag">×1</span></label>
+        <input type="range" id="rngExag" min="1" max="4" step="0.5" value="1">
+    </div>
+    <div class="control">
+        <label for="rngAjuste">Subir / bajar la nube <span id="vAjuste">0 m</span></label>
+        <input type="range" id="rngAjuste" min="-30" max="30" step="0.5" value="0">
+    </div>
+    <div class="fila">
+        <button type="button" id="btnEncuadrar">Encuadrar la nube</button>
+        <button type="button" id="btnSatelite" class="activo">Satélite</button>
+    </div>
+    <button type="button" id="btnUbicar" class="ancho" hidden><i data-lucide="map-pin"></i> Ubicar en el mapa</button>
+
+    <h2>Comparar dos nubes</h2>
+    <p class="nota">Abre una segunda nube del mismo lugar (por ejemplo, la mesa antes y después del ensayo)
+        para compararlas en 3D con la misma cámara.</p>
+    <button type="button" id="btnCompArchivo" class="ancho"><i data-lucide="folder-open"></i> Abrir la segunda nube (archivo del PC)</button>
+    <div class="fila">
+        <input type="text" id="txtCompUrl" placeholder="o una URL https://…">
+        <button type="button" id="btnCompUrl" style="flex:0 0 auto"><i data-lucide="link"></i> Abrir</button>
+    </div>
+    <input type="file" id="archivoComp" accept=".laz,.las,.copc" hidden>
+    <div class="estado" id="compEstado" hidden></div>
+    <div id="compControles" hidden>
+        <div class="datos" id="compDatos" style="margin-bottom:8px"></div>
+        <div class="seg" id="segComp">
+            <button type="button" data-comp="cortina" class="activo"><i data-lucide="columns-2"></i> Cortina</button>
+            <button type="button" data-comp="lado"><i data-lucide="square-split-horizontal"></i> Lado a lado</button>
+            <button type="button" data-comp="superponer"><i data-lucide="layers"></i> Superponer</button>
+            <button type="button" data-comp="diferencias"><i data-lucide="activity"></i> Diferencias</button>
+        </div>
+        <p class="nota" id="compNota" style="margin-top:8px"></p>
+        <div id="compDif" hidden>
+            <div class="control">
+                <label for="rngUmbral">Cambio máximo en la escala <span id="vUmbral">5 cm</span></label>
+                <input type="range" id="rngUmbral" min="0.5" max="30" step="0.5" value="5">
+            </div>
+            <div class="rampa-dif"></div>
+            <div class="rampa-txt"><span>0 cm (igual)</span><span id="vUmbral2">5 cm o más</span></div>
+            <p class="nota" id="compResumen" style="margin-top:6px"></p>
+            <button type="button" id="btnTarjeta" class="ancho"><i data-lucide="info"></i> Cómo leer los colores</button>
+        </div>
+        <p class="nota" style="margin:10px 0 4px"><b>Alinear la segunda nube</b></p>
+        <label class="check"><input type="checkbox" id="chkAlinear" checked> Poner B en el mismo sitio que A automáticamente
+            (centros y piso juntos, si los escaneos tienen coordenadas distintas)</label>
+        <p class="nota" id="compAuto" hidden></p>
+        <div class="control"><label for="rngBgiro">Girar B <span id="vBgiro">0°</span></label><input type="range" id="rngBgiro" min="-180" max="180" step="0.5" value="0"></div>
+        <button type="button" id="btnCalzar" class="ancho"><i data-lucide="wand-sparkles"></i> Alinear automáticamente (giro + ajuste fino)</button>
+        <p class="nota" style="margin:4px 0">Ajuste fino a mano:</p>
+        <div class="control"><label for="rngBx">Mover en X <span id="vBx">0 cm</span></label><input type="range" id="rngBx" min="-200" max="200" step="0.5" value="0"></div>
+        <div class="control"><label for="rngBy">Mover en Y <span id="vBy">0 cm</span></label><input type="range" id="rngBy" min="-200" max="200" step="0.5" value="0"></div>
+        <div class="control"><label for="rngBz">Mover en Z <span id="vBz">0 cm</span></label><input type="range" id="rngBz" min="-200" max="200" step="0.5" value="0"></div>
+        <button type="button" id="btnCompQuitar" class="ancho"><i data-lucide="x"></i> Quitar la comparación</button>
+    </div>
+
+    <h2>Cómo usar mis datos</h2>
+    <p class="nota">Si tienes un <code>.las</code> o <code>.laz</code> normal, conviértelo a COPC gratis con
+        PDAL: <code>pdal translate entrada.laz salida.copc.laz</code> (o en QGIS 3.32+ con
+        “Exportar a COPC”). Con coordenadas reales (en Colombia normalmente EPSG:9377 o 3116) queda
+        sobre el satélite; si son locales (escáner, modelo sin georreferenciar) se muestra sobre una
+        cuadrícula en metros y se puede ubicar a mano en el mapa.
+        Para publicarlo en el sitio, el archivo debe estar en un almacenamiento que permita lectura por rangos
+        (S3, Google Cloud Storage, Cloudflare R2…); Vercel no sirve para archivos de este tamaño.</p>
+    <p class="nota">Clic sobre un punto para ver su clase y altura. Botón derecho (o dos dedos) para girar e inclinar.</p>
+</div>
+
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/deck.gl@9.1.14/dist.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/proj4@2.15.0/dist/proj4.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@1.52.0/dist/umd/lucide.min.js"></script>
+<script type="module">
+    import { Copc } from "https://cdn.jsdelivr.net/npm/copc@0.0.9/+esm";
+    import { createLazPerf } from "https://cdn.jsdelivr.net/npm/laz-perf@0.0.7/+esm";
+
+    const AUTZEN = "https://s3.amazonaws.com/hobu-lidar/autzen-classified.copc.laz";
+
+    // Definiciones para cuando el archivo no trae su sistema de coordenadas
+    proj4.defs("EPSG:9377", "+proj=tmerc +lat_0=4 +lon_0=-73 +k=0.9992 +x_0=5000000 +y_0=2000000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs");
+    proj4.defs("EPSG:3116", "+proj=tmerc +lat_0=4.596200416666666 +lon_0=-74.07750791666666 +k=1 +x_0=1000000 +y_0=1000000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs");
+    proj4.defs("EPSG:32618", "+proj=utm +zone=18 +datum=WGS84 +units=m +no_defs");
+    proj4.defs("EPSG:32617", "+proj=utm +zone=17 +datum=WGS84 +units=m +no_defs");
+    proj4.defs("EPSG:32619", "+proj=utm +zone=19 +datum=WGS84 +units=m +no_defs");
+    proj4.defs("EPSG:4686", "+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs");
+    // MAGNA-SIRGAS por zonas (origenes Oeste-Oeste, Oeste, Este Central, Este)
+    [[3114, -80.07750791666666], [3115, -77.07750791666666], [3117, -71.07750791666666], [3118, -68.07750791666666]].forEach(([c, lon]) =>
+        proj4.defs("EPSG:" + c, `+proj=tmerc +lat_0=4.596200416666666 +lon_0=${lon} +k=1 +x_0=1000000 +y_0=1000000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs`));
+
+    // Colores de las clases ASPRS (estandar LAS)
+    const CLASES = {
+        0: ["Nunca clasificado", [170, 170, 170]], 1: ["Sin clasificar", [200, 200, 200]],
+        2: ["Suelo", [166, 116, 62]], 3: ["Vegetación baja", [182, 230, 120]],
+        4: ["Vegetación media", [92, 184, 72]], 5: ["Vegetación alta", [28, 120, 50]],
+        6: ["Edificio", [235, 90, 60]], 7: ["Ruido bajo", [255, 0, 255]],
+        8: ["Punto clave", [255, 230, 0]], 9: ["Agua", [50, 120, 230]],
+        10: ["Riel", [120, 80, 140]], 11: ["Superficie vial", [90, 90, 100]],
+        12: ["Traslape", [250, 200, 120]], 13: ["Cable (protección)", [255, 255, 160]],
+        14: ["Cable (conductor)", [255, 210, 0]], 15: ["Torre", [200, 60, 160]],
+        16: ["Conector de cable", [240, 160, 60]], 17: ["Puente", [150, 110, 220]],
+        18: ["Ruido alto", [255, 0, 160]]
+    };
+    const RAMPA = [[48, 18, 59], [70, 107, 227], [41, 187, 236], [49, 242, 153], [163, 253, 61], [237, 208, 58], [251, 128, 34], [208, 47, 5], [122, 4, 3]];
+    const css = c => `rgb(${c.join(",")})`;
+    function rampa(t) {
+        t = Math.min(1, Math.max(0, t)) * (RAMPA.length - 1);
+        const i = Math.min(RAMPA.length - 2, Math.floor(t)), f = t - i, a = RAMPA[i], b = RAMPA[i + 1];
+        return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
+    }
+
+    const $ = id => document.getElementById(id);
+    // Iconos de Lucide (los <i data-lucide> se cambian por su dibujo)
+    function iconos() { if (window.lucide) lucide.createIcons({ attrs: { "stroke-width": 2 } }); }
+    iconos();
+    const opc = { modo: "clase", tam: 2, metros: false, presupuesto: 2e6, detalle: 1, exag: 1, ajuste: 0, ocultas: new Set([7, 18]) };
+
+    // ---------- Mapa ----------
+    const map = new maplibregl.Map({
+        container: "map",
+        style: {
+            version: 8,
+            sources: {
+                sat: { type: "raster", tileSize: 256, maxzoom: 19, attribution: "Imagen © Esri",
+                       tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"] },
+                osm: { type: "raster", tileSize: 256, maxzoom: 19, attribution: "© OpenStreetMap",
+                       tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"] }
+            },
+            layers: [
+                { id: "fondo", type: "background", paint: { "background-color": "#111" } },
+                { id: "osm", type: "raster", source: "osm", layout: { visibility: "none" } },
+                { id: "sat", type: "raster", source: "sat" }
+            ]
+        },
+        center: [-123.075, 44.05], zoom: 15, pitch: 55, bearing: -20, maxPitch: 85,
+        maxZoom: 24 // objetos pequenos (escaneos de pocos metros) necesitan acercarse mucho
+    });
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
+    // Cuadricula en metros: el "piso" de las nubes sin georreferenciar
+    map.on("load", () => {
+        map.addSource("cuadricula", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        map.addLayer({
+            id: "cuadricula", type: "line", source: "cuadricula", layout: { visibility: "none" },
+            paint: {
+                "line-color": ["case", ["get", "eje"], "#f5c400", "#ffffff"],
+                "line-opacity": ["case", ["get", "eje"], 0.55, ["get", "mayor"], 0.28, 0.1],
+                "line-width": ["case", ["get", "mayor"], 1.2, 0.8]
+            }
+        });
+    });
+    map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-right");
+
+    const overlay = new deck.MapboxOverlay({ interleaved: false, layers: [], onClick: alClic });
+    map.addControl(overlay);
+
+    // ---------- Estado de la nube abierta ----------
+    let nube = null;          // { get, copc, aGeo, origen, nodos, zBase, zMin, zMax, ... }
+    let lazPerf = null;
+    let generacion = 0;       // sube al abrir otra nube, para descartar cargas viejas
+
+    function estado(txt, error) {
+        $("estado").textContent = txt;
+        $("estado").classList.toggle("error", !!error);
+    }
+    const mil = n => n.toLocaleString("es-CO");
+    const millones = n => (n / 1e6).toLocaleString("es-CO", { maximumFractionDigits: 1 }) + " M";
+    const dec = n => n.toLocaleString("es-CO", { maximumFractionDigits: Math.abs(n) < 100 ? 2 : 0 });
+
+    // Lectores por rangos: URL (HTTP Range) o archivo local (File.slice)
+    // Algunos servidores (p. ej. el IGN de Francia) limitan a ~1 peticion por segundo y responden 429.
+    // Si pasa: se piden de a una con pausa, y si el archivo es mediano se baja entero una sola vez.
+    const ESPERA_LENTO = 1100, MAX_ENTERO = 300e6;
+    const dormir = ms => new Promise(r => setTimeout(r, ms));
+    function lectorUrl(url) {
+        let lento = false, ultimo = 0, cadena = Promise.resolve(), entero = null, bajando = false;
+        function turno() {
+            cadena = cadena.then(async () => {
+                await dormir(Math.max(0, ultimo + ESPERA_LENTO - Date.now()));
+                ultimo = Date.now();
+            });
+            return cadena;
+        }
+        async function pedirConPausa(opciones) {
+            for (let intento = 0; intento < 10; intento++) {
+                if (lento) await turno();
+                const r = await fetch(url, opciones);
+                if (r.status === 429 || r.status === 503) {
+                    if (!lento) { lento = true; bajarEntero(); }
+                    await dormir(ESPERA_LENTO * (1 + intento));
+                    continue;
+                }
+                if (!r.ok) throw new Error(r.status === 403 || r.status === 401
+                    ? "El servidor no da permiso para leer este archivo (" + r.status + ")."
+                    : "El servidor respondió " + r.status);
+                return r;
+            }
+            throw new Error("El servidor está limitando las peticiones (429). Espera un minuto y vuelve a abrirlo.");
+        }
+        async function bajarEntero() {
+            if (bajando) return;
+            bajando = true;
+            try {
+                const tam = +(await pedirConPausa({ method: "HEAD" })).headers.get("Content-Length");
+                if (!tam || tam > MAX_ENTERO) { aviso = "El servidor limita la velocidad: el detalle llega despacio (1 parte por segundo)."; dibujar(); return; }
+                const r = await pedirConPausa({});
+                const lector = r.body.getReader(), buf = new Uint8Array(tam);
+                let n = 0;
+                for (;;) {
+                    const { done, value } = await lector.read();
+                    if (done) break;
+                    buf.set(value, n); n += value.length;
+                    aviso = `El servidor limita la velocidad: descargando el archivo completo una sola vez (${Math.round(100 * n / tam)} % de ${Math.round(tam / 1e6)} MB)…`;
+                    avisarPronto();
+                }
+                entero = buf;
+                aviso = "";
+                dibujar();
+            } catch (e) {
+                console.error(e);
+                aviso = "El servidor limita la velocidad: el detalle llega despacio.";
+            }
+        }
+        return async (ini, fin) => {
+            if (entero) return entero.slice(ini, fin);
+            const r = await pedirConPausa({ headers: { Range: `bytes=${ini}-${fin - 1}` } });
+            if (entero) return entero.slice(ini, fin);
+            const b = new Uint8Array(await r.arrayBuffer());
+            // Si el servidor ignora el Range manda el archivo entero
+            if (r.status === 200 && b.length > fin - ini) { entero = b; return b.slice(ini, fin); }
+            return b;
+        };
+    }
+    let aviso = "", avisoPendiente = false;
+    function avisarPronto() {
+        if (avisoPendiente) return;
+        avisoPendiente = true;
+        setTimeout(() => { avisoPendiente = false; dibujar(); }, 400);
+    }
+    function lectorArchivo(file) {
+        return async (ini, fin) => new Uint8Array(await file.slice(ini, fin).arrayBuffer());
+    }
+
+    // Saca el PROJCS de un COMPD_CS y la unidad vertical (en metros)
+    function leerWkt(wkt) {
+        let horiz = wkt, fz = null;
+        if (/^\s*COMPD_CS/.test(wkt)) {
+            const i = wkt.indexOf("PROJCS[");
+            if (i >= 0) {
+                let n = 0, j = i;
+                for (; j < wkt.length; j++) {
+                    if (wkt[j] === "[") n++;
+                    else if (wkt[j] === "]" && --n === 0) break;
+                }
+                horiz = wkt.slice(i, j + 1);
+            }
+            const v = wkt.slice(wkt.indexOf("VERT_CS"));
+            const u = [...v.matchAll(/UNIT\["[^"]*",\s*([\d.eE+-]+)/g)].pop();
+            if (u) fz = parseFloat(u[1]);
+        }
+        return { horiz, fz };
+    }
+
+    async function abrir(fuente, nombre) {
+        const gen = ++generacion;
+        if (comp.nube) quitarComparacion(false);
+        nube = null;
+        aviso = "";
+        overlay.setProps({ layers: [] });
+        $("datos").innerHTML = "";
+        try {
+            estado("Preparando el descompresor LAZ…");
+            lazPerf ??= await createLazPerf({ locateFile: f => "https://cdn.jsdelivr.net/npm/laz-perf@0.0.7/lib/web/" + f });
+
+            estado("Leyendo la cabecera de " + nombre + "…");
+            const get = typeof fuente === "string" ? lectorUrl(fuente) : lectorArchivo(fuente);
+            let copc;
+            try {
+                copc = await Copc.create(get);
+            } catch (e) {
+                // No es COPC (LAS/LAZ normal, o version LAS que copc.js no lee): se lee completo
+                if (!/COPC info VLR|Invalid version/.test(e.message || "")) throw e;
+                return await abrirCompleto(fuente, nombre, gen);
+            }
+            const tamano = typeof fuente === "string" ? await pesoUrl(fuente) : fuente.size;
+            const h = copc.header;
+            const pr = proyeccion(copc.wkt, null, h.min, h.max);
+
+            // El indice puede venir en varias paginas: aqui solo la primera, el resto al acercarse
+            estado("Leyendo el índice de la nube…");
+            const { nodes: nodos, pages: paginas } = await Copc.loadHierarchyPage(get, copc.info.rootHierarchyPage);
+            if (gen !== generacion) return;
+
+            nube = {
+                get, copc, aGeo: pr.aGeo, fz: pr.fz, local: !!pr.local, centro: pr.centro, ubicada: false, nombre, nodos, paginas, paginasPedidas: new Set(),
+                origen: pr.c0, min: h.min, max: h.max,
+                zMin: h.min[2] * pr.fz, zMax: h.max[2] * pr.fz,
+                zSuelo: null, zTecho: null,   // se calculan con la primera parte que llega (sin ruido)
+                tieneRgb: [2, 3, 5, 7, 8, 10].includes(h.pointDataRecordFormat & 0x3f),
+                cache: new Map(), cargando: new Set(), cajas: new Map(), conteoClases: {}
+            };
+            mostrarDatos(h.pointCount, tamano, tamano > 2e8 ? " (solo se lee lo que se ve)" : "",
+                `<span>Densidad</span><b>${(copc.info.spacing * pr.fh).toLocaleString("es-CO", { maximumFractionDigits: 2 })} m en la raíz</b>`);
+            listo();
+        } catch (e) {
+            console.error(e);
+            if (gen === generacion) estado(e.message || String(e), true);
+        }
+    }
+
+    function mostrarDatos(total, tamano, notaTamano, extra) {
+        $("datos").innerHTML = `
+            <span>Archivo</span><b>${nube.nombre}</b>
+            <span>Puntos</span><b>${mil(total)}</b>
+            ${tamano ? `<span>Tamaño</span><b>${millones(tamano).replace(" M", " MB")}${notaTamano}</b>` : ""}
+            <span>Altura</span><b>${nube.local
+                ? `${dec(nube.zMin)} a ${dec(nube.zMax)} m (Z local)`
+                : `${mil(Math.round(nube.zMin))} a ${mil(Math.round(nube.zMax))} m s.n.m.`}</b>
+            ${extra}
+            ${nube.local ? `<span>Ubicación</span><b>Sin georreferenciar: coordenadas locales en metros, sobre una cuadrícula.
+                Usa “Ubicar en el mapa” para ponerla en un sitio.</b>` : ""}`;
+    }
+
+    function listo() {
+        if (!nube.tieneRgb && opc.modo === "rgb") fijarModo("clase");
+        document.querySelector('[data-modo="rgb"]').disabled = !nube.tieneRgb;
+        pintarFondo();
+        if (nube.local && nube.paso) $("datos").insertAdjacentHTML("beforeend", `<span>Cuadrícula</span><b>cada ${dec(nube.paso)} m (las líneas más marcadas, cada ${dec(nube.paso * 5)} m)</b>`);
+        pintarLeyenda();
+        encuadrar(false);
+        actualizar();
+    }
+
+    // Proyeccion: la elegida en la lista, la del WKT del archivo o la de sus GeoKeys (EPSG).
+    // Si el archivo no esta georreferenciado (sin sistema, o coordenadas locales de un
+    // escaner cerca de 0,0) se usa un plano en metros propio: proyLocal.
+    function proyeccion(wkt, epsg, min, max, centro = null) {
+        const elegido = $("selEpsg").value;
+        if (elegido === "local") return proyLocal(min, max, LUGAR_LOCAL, centro);
+        let def = elegido, fz = null;
+        if (!def && wkt) { const w = leerWkt(wkt); def = w.horiz; fz = w.fz; }
+        if (!def && epsg) {
+            if (!proj4.defs("EPSG:" + epsg)) throw new Error(`El archivo usa EPSG:${epsg}, que este visor no conoce. Elige el sistema en la lista y ábrelo otra vez.`);
+            def = "EPSG:" + epsg;
+        }
+        if (!def) return proyLocal(min, max, LUGAR_LOCAL, centro);
+        let aGeo, grados = false;
+        try {
+            aGeo = proj4(def, "EPSG:4326");
+            try { grados = proj4.Proj(def).projName === "longlat"; } catch (e) { grados = /^\s*GEOGCS|longlat/.test(def); }
+        } catch (e) {
+            if (!elegido) return proyLocal(min, max, LUGAR_LOCAL, centro);
+            throw new Error("No se pudo interpretar el sistema de coordenadas. Elige otro en la lista.");
+        }
+        const cx = (min[0] + max[0]) / 2, cy = (min[1] + max[1]) / 2;
+        // Coordenadas proyectadas casi en 0,0 y de pocos km: son locales (ningun sistema
+        // de Colombia ni UTM da esos valores aqui), aunque el archivo diga otra cosa
+        if (!grados && Math.abs(cx) < 1e5 && Math.abs(cy) < 1e5 && Math.max(max[0] - min[0], max[1] - min[1]) < 5000)
+            return proyLocal(min, max, LUGAR_LOCAL, centro);
+        // Factor horizontal a metros, medido proyectando 1000 unidades
+        const c0 = aGeo.forward([cx, cy]), c1 = aGeo.forward([cx + 1000, cy]);
+        const fh = metros(c0, c1) / 1000;
+        if (!isFinite(fh) || fh <= 0 || !isFinite(c0[1]) || Math.abs(c0[1]) > 90) {
+            if (!elegido) return proyLocal(min, max, LUGAR_LOCAL, centro);
+            throw new Error("Las coordenadas no parecen coincidir con el sistema de coordenadas. Prueba eligiendo otro en la lista.");
+        }
+        return { aGeo, fz: fz ?? fh, fh, c0 };
+    }
+
+    // Plano local en metros, centrado en "lugar" (por defecto 0,0, sin mapa debajo)
+    const LUGAR_LOCAL = [0, 0];
+    // centro: el de otra nube, para que dos escaneos locales queden en el mismo sistema
+    function proyLocal(min, max, lugar = LUGAR_LOCAL, centro = null) {
+        const [cx, cy] = centro || [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2];
+        const [lon0, lat0] = lugar, mx = 111320 * Math.cos(lat0 * Math.PI / 180), my = 110574;
+        return { aGeo: { forward: ([x, y]) => [lon0 + (x - cx) / mx, lat0 + (y - cy) / my] }, fz: 1, fh: 1, c0: [lon0, lat0], local: true, centro: [cx, cy] };
+    }
+
+    // Las partes guardan lon/lat relativos al origen; al mover una nube local de latitud
+    // se corrige el ancho (los grados de longitud miden distinto segun la latitud)
+    function ajustarLugar(d) {
+        const c = Math.cos(nube.origen[1] * Math.PI / 180);
+        if (!d.cosLat || d.cosLat === c) { d.cosLat = c; return; }
+        const f = d.cosLat / c;
+        for (let i = 0; i < d.n; i++) d.lonlat[2 * i] *= f;
+        d.cosLat = c;
+        d.capa = null;
+    }
+    function ubicar(lugar) {
+        const pr = proyLocal(nube.min, nube.max, lugar);
+        nube.aGeo = pr.aGeo;
+        nube.origen = pr.c0;
+        nube.cajas.clear();
+        nube.ubicada = lugar !== LUGAR_LOCAL;
+        nube.cache.forEach(ajustarLugar);
+        popup?.remove();
+        versionVista++;
+        pintarFondo();
+        encuadrar(true);
+        actualizar();
+    }
+
+    // Paso "bonito" de la cuadricula: 1, 2 o 5 por una potencia de 10
+    function pasoBonito(x) {
+        const b = 10 ** Math.floor(Math.log10(x)), r = x / b;
+        return b * (r < 1.5 ? 1 : r < 3.5 ? 2 : r < 7.5 ? 5 : 10);
+    }
+    function cuadricula() {
+        const { min, max } = nube;
+        const lado = Math.max(max[0] - min[0], max[1] - min[1], 0.1);
+        const paso = pasoBonito(lado / 8);
+        const cx = (min[0] + max[0]) / 2, cy = (min[1] + max[1]) / 2;
+        const n = Math.ceil(lado * 1.5 / paso), e = n * paso;
+        const linea = (a, b, i) => ({ type: "Feature", properties: { eje: i === 0, mayor: i % 5 === 0 },
+            geometry: { type: "LineString", coordinates: [nube.aGeo.forward(a), nube.aGeo.forward(b)] } });
+        const f = [];
+        for (let i = -n; i <= n; i++) {
+            const t = i * paso;
+            f.push(linea([cx + t, cy - e], [cx + t, cy + e], i), linea([cx - e, cy + t], [cx + e, cy + t], i));
+        }
+        nube.paso = paso;
+        return { type: "FeatureCollection", features: f };
+    }
+
+    // Mapa de fondo: satelite/OSM, o cuadricula si la nube no esta georreferenciada
+    function pintarFondo() {
+        const local = !!(nube && nube.local), plano = !!nube && ((local && !nube.ubicada) || !!comp.nube);
+        const sat = $("btnSatelite").classList.contains("activo");
+        map.setLayoutProperty("sat", "visibility", !plano && sat ? "visible" : "none");
+        map.setLayoutProperty("osm", "visibility", !plano && !sat ? "visible" : "none");
+        map.setPaintProperty("fondo", "background-color", plano ? "#23272d" : "#111");
+        if (map.getSource("cuadricula")) {
+            map.getSource("cuadricula").setData(plano ? cuadricula() : { type: "FeatureCollection", features: [] });
+            map.setLayoutProperty("cuadricula", "visibility", plano ? "visible" : "none");
+        }
+        $("btnSatelite").disabled = plano;
+        modo3d = plano;
+        $("vista3d").hidden = !plano;
+        if (plano) abrir3d(); else cerrar3d();
+        $("btnUbicar").hidden = !local;
+        $("btnUbicar").innerHTML = local && nube.ubicada
+            ? '<i data-lucide="grid-3x3"></i> Quitar del mapa (volver a la cuadrícula)' : '<i data-lucide="map-pin"></i> Ubicar en el mapa';
+        iconos();
+    }
+
+    // ---------- LAS / LAZ normal (no COPC): se lee completo y se reparte en partes ----------
+    const MAX_PUNTOS_COMPLETO = 10e6, PARTE = 200000;
+    const OFFSET_RGB = { 2: 20, 3: 28, 5: 28, 7: 30, 8: 30, 10: 30 };
+
+    // b (segunda nube): { vigente(), centro, max } -> devuelve la nube en vez de abrirla
+    async function abrirCompleto(fuente, nombre, gen, b = null) {
+        const sigue = () => b ? b.vigente() : gen === generacion;
+        let blob = fuente;
+        if (typeof fuente === "string") {
+            estado("No es COPC: descargando el archivo completo…");
+            const r = await fetch(fuente);
+            if (!r.ok) throw new Error("El servidor respondió " + r.status);
+            blob = await r.blob();
+        }
+        const cab = new DataView(await blob.slice(0, 375).arrayBuffer());
+        const firma = String.fromCharCode(cab.getUint8(0), cab.getUint8(1), cab.getUint8(2), cab.getUint8(3));
+        if (firma !== "LASF") throw new Error("El archivo no es LAS ni LAZ.");
+        const menor = cab.getUint8(25);
+        const hl = cab.getUint16(94, true), off = cab.getUint32(96, true), nv = cab.getUint32(100, true);
+        const fmtByte = cab.getUint8(104), fmt = fmtByte & 0x3f, rl = cab.getUint16(105, true);
+        let n = cab.getUint32(107, true);
+        if (menor >= 4 && cab.byteLength >= 255) { const g = Number(cab.getBigUint64(247, true)); if (g) n = g; }
+        const esc = [131, 139, 147].map(o => cab.getFloat64(o, true)), ofs = [155, 163, 171].map(o => cab.getFloat64(o, true));
+        const max = [179, 195, 211].map(o => cab.getFloat64(o, true)), min = [187, 203, 219].map(o => cab.getFloat64(o, true));
+        if (fmt > 10) throw new Error("Formato de punto LAS no soportado: " + fmt);
+
+        // VLR: WKT (2112) o GeoKeys (34735) y la marca de compresion LAZ (22204)
+        const vb = new DataView(await blob.slice(hl, off).arrayBuffer());
+        const texto = (o, l) => new TextDecoder("latin1").decode(new Uint8Array(vb.buffer, o, l)).replace(/\0[\s\S]*$/, "");
+        let wkt = null, epsg = null, laz = (fmtByte & 0xc0) !== 0;
+        for (let p = 0, i = 0; i < nv && p + 54 <= vb.byteLength; i++) {
+            const uid = texto(p + 2, 16);
+            const rid = vb.getUint16(p + 18, true), len = vb.getUint16(p + 20, true), c = p + 54;
+            if (c + len > vb.byteLength) break;
+            if (rid === 2112) wkt = texto(c, len) || null;
+            if (rid === 22204 && uid === "laszip encoded") laz = true;
+            if (rid === 34735 && uid === "LASF_Projection") {
+                const nk = vb.getUint16(c + 6, true);
+                for (let k = 0; k < nk && c + 16 + 8 * k <= c + len; k++) {
+                    const q = c + 8 + 8 * k, id = vb.getUint16(q, true), donde = vb.getUint16(q + 2, true), val = vb.getUint16(q + 6, true);
+                    if (donde === 0 && (id === 3072 || (id === 2048 && !epsg)) && val > 0 && val < 32767) epsg = val;
+                }
+            }
+            p = c + len;
+        }
+        const pr = proyeccion(wkt, epsg, min, max, b && b.centro);
+        const paso = Math.max(1, Math.ceil(n / (b ? b.max : MAX_PUNTOS_COMPLETO)));
+        const guardar = Math.ceil(n / paso), nPartes = Math.max(1, Math.ceil(guardar / PARTE));
+        const tieneRgb = OFFSET_RGB[fmt] != null, oRgb = OFFSET_RGB[fmt];
+
+        // Cada punto guardado va a la parte (j % nPartes): asi cada parte es una muestra de toda la nube
+        const cap = Math.ceil(guardar / nPartes) + 1;
+        const partes = Array.from({ length: nPartes }, () => ({
+            n: 0, lonlat: new Float32Array(cap * 2), z: new Float32Array(cap), clase: new Uint8Array(cap),
+            inten: new Uint16Array(cap), crudo: tieneRgb ? new Uint16Array(cap * 3) : null, conteo: {}, uso: 0, capa: null
+        }));
+        const [lon0, lat0] = pr.c0, f = pr.aGeo;
+        let j = 0, maxRgb = 0;
+        function tomar(dv, b) {
+            const d = partes[j % nPartes], m = d.n++;
+            j++;
+            const p = f.forward([dv.getInt32(b, true) * esc[0] + ofs[0], dv.getInt32(b + 4, true) * esc[1] + ofs[1]]);
+            d.lonlat[2 * m] = p[0] - lon0;
+            d.lonlat[2 * m + 1] = p[1] - lat0;
+            d.z[m] = (dv.getInt32(b + 8, true) * esc[2] + ofs[2]) * pr.fz;
+            d.inten[m] = dv.getUint16(b + 12, true);
+            const cl = fmt < 6 ? dv.getUint8(b + 15) & 31 : dv.getUint8(b + 16);
+            d.clase[m] = cl;
+            d.conteo[cl] = (d.conteo[cl] || 0) + 1;
+            if (tieneRgb) for (let k = 0; k < 3; k++) {
+                const v = dv.getUint16(b + oRgb + 2 * k, true);
+                if (v > maxRgb) maxRgb = v;
+                d.crudo[3 * m + k] = v;
+            }
+        }
+        const avance = i => estado(`Leyendo ${nombre}: ${Math.round(100 * i / n)} %` +
+            (paso > 1 ? ` (se toma 1 de cada ${paso} puntos para no llenar la memoria)` : ""));
+
+        if (laz) {
+            if (blob.size > 1.5e9) throw new Error("El LAZ pesa más de 1,5 GB: conviértelo a COPC (pdal translate) para abrirlo por partes.");
+            const datos = new Uint8Array(await blob.arrayBuffer());
+            const pArchivo = lazPerf._malloc(datos.byteLength), pPunto = lazPerf._malloc(rl);
+            const lector = new lazPerf.LASZip();
+            try {
+                lazPerf.HEAPU8.set(datos, pArchivo);
+                lector.open(pArchivo, datos.byteLength);
+                let heap = null, dv = null;
+                for (let i = 0; i < n; i++) {
+                    lector.getPoint(pPunto);
+                    if (i % paso) continue;
+                    if (heap !== lazPerf.HEAPU8.buffer) { heap = lazPerf.HEAPU8.buffer; dv = new DataView(heap); }
+                    tomar(dv, pPunto);
+                    if (i % 500000 === 0) { avance(i); await dormir(0); if (!sigue()) return; }
+                }
+            } finally {
+                lector.delete();
+                lazPerf._free(pArchivo);
+                lazPerf._free(pPunto);
+            }
+        } else {
+            // LAS sin comprimir: se lee por bloques para no cargar archivos enormes de una vez
+            const porBloque = Math.max(1, Math.floor(64e6 / rl));
+            for (let i0 = 0; i0 < n; i0 += porBloque) {
+                const i1 = Math.min(n, i0 + porBloque);
+                const dv = new DataView(await blob.slice(off + i0 * rl, off + i1 * rl).arrayBuffer());
+                for (let i = i0 + ((paso - i0 % paso) % paso); i < i1; i += paso) tomar(dv, (i - i0) * rl);
+                avance(i1);
+                await dormir(0);
+                if (!sigue()) return;
+            }
+        }
+
+        // Recortar y pasar el color a 8 bits
+        const corr = maxRgb > 255 ? 8 : 0;
+        const nodos = {}, cache = new Map();
+        partes.forEach((d, i) => {
+            if (!d.n) return;
+            d.lonlat = d.lonlat.subarray(0, d.n * 2); d.z = d.z.subarray(0, d.n);
+            d.clase = d.clase.subarray(0, d.n); d.inten = d.inten.subarray(0, d.n);
+            d.color = null;
+            d.cosLat = Math.cos(pr.c0[1] * Math.PI / 180);
+            if (tieneRgb) {
+                d.color = new Uint8Array(d.n * 3);
+                for (let k = 0; k < d.n * 3; k++) d.color[k] = d.crudo[k] >> corr;
+            }
+            delete d.crudo;
+            nodos["c" + i] = { pointCount: d.n };
+            cache.set("c" + i, d);
+        });
+        if (!cache.size) throw new Error("El archivo no tiene puntos.");
+        const leida = {
+            completo: true, aGeo: pr.aGeo, fz: pr.fz, local: !!pr.local, centro: pr.centro, ubicada: false, nombre, total: n, nodos, paginas: {}, paginasPedidas: new Set(),
+            origen: pr.c0, min, max, zMin: min[2] * pr.fz, zMax: max[2] * pr.fz, zSuelo: null, zTecho: null,
+            tieneRgb, cache, cargando: new Set(), cajas: new Map(), conteoClases: {}
+        };
+        if (b) return leida;
+        nube = leida;
+        calcularSuelo(cache.values().next().value);
+        // Se leyeron hasta 10 M de puntos: se muestran todos (el control se puede bajar)
+        const leidos = Math.min(10, Math.ceil(j / 5e5) / 2);
+        if (leidos * 1e6 > opc.presupuesto) {
+            opc.presupuesto = leidos * 1e6;
+            $("rngPresupuesto").value = leidos;
+            $("vPresupuesto").textContent = millones(opc.presupuesto);
+        }
+        mostrarDatos(n, blob.size, "", `<span>Tipo</span><b>${laz ? "LAZ" : "LAS"} ${cab.getUint8(24)}.${menor} sin índice: se leyó completo${paso > 1 ? ", 1 de cada " + paso + " puntos" : ""}</b>`);
+        listo();
+    }
+
+    function metros(a, b) {
+        const r = Math.PI / 180, x = (b[0] - a[0]) * r * Math.cos((a[1] + b[1]) / 2 * r), y = (b[1] - a[1]) * r;
+        return 6371000 * Math.hypot(x, y);
+    }
+
+    // Caja de un nodo (clave "nivel-x-y-z") en el sistema del archivo y en lon/lat
+    function caja(clave) {
+        let c = nube.cajas.get(clave);
+        if (c) return c;
+        const [d, x, y] = clave.split("-").map(Number), cubo = nube.copc.info.cube;
+        const lado = (cubo[3] - cubo[0]) / 2 ** d;
+        const x0 = cubo[0] + x * lado, y0 = cubo[1] + y * lado;
+        const esquinas = [[x0, y0], [x0 + lado, y0], [x0, y0 + lado], [x0 + lado, y0 + lado]].map(p => nube.aGeo.forward(p));
+        const lons = esquinas.map(p => p[0]), lats = esquinas.map(p => p[1]);
+        c = { d, w: Math.min(...lons), e: Math.max(...lons), s: Math.min(...lats), n: Math.max(...lats) };
+        c.centro = [(c.w + c.e) / 2, (c.s + c.n) / 2];
+        c.ladoM = metros(esquinas[0], esquinas[1]);
+        nube.cajas.set(clave, c);
+        return c;
+    }
+
+    function encuadrar(animar = true) {
+        if (!nube) return;
+        if (modo3d) { verTodo(animar); return; }
+        const a = nube.aGeo.forward([nube.min[0], nube.min[1]]), b = nube.aGeo.forward([nube.max[0], nube.max[1]]);
+        map.fitBounds([[Math.min(a[0], b[0]), Math.min(a[1], b[1])], [Math.max(a[0], b[0]), Math.max(a[1], b[1])]],
+            { padding: { top: 40, bottom: 40, left: innerWidth > 640 ? 320 : 20, right: 40 }, pitch: 55, bearing: -20, animate: animar });
+    }
+
+    // ---------- Que nodos hacen falta para la vista actual ----------
+    function deseados() {
+        if (nube.completo || modo3d) {
+            const out = [];
+            let suma = 0;
+            const claves = Object.keys(nube.nodos).filter(k => nube.nodos[k].pointCount > 0);
+            if (!nube.completo) claves.sort((p, q) => +p.split("-")[0] - +q.split("-")[0]);
+            for (const k of claves) {
+                if (suma >= opc.presupuesto && out.length) break;
+                suma += nube.nodos[k].pointCount; out.push(k);
+            }
+            return out;
+        }
+        const b = map.getBounds(), zoom = map.getZoom(), centro = map.getCenter();
+        const pad = 0.15 * Math.max(b.getEast() - b.getWest(), b.getNorth() - b.getSouth());
+        const mpp = 40075016.686 * Math.cos(centro.lat * Math.PI / 180) / (512 * 2 ** zoom);
+        const umbral = 300 / opc.detalle;
+        const refinado = new Set(), lista = [];
+        const nivel = k => +k.split("-")[0];
+        const padreOk = k => {
+            const [d, x, y, z] = k.split("-").map(Number);
+            return d === 0 || refinado.has(`${d - 1}-${x >> 1}-${y >> 1}-${z >> 1}`);
+        };
+        const visible = c => !(c.e < b.getWest() - pad || c.w > b.getEast() + pad || c.n < b.getSouth() - pad || c.s > b.getNorth() + pad);
+        const claves = Object.keys(nube.nodos).sort((p, q) => nivel(p) - nivel(q));
+        for (const k of claves) {
+            if (!padreOk(k)) continue;
+            const c = caja(k);
+            if (!visible(c)) continue;
+            const dist = metros([centro.lng, centro.lat], c.centro);
+            const px = c.ladoM / mpp / (1 + dist / (mpp * 700));
+            if (nube.nodos[k].pointCount > 0) lista.push({ k, d: c.d, px });
+            if (px > umbral) refinado.add(k);
+        }
+        // Paginas del indice que hacen falta para esta vista
+        for (const k in nube.paginas) {
+            if (nube.paginasPedidas.has(k) || !padreOk(k) || !visible(caja(k))) continue;
+            nube.paginasPedidas.add(k);
+            cargarPagina(k);
+        }
+        // Primero lo grueso, luego lo mas grande en pantalla, hasta el maximo de puntos
+        lista.sort((p, q) => p.d - q.d || q.px - p.px);
+        const out = [];
+        let suma = 0;
+        for (const n of lista) {
+            const pc = nube.nodos[n.k].pointCount;
+            if (suma + pc > opc.presupuesto && out.length) break;
+            suma += pc; out.push(n.k);
+        }
+        return out;
+    }
+
+    async function cargarPagina(k) {
+        const n = nube, gen = generacion;
+        try {
+            const { nodes, pages } = await Copc.loadHierarchyPage(n.get, n.paginas[k]);
+            if (gen !== generacion) return;
+            Object.assign(n.nodos, nodes);
+            delete n.paginas[k];
+            Object.assign(n.paginas, pages);
+            actualizar();
+        } catch (e) {
+            console.error("Pagina " + k, e);
+            n.paginasPedidas.delete(k);
+        }
+    }
+
+    async function pesoUrl(url) {
+        try {
+            const r = await fetch(url, { headers: { Range: "bytes=0-0" } });
+            const m = (r.headers.get("Content-Range") || "").match(/\/(\d+)$/);
+            return m ? +m[1] : 0;
+        } catch (e) { return 0; }
+    }
+
+    let enVista = [], cola = [], pidiendo = 0;
+    function actualizar() {
+        if (!nube) return;
+        enVista = deseados();
+        cola = enVista.filter(k => !nube.cache.has(k) && !nube.cargando.has(k));
+        bombear();
+        dibujar();
+    }
+
+    function bombear() {
+        const gen = generacion;
+        while (pidiendo < 4 && cola.length) {
+            const k = cola.shift();
+            nube.cargando.add(k);
+            pidiendo++;
+            cargarNodo(k).then(datos => {
+                if (gen !== generacion) return;
+                ajustarLugar(datos); // por si la nube se movio mientras llegaba
+                nube.cache.set(k, datos);
+                if (nube.zSuelo == null) calcularSuelo(datos);
+                limpiarCache();
+                dibujarPronto();
+            }).catch(e => {
+                console.error("Nodo " + k, e);
+            }).finally(() => {
+                if (gen !== generacion) return;
+                nube.cargando.delete(k);
+                pidiendo--;
+                bombear();
+                if (!pidiendo && !cola.length) dibujar();
+            });
+        }
+    }
+
+    async function cargarNodo(k, nb = nube) {
+        const vista = await Copc.loadPointDataView(nb.get, nb.copc, nb.nodos[k], { lazPerf });
+        const n = vista.pointCount;
+        const gx = vista.getter("X"), gy = vista.getter("Y"), gz = vista.getter("Z");
+        const gc = vista.getter("Classification"), gi = vista.getter("Intensity");
+        const rgb = nb.tieneRgb ? ["Red", "Green", "Blue"].map(vista.getter) : null;
+        const lonlat = new Float32Array(n * 2), z = new Float32Array(n);
+        const clase = new Uint8Array(n), inten = new Uint16Array(n), crudo = rgb ? new Uint16Array(n * 3) : null;
+        const [lon0, lat0] = nb.origen, f = nb.aGeo;
+        let maxRgb = 0;
+        for (let i = 0; i < n; i++) {
+            const p = f.forward([gx(i), gy(i)]);
+            lonlat[2 * i] = p[0] - lon0;
+            lonlat[2 * i + 1] = p[1] - lat0;
+            z[i] = gz(i) * nb.fz;
+            clase[i] = gc(i);
+            inten[i] = gi(i);
+            if (rgb) for (let j = 0; j < 3; j++) { const v = rgb[j](i); if (v > maxRgb) maxRgb = v; crudo[3 * i + j] = v; }
+        }
+        // El color LAS es de 16 bits, pero algunos archivos lo guardan en 8 bits
+        let color = null;
+        if (rgb) {
+            color = new Uint8Array(n * 3);
+            const corrimiento = maxRgb > 255 ? 8 : 0;
+            for (let i = 0; i < n * 3; i++) color[i] = crudo[i] >> corrimiento;
+        }
+        const conteo = {};
+        for (let i = 0; i < n; i++) conteo[clase[i]] = (conteo[clase[i]] || 0) + 1;
+        return { n, lonlat, z, clase, inten, color, conteo, uso: 0, capa: null, cosLat: Math.cos(lat0 * Math.PI / 180) };
+    }
+
+    // Nivel del suelo: el punto mas bajo del archivo suele ser ruido (rebotes falsos bajo tierra)
+    // y deja la nube flotando. Se usa el 2 % mas bajo de los puntos de suelo (clase 2), o de todos sin ruido.
+    function calcularSuelo(d) {
+        const suelo = [], todos = [];
+        for (let i = 0; i < d.n; i++) {
+            const c = d.clase[i];
+            if (c === 7 || c === 18) continue;
+            todos.push(d.z[i]);
+            if (c === 2) suelo.push(d.z[i]);
+        }
+        const base = suelo.length >= 200 ? suelo : todos;
+        if (base.length < 50) return;
+        const pct = (a, q) => a[Math.min(a.length - 1, Math.floor(q * a.length))];
+        base.sort((a, b) => a - b);
+        todos.sort((a, b) => a - b);
+        nube.zSuelo = pct(base, 0.02);
+        nube.zTecho = pct(todos, 0.995);
+        versionVista++;
+        pintarLeyenda();
+    }
+
+    // Deja en memoria como maximo el doble del presupuesto
+    function limpiarCache() {
+        if (nube.completo) return;
+        let total = 0;
+        for (const v of nube.cache.values()) total += v.n;
+        if (total <= opc.presupuesto * 2) return;
+        const usados = new Set(enVista);
+        const viejos = [...nube.cache.entries()].filter(([k]) => !usados.has(k)).sort((a, b) => a[1].uso - b[1].uso);
+        for (const [k, v] of viejos) {
+            if (total <= opc.presupuesto * 2) break;
+            nube.cache.delete(k); total -= v.n;
+        }
+    }
+
+    // ---------- Dibujo ----------
+    // Cada nodo es una capa de deck.gl; se rearma solo cuando cambian el color, el filtro o la altura
+    let versionVista = 0;
+    function armar(datos, nb = nube) {
+        if (datos.capa && datos.capa.version === versionVista) return datos.capa;
+        const { n, lonlat, z, clase, inten, color } = datos;
+        const pos = new Float32Array(n * 3), col = new Uint8Array(n * 4), idx = new Uint32Array(n);
+        const zb = (nb.zSuelo ?? nb.zMin) - opc.ajuste / opc.exag;
+        const zr = nb.zSuelo ?? nb.zMin, rz = Math.max(1, (nb.zTecho ?? nb.zMax) - zr);
+        let m = 0, maxI = 0;
+        if (opc.modo === "intensidad") for (let i = 0; i < n; i++) if (inten[i] > maxI) maxI = inten[i];
+        for (let i = 0; i < n; i++) {
+            if (opc.ocultas.has(clase[i])) continue;
+            pos[3 * m] = lonlat[2 * i];
+            pos[3 * m + 1] = lonlat[2 * i + 1];
+            pos[3 * m + 2] = (z[i] - zb) * opc.exag;
+            let c;
+            if (opc.modo === "clase") c = (CLASES[clase[i]] || ["", [255, 255, 255]])[1];
+            else if (opc.modo === "rgb" && color) c = [color[3 * i], color[3 * i + 1], color[3 * i + 2]];
+            else if (opc.modo === "altura") c = rampa((z[i] - zr) / rz);
+            else { const g = maxI ? Math.min(255, 40 + 215 * Math.sqrt(inten[i] / maxI)) : 200; c = [g, g, g]; }
+            col[4 * m] = c[0]; col[4 * m + 1] = c[1]; col[4 * m + 2] = c[2]; col[4 * m + 3] = 255;
+            idx[m] = i;
+            m++;
+        }
+        datos.capa = {
+            version: versionVista, idx, cuenta: m,
+            data: { length: m, attributes: { getPosition: { value: pos.subarray(0, m * 3), size: 3 }, getColor: { value: col.subarray(0, m * 4), size: 4 } } }
+        };
+        return datos.capa;
+    }
+
+    let pendiente = false;
+    function dibujarPronto() {
+        if (pendiente) return;
+        pendiente = true;
+        requestAnimationFrame(() => { pendiente = false; dibujar(); });
+    }
+
+    function dibujar() {
+        if (!nube) return;
+        const capas = [];
+        let puntos = 0;
+        const reloj = performance.now();
+        const vistos = new Set();
+        // Mientras llegan los nodos finos, se mantienen los gruesos que ya estan
+        for (const k of enVista) {
+            const datos = nube.cache.get(k);
+            if (!datos) continue;
+            datos.uso = reloj;
+            const a = armar(datos);
+            puntos += a.cuenta;
+            if (modo3d) {
+                if (v3.renderer) { objeto3d(k, datos); vistos.add(k); }
+                continue;
+            }
+            capas.push(new deck.PointCloudLayer({
+                id: "n" + k, data: a.data,
+                coordinateSystem: deck.COORDINATE_SYSTEM.LNGLAT_OFFSETS,
+                coordinateOrigin: [nube.origen[0], nube.origen[1], 0],
+                pointSize: opc.metros ? opc.tam / 100 : opc.tam, sizeUnits: opc.metros ? "meters" : "pixels",
+                material: false, pickable: true,
+                updateTriggers: { getColor: a.version, getPosition: a.version }
+            }));
+        }
+        overlay.setProps({ layers: capas });
+        if (modo3d && v3.renderer) dibujar3d(vistos);
+        const faltan = cola.length + pidiendo;
+        estado((faltan ? `Cargando detalle… ${mil(puntos)} puntos en pantalla, faltan ${faltan} partes`
+                       : `${mil(puntos)} puntos en pantalla (${capas.length || vistos.size} partes de la nube).`) + (aviso ? "\n" + aviso : ""));
+        if (!faltan) contarClases();
+    }
+
+    function contarClases() {
+        const conteo = {};
+        for (const k of enVista) {
+            const d = nube.cache.get(k);
+            if (d) for (const c in d.conteo) conteo[c] = (conteo[c] || 0) + d.conteo[c];
+        }
+        nube.conteoClases = conteo;
+        if (opc.modo === "clase") pintarLeyenda();
+    }
+
+    function redibujar() { versionVista++; dibujar(); }
+
+    // ---------- Leyenda ----------
+    function pintarLeyenda() {
+        const L = $("leyenda");
+        if (opc.modo === "clase") {
+            const conteo = nube ? nube.conteoClases : {};
+            const clases = Object.keys(conteo).length ? Object.keys(conteo).map(Number).sort((a, b) => a - b) : [1, 2, 3, 4, 5, 6, 7, 9, 17, 18];
+            L.innerHTML = `<div class="leyenda">${clases.map(c => {
+                const [nom, col] = CLASES[c] || ["Clase " + c, [255, 255, 255]];
+                return `<label><input type="checkbox" data-clase="${c}" ${opc.ocultas.has(c) ? "" : "checked"}>
+                    <i style="background:${css(col)}"></i>${nom}<small>${conteo[c] ? mil(conteo[c]) : ""}</small></label>`;
+            }).join("")}</div><p class="nota" style="margin-top:6px">Desmarca una clase para ocultarla (el ruido viene oculto).</p>`;
+            L.querySelectorAll("input[data-clase]").forEach(ch => ch.addEventListener("change", () => {
+                const c = +ch.dataset.clase;
+                ch.checked ? opc.ocultas.delete(c) : opc.ocultas.add(c);
+                redibujar();
+            }));
+        } else if (opc.modo === "altura") {
+            const a = nube ? Math.round(nube.zSuelo ?? nube.zMin) : 0, b = nube ? Math.round(nube.zTecho ?? nube.zMax) : 0;
+            L.innerHTML = `<div class="rampa" style="background:linear-gradient(90deg,${RAMPA.map(css).join(",")})"></div>
+                <div class="rampa-txt"><span>${mil(a)} m</span><span>${mil(b)} m</span></div>`;
+        } else if (opc.modo === "intensidad") {
+            L.innerHTML = `<div class="rampa" style="background:linear-gradient(90deg,#282828,#fff)"></div>
+                <div class="rampa-txt"><span>Baja</span><span>Alta (reflejo del láser)</span></div>`;
+        } else {
+            L.innerHTML = `<p class="nota">Color tomado de las fotos del vuelo.</p>`;
+        }
+    }
+
+    function fijarModo(m) {
+        opc.modo = m;
+        document.querySelectorAll("#segColor button").forEach(b => b.classList.toggle("activo", b.dataset.modo === m));
+        pintarLeyenda();
+        redibujar();
+    }
+
+    // ---------- Clic en un punto ----------
+    let popup = null;
+    function alClic(info) {
+        popup?.remove();
+        $("globo").hidden = true;
+        if (!info.layer || info.index < 0 || !nube) return;
+        const nb = info.nube || nube;
+        const datos = nb.cache.get(info.layer.id.slice(1));
+        if (!datos || !datos.capa) return;
+        const i = datos.capa.idx[info.index];
+        const [nom] = CLASES[datos.clase[i]] || ["Clase " + datos.clase[i]];
+        const suelo = alturaSuelo(info.layer.id.slice(1), i, nb);
+        const html = `${comp.nube ? `<small>${nb === nube ? "A" : "B"} · ${nb.nombre}</small><br>` : ""}<b>${nom}</b> (clase ${datos.clase[i]})<br>
+                ${nube.local ? `Altura (Z): ${dec(datos.z[i])} m` : `Elevación: ${datos.z[i].toLocaleString("es-CO", { maximumFractionDigits: 1 })} m s.n.m.`}<br>
+                ${suelo != null ? `Altura sobre el suelo: ≈ ${(datos.z[i] - suelo).toLocaleString("es-CO", { maximumFractionDigits: 1 })} m<br>` : ""}
+                Intensidad: ${mil(datos.inten[i])}${distanciaPunto(nb, info)}`;
+        if (modo3d) {
+            const g = $("globo");
+            g.innerHTML = html;
+            g.style.left = info.x + "px";
+            g.style.top = info.y + "px";
+            g.hidden = false;
+            return;
+        }
+        popup = new maplibregl.Popup({ closeButton: true })
+            .setLngLat([datos.lonlat[2 * i] + nube.origen[0], datos.lonlat[2 * i + 1] + nube.origen[1]])
+            .setHTML(html)
+            .addTo(map);
+    }
+
+    // Suelo mas cercano (clase 2) entre los puntos cargados del mismo nodo: aproximado, sirve para alturas de edificios y arboles
+    function alturaSuelo(k, i, nb = nube) {
+        const d = nb.cache.get(k);
+        let mejor = Infinity, z = null;
+        const x = d.lonlat[2 * i], y = d.lonlat[2 * i + 1], cl = Math.cos(nube.origen[1] * Math.PI / 180);
+        for (let j = 0; j < d.n; j++) {
+            if (d.clase[j] !== 2) continue;
+            const dx = (d.lonlat[2 * j] - x) * cl, dy = d.lonlat[2 * j + 1] - y, q = dx * dx + dy * dy;
+            if (q < mejor) { mejor = q; z = d.z[j]; }
+        }
+        return z != null && Math.sqrt(mejor) * 111320 < 30 ? z : null;
+    }
+
+
+    // ---------- Visor 3D propio con three.js (nubes sin georreferenciar) ----------
+    // Sin mapa debajo, MapLibre sobra y amarra la camara (no deja entrar a un edificio).
+    // Aqui se usa three.js (el mismo de modelo3d.html): girar alrededor con el mouse,
+    // acercarse hacia el cursor, y caminar por dentro en primera persona.
+    const M_LON = 111320, M_LAT = 110574;
+    let T = null, modo3d = false, nube3d = null;
+    const v3 = { modo: "orbita", objetos: new Map(), teclas: new Set(), yaw: 0, pitch: 0, viaje: null, reloj: 0 };
+
+    // Las partes guardan grados relativos al origen: se pasan a metros
+    function escala3d(nb = nube) { return [M_LON * Math.cos(nb.origen[1] * Math.PI / 180), M_LAT]; }
+    // El panel tapa la izquierda del visor: la vista se centra en lo que queda libre
+    function margen() { return innerWidth > 640 ? 302 : 0; }
+    function alto3d() { return Math.max(0.5, ((nube.zTecho ?? nube.zMax) - (nube.zSuelo ?? nube.zMin)) * opc.exag); }
+    function lado3d() { return Math.max(nube.max[0] - nube.min[0], nube.max[1] - nube.min[1], 0.5); }
+
+    async function crearVisor3d() {
+        if (v3.renderer) return;
+        const [three, orbita] = await Promise.all([import("three"), import("three/addons/controls/OrbitControls.js")]);
+        if (v3.renderer) return;
+        T = three;
+        T.ColorManagement.enabled = false; // colores del archivo tal cual
+        const r = new T.WebGLRenderer({ antialias: false, alpha: true });
+        r.outputColorSpace = T.LinearSRGBColorSpace;
+        r.setPixelRatio(2); // se dibuja al doble: permite puntos de medio pixel
+        r.domElement.className = "lienzo3d";
+        $("vista3d").prepend(r.domElement);
+        const cam = new T.PerspectiveCamera(55, 1, 0.01, 5000);
+        cam.up.set(0, 0, 1); // Z hacia arriba, como en el archivo
+        const ctl = new orbita.OrbitControls(cam, r.domElement);
+        Object.assign(ctl, {
+            enableDamping: true, dampingFactor: 0.12, zoomToCursor: true, screenSpacePanning: true,
+            minDistance: 0.05, maxDistance: 3000, autoRotateSpeed: 1.2
+        });
+        ctl.mouseButtons = { LEFT: T.MOUSE.ROTATE, MIDDLE: T.MOUSE.DOLLY, RIGHT: T.MOUSE.PAN };
+        const escena = new T.Scene(), grupo = new T.Group(), grupoB = new T.Group(), grupoBin = new T.Group();
+        grupoB.add(grupoBin); // grupoB se gira sobre el centro de la nube B; grupoBin la centra
+        const grupoBicp = new T.Group(); // correccion fina (ICP), en coordenadas del mundo
+        grupoBicp.matrixAutoUpdate = false;
+        grupoBicp.add(grupoB);
+        escena.add(grupo, grupoBicp);
+        // Camara propia de B (lado a lado con camaras separadas)
+        const camB = cam.clone();
+        camB.up.set(0, 0, 1);
+        const material = new T.PointsMaterial({ vertexColors: true, size: 2, sizeAttenuation: false });
+        // Superponer: cada nube de un color
+        const matA = new T.PointsMaterial({ color: 0x3fa4ff, size: 2, sizeAttenuation: false });
+        const matB = new T.PointsMaterial({ color: 0xff8a2b, size: 2, sizeAttenuation: false });
+        r.autoClear = false;
+        Object.assign(v3, { renderer: r, cam, camB, ctl, escena, grupo, grupoB, grupoBicp, grupoBin, material, matA, matB, reloj: performance.now(),
+                            targetA: new T.Vector3(), targetB: new T.Vector3() });
+        // En lado a lado con camaras separadas, el lado donde se hace clic es el que se mueve
+        const elegirLado = e => {
+            if (!(comp.nube && comp.modo === "lado" && !comp.unidas)) return;
+            const rc = $("vista3d").getBoundingClientRect(), x0 = margen(), mitad = (rc.width - x0) / 2;
+            activarLado(e.clientX - rc.left > x0 + mitad ? "B" : "A");
+        };
+        $("vista3d").addEventListener("pointerdown", elegirLado, true);
+        $("vista3d").addEventListener("wheel", elegirLado, true);
+        new ResizeObserver(tamano3d).observe($("vista3d"));
+        eventos3d(r.domElement);
+    }
+
+    async function abrir3d() {
+        try { await crearVisor3d(); }
+        catch (e) { console.error(e); estado("No se pudo cargar el visor 3D (three.js): " + e.message, true); return; }
+        if (!modo3d) return;
+        tamano3d();
+        if (nube3d !== nube) {
+            nube3d = nube;
+            limpiar3d();
+            piso3d();
+            ponerModo("orbita");
+            verTodo(false);
+            let vista = false;
+            try { vista = localStorage.getItem("lidarGuia3d") === "1"; } catch (e) { }
+            $("guia3d").hidden = vista;
+        }
+        v3.renderer.setAnimationLoop(cuadro);
+        rotulosComp();
+        dibujar();
+    }
+    function cerrar3d() {
+        if (!v3.renderer) return;
+        v3.renderer.setAnimationLoop(null);
+        v3.ctl.autoRotate = false;
+        $("b3Girar").classList.remove("activo");
+        $("guia3d").hidden = true;
+        limpiar3d();
+        nube3d = null;
+    }
+    function tamano3d() {
+        const c = $("vista3d"), w = c.clientWidth, h = c.clientHeight;
+        if (!v3.renderer || !w || !h) return;
+        v3.renderer.setSize(w, h, false);
+        ajustarCamara();
+        rotulosComp();
+    }
+    function ajustarCamara() {
+        const c = $("vista3d"), w = c.clientWidth, h = c.clientHeight, x0 = margen();
+        if (!w || !h) return;
+        v3.cam.aspect = w / h;
+        if (x0) v3.cam.setViewOffset(w, h, -x0 / 2, 0, w, h); else v3.cam.clearViewOffset();
+        v3.cam.updateProjectionMatrix();
+    }
+    function limpiar3d() {
+        for (const o of v3.objetos.values()) { v3.grupo.remove(o); o.geometry.dispose(); }
+        v3.objetos.clear();
+        limpiarB();
+    }
+    function limpiarB() {
+        for (const o of comp.objetos.values()) { v3.grupoBin.remove(o); o.geometry.dispose(); }
+        comp.objetos.clear();
+    }
+
+    // Piso: cuadricula en metros (lineas marcadas cada 5) con los ejes en amarillo
+    function piso3d() {
+        if (v3.piso) { v3.escena.remove(v3.piso); v3.piso.children.forEach(g => { g.geometry.dispose(); g.material.dispose(); }); }
+        const paso = pasoBonito(lado3d() / 8), n = Math.ceil(lado3d() * 1.5 / paso / 5) * 5, tam = 2 * n * paso;
+        const fino = new T.GridHelper(tam, 2 * n, 0xf5c400, 0x6b727c), grueso = new T.GridHelper(tam, 2 * n / 5, 0xf5c400, 0xaab0b8);
+        fino.material.transparent = grueso.material.transparent = true;
+        fino.material.opacity = 0.22;
+        grueso.material.opacity = 0.4;
+        const piso = new T.Group();
+        piso.add(fino, grueso);
+        piso.rotation.x = Math.PI / 2; // GridHelper viene en el plano XZ
+        v3.escena.add(piso);
+        v3.piso = piso;
+    }
+
+    // Una parte de la nube como objeto three.js (se rehace si cambian color, filtro o altura)
+    function objeto3d(k, datos, nb = nube, mapa = v3.objetos, grupo = v3.grupo) {
+        const a = armar(datos, nb);
+        let o = mapa.get(k);
+        if (o && o.userData.capa === a) return o;
+        const n = a.cuenta, pos = a.data.attributes.getPosition.value, col = a.data.attributes.getColor.value;
+        const p = new Float32Array(n * 3), c = new Uint8Array(n * 3), [sx, sy] = escala3d(nb);
+        for (let i = 0; i < n; i++) {
+            p[3 * i] = pos[3 * i] * sx; p[3 * i + 1] = pos[3 * i + 1] * sy; p[3 * i + 2] = pos[3 * i + 2];
+            c[3 * i] = col[4 * i]; c[3 * i + 1] = col[4 * i + 1]; c[3 * i + 2] = col[4 * i + 2];
+        }
+        const g = new T.BufferGeometry();
+        g.setAttribute("position", new T.BufferAttribute(p, 3));
+        g.setAttribute("color", new T.BufferAttribute(c, 3, true));
+        g.computeBoundingSphere();
+        if (o) { o.geometry.dispose(); o.geometry = g; }
+        else { o = new T.Points(g, v3.material); o.userData.k = k; o.userData.nb = nb; grupo.add(o); mapa.set(k, o); }
+        o.userData.capa = a;
+        o.userData.colorReal = g.attributes.color;
+        o.userData.colorDif = null;
+        comp.sucio = true; // las diferencias se recalculan
+        return o;
+    }
+    function dibujar3d(vistos) {
+        for (const [k, o] of v3.objetos) {
+            if (!nube.cache.has(k)) { v3.grupo.remove(o); o.geometry.dispose(); v3.objetos.delete(k); continue; }
+            o.visible = vistos.has(k);
+        }
+        // Segunda nube (se lee completa hasta su maximo: no depende de la vista)
+        if (comp.nube) {
+            for (const [k, d] of comp.nube.cache) objeto3d(k, d, comp.nube, comp.objetos, v3.grupoBin);
+            posicionB();
+        }
+        // Tamano: en pixeles fijos, o en centimetros reales (crece al acercarse)
+        const tam = opc.metros ? opc.tam / 100 * Math.tan(v3.cam.fov * Math.PI / 360) : opc.tam;
+        for (const m of [v3.material, v3.matA, v3.matB]) {
+            if (m.sizeAttenuation !== opc.metros) { m.sizeAttenuation = opc.metros; m.needsUpdate = true; }
+            m.size = tam;
+        }
+        materialesComp();
+        if (comp.nube && comp.modo === "diferencias" && comp.sucio) diferenciasLuego();
+    }
+
+    // ---------- Camara ----------
+    function ponerModo(modo) {
+        v3.modo = modo;
+        v3.ctl.enabled = modo === "orbita";
+        if (modo !== "orbita") { v3.ctl.autoRotate = false; $("b3Girar").classList.remove("activo"); }
+        $("b3Orbita").classList.toggle("activo", modo === "orbita");
+        $("b3Caminar").classList.toggle("activo", modo === "caminar");
+        $("ayuda3d").innerHTML = modo === "orbita"
+            ? "<kbd>Clic izquierdo</kbd> girar · <kbd>Clic derecho</kbd> mover · <kbd>Rueda</kbd> acercar<br><b>Doble clic en la casa para entrar caminando</b>"
+            : "<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> o flechas: caminar · <kbd>Q</kbd>/<kbd>E</kbd> bajar y subir · <kbd>Shift</kbd> rápido · arrastra para mirar<br>" +
+              "Doble clic para ir a otro punto · <b><kbd>Esc</kbd> o <kbd>Ver toda la nube</kbd> para salir</b>";
+    }
+    // Lleva la camara a "pos" mirando a "mira" (con animacion corta)
+    function irA(mira, pos, animar = true) {
+        const ctl = v3.ctl, cam = ctl.object;
+        if (!animar) {
+            v3.viaje = null;
+            cam.position.copy(pos);
+            if (v3.modo === "orbita") { ctl.target.copy(mira); ctl.update(); } else { cam.lookAt(mira); orientar(mira); }
+            return;
+        }
+        const desde = v3.modo === "orbita" ? ctl.target.clone() : cam.position.clone().add(direccion());
+        v3.viaje = { t0: performance.now(), dur: 750, p0: cam.position.clone(), p1: pos.clone(), q0: desde, q1: mira.clone() };
+    }
+    // az/el en null: conserva el angulo actual de la camara (solo reencuadra)
+    function verTodo(animar = true, az = -35, el = 25) {
+        if (!v3.renderer || !nube) return;
+        if (comp.activo === "B") activarLado("A");
+        if (v3.modo !== "orbita") ponerModo("orbita");
+        if (az == null) {
+            const o = v3.cam.position.clone().sub(v3.ctl.target), l = o.length() || 1;
+            el = Math.asin(Math.max(-1, Math.min(1, o.z / l))) * 180 / Math.PI;
+            az = Math.atan2(o.x, -o.y) * 180 / Math.PI;
+        }
+        // Que quepa a lo alto y a lo ancho de lo que se ve (media pantalla en "lado a lado")
+        const c = $("vista3d"), libre = Math.max(100, c.clientWidth - margen()), h = c.clientHeight || 1;
+        const ancho = comp.nube && comp.modo === "lado" ? libre / 2 : libre, tv = Math.tan(v3.cam.fov * Math.PI / 360);
+        const d = Math.max(lado3d(), alto3d()), dist = d * 0.6 / Math.min(tv, tv * ancho / h) + d * 0.4;
+        const a = az * Math.PI / 180, e = el * Math.PI / 180;
+        const mira = new T.Vector3(0, 0, alto3d() / 2);
+        irA(mira, mira.clone().add(new T.Vector3(Math.cos(e) * Math.sin(a), -Math.cos(e) * Math.cos(a), Math.sin(e)).multiplyScalar(dist)), animar);
+        if (v3.viaje) v3.viaje.ambas = true;
+        else if (comp.nube && !comp.unidas) { v3.camB.position.copy(v3.cam.position); v3.camB.quaternion.copy(v3.cam.quaternion); v3.targetB.copy(mira); }
+    }
+    function camAct() { return v3.ctl.object; }
+    function direccion() {
+        const cp = Math.cos(v3.pitch);
+        return new T.Vector3(Math.sin(v3.yaw) * cp, Math.cos(v3.yaw) * cp, Math.sin(v3.pitch));
+    }
+    function orientar(mira) {
+        const d = mira.clone().sub(camAct().position).normalize();
+        v3.yaw = Math.atan2(d.x, d.y);
+        v3.pitch = Math.asin(Math.max(-1, Math.min(1, d.z)));
+    }
+    // Caminar hasta un punto: se queda un poco antes, mirandolo de frente
+    function caminarA(punto) {
+        const c = camAct().position, dx = punto.x - c.x, dy = punto.y - c.y, l = Math.hypot(dx, dy) || 1;
+        const atras = Math.min(0.7, l / 2);
+        const pos = new T.Vector3(punto.x - dx / l * atras, punto.y - dy / l * atras, Math.max(0.3, punto.z));
+        const mira = pos.clone().add(new T.Vector3(dx / l, dy / l, 0));
+        if (v3.modo !== "caminar") { ponerModo("caminar"); orientar(v3.ctl.target); }
+        irA(mira, pos);
+    }
+    function caminarDesdeAqui() {
+        // Si la camara esta lejos, se entra por el borde de la nube a la altura de los ojos
+        const c = camAct().position, l = Math.hypot(c.x, c.y), borde = lado3d() / 2 + 1.5;
+        const mira = v3.ctl.target.clone();
+        ponerModo("caminar");
+        orientar(mira);
+        if (l > borde * 1.5 || c.z > alto3d() + 3) {
+            const ux = l ? c.x / l : 0, uy = l ? c.y / l : -1;
+            const pos = new T.Vector3(ux * borde, uy * borde, 1.6);
+            irA(new T.Vector3(0, 0, 1.6), pos);
+        }
+    }
+    function salirDeCaminar() {
+        const mira = camAct().position.clone().add(direccion().multiplyScalar(2));
+        ponerModo("orbita");
+        v3.ctl.target.copy(mira);
+        v3.ctl.update();
+    }
+
+    function cuadro() {
+        const ahora = performance.now(), dt = Math.min(0.1, (ahora - v3.reloj) / 1000);
+        v3.reloj = ahora;
+        const ctl = v3.ctl, cam = ctl.object;
+        if (v3.viaje) {
+            const vj = v3.viaje, f = Math.min(1, (ahora - vj.t0) / vj.dur), e = f < 0.5 ? 2 * f * f : 1 - (2 - 2 * f) ** 2 / 2;
+            cam.position.lerpVectors(vj.p0, vj.p1, e);
+            const q = new T.Vector3().lerpVectors(vj.q0, vj.q1, e);
+            if (v3.modo === "orbita") ctl.target.copy(q); else cam.lookAt(q);
+            if (f === 1) { v3.viaje = null; if (v3.modo !== "orbita") orientar(q); }
+            if (vj.ambas && comp.nube && !comp.unidas) { v3.camB.position.copy(cam.position); v3.camB.quaternion.copy(cam.quaternion); v3.targetB.copy(q); }
+        } else if (v3.modo === "caminar") {
+            moverCaminando(dt);
+        }
+        if (v3.modo === "orbita") ctl.update();
+        render3d();
+    }
+
+    // Dibuja una o las dos nubes segun el modo de comparacion
+    function render3d() {
+        const r = v3.renderer, cam = v3.cam, w = r.domElement.clientWidth, h = r.domElement.clientHeight;
+        const gA = v3.grupo, gB = v3.grupoB, m = comp.nube ? comp.modo : null;
+        r.setScissorTest(false);
+        r.clear();
+        if (m === "cortina" || m === "lado") {
+            r.setScissorTest(true);
+            let zonas;
+            if (m === "cortina") {
+                const x = Math.round(w * comp.div);
+                zonas = [[0, x, gA], [x, w - x, gB]];
+            } else {
+                // Lado a lado: cada nube en media pantalla, con la misma camara
+                const x0 = margen(), mitad = (w - x0) / 2;
+                cam.clearViewOffset();
+                cam.aspect = mitad / h;
+                cam.updateProjectionMatrix();
+                zonas = [[x0, mitad, gA], [x0 + mitad, mitad, gB]];
+                if (!comp.unidas) { v3.camB.aspect = mitad / h; v3.camB.updateProjectionMatrix(); }
+            }
+            const corre = m === "lado" && comp.desfase;
+            if (corre) gB.position.add(comp.desfase);
+            for (const [x, ancho, g] of zonas) {
+                gA.visible = g === gA;
+                gB.visible = g === gB;
+                if (m === "lado") r.setViewport(x, 0, ancho, h);
+                r.setScissor(x, 0, ancho, h);
+                r.render(v3.escena, m === "lado" && g === gB && !comp.unidas ? v3.camB : cam);
+            }
+            r.setScissorTest(false);
+            if (corre) gB.position.sub(comp.desfase);
+            if (m === "lado") { r.setViewport(0, 0, w, h); ajustarCamara(); }
+        } else {
+            gA.visible = m !== "diferencias";
+            gB.visible = !!m;
+            r.render(v3.escena, cam);
+        }
+        gA.visible = true;
+    }
+    function moverCaminando(dt) {
+        const h = k => v3.teclas.has(k) ? 1 : 0;
+        v3.yaw += (h("arrowright") - h("arrowleft")) * 1.4 * dt;
+        const v = (h("shift") ? 3.5 : 1.2) * dt;
+        const ad = Math.sign(h("w") + h("arrowup") - h("s") - h("arrowdown")), la = h("d") - h("a"), su = h("e") - h("q");
+        const sn = Math.sin(v3.yaw), cs = Math.cos(v3.yaw), p = camAct().position;
+        p.x += (sn * ad + cs * la) * v;
+        p.y += (cs * ad - sn * la) * v;
+        p.z += su * v;
+        camAct().lookAt(p.clone().add(direccion()));
+    }
+
+    // Punto bajo el mouse (x, y relativos al lienzo)
+    function picar(x, y) {
+        const el = v3.renderer.domElement, w = el.clientWidth, h = el.clientHeight, rc = v3.rc ??= new T.Raycaster();
+        const m = comp.nube ? comp.modo : null, A = [...v3.objetos.values()], B = [...comp.objetos.values()];
+        let objs = A, nx = x / w * 2 - 1, camPick = v3.cam;
+        if (m === "cortina") objs = x > w * comp.div ? B : A;
+        else if (m === "superponer") objs = A.concat(B);
+        else if (m === "diferencias") objs = B;
+        else if (m === "lado") {
+            const x0 = margen(), mitad = (w - x0) / 2, enB = x > x0 + mitad;
+            if (x < x0) return null;
+            objs = enB ? B : A;
+            nx = (x - x0 - (enB ? mitad : 0)) / mitad * 2 - 1;
+            if (enB && !comp.unidas) camPick = v3.camB;
+            camPick.clearViewOffset();
+            camPick.aspect = mitad / h;
+            camPick.updateProjectionMatrix();
+        }
+        rc.setFromCamera(new T.Vector2(nx, -(y / h) * 2 + 1), camPick);
+        if (m === "lado") ajustarCamara();
+        const corre = m === "lado" && objs === B && comp.desfase;
+        if (corre) { v3.grupoB.position.add(comp.desfase); v3.grupoB.updateMatrixWorld(); }
+        const dist = v3.modo === "orbita" ? v3.cam.position.distanceTo(v3.ctl.target) : 2;
+        rc.params.Points.threshold = Math.max(0.004, dist * 0.005);
+        const hit = rc.intersectObjects(objs.filter(o => o.visible), false)[0];
+        const punto = hit && hit.object.localToWorld(new T.Vector3().fromBufferAttribute(hit.object.geometry.attributes.position, hit.index));
+        if (corre) { v3.grupoB.position.sub(comp.desfase); v3.grupoB.updateMatrixWorld(); }
+        if (!hit) return null;
+        return { k: hit.object.userData.k, index: hit.index, nb: hit.object.userData.nb, punto };
+    }
+
+    function eventos3d(el) {
+        let abajo = null;
+        const xy = e => { const r = el.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+        el.addEventListener("pointerdown", e => {
+            abajo = { x: e.clientX, y: e.clientY, t: performance.now(), yaw: v3.yaw, pitch: v3.pitch, boton: e.button };
+            $("guia3d").hidden = true;
+            if (v3.modo === "caminar") el.setPointerCapture(e.pointerId);
+        });
+        el.addEventListener("pointermove", e => {
+            if (!abajo || v3.modo !== "caminar" || v3.viaje) return;
+            // Mirar alrededor: arrastrar a la derecha mira a la derecha
+            v3.yaw = abajo.yaw + (e.clientX - abajo.x) * 0.005;
+            v3.pitch = Math.max(-1.5, Math.min(1.5, abajo.pitch - (e.clientY - abajo.y) * 0.005));
+            camAct().lookAt(camAct().position.clone().add(direccion()));
+        });
+        el.addEventListener("pointerup", e => {
+            const a = abajo;
+            abajo = null;
+            if (!a || a.boton !== 0 || Math.hypot(e.clientX - a.x, e.clientY - a.y) > 4 || performance.now() - a.t > 400) return;
+            const [x, y] = xy(e), h = picar(x, y);
+            alClic(h ? { layer: { id: "n" + h.k }, index: h.index, nube: h.nb, x, y } : { index: -1 });
+        });
+        el.addEventListener("dblclick", e => {
+            const [x, y] = xy(e), h = picar(x, y);
+            if (h) caminarA(h.punto);
+        });
+        el.addEventListener("wheel", e => {
+            if (v3.modo !== "caminar") return;
+            e.preventDefault();
+            camAct().position.add(direccion().multiplyScalar(-Math.sign(e.deltaY) * (e.shiftKey ? 1 : 0.3)));
+        }, { passive: false });
+        el.addEventListener("contextmenu", e => e.preventDefault());
+    }
+
+    const TECLAS = ["w", "a", "s", "d", "q", "e", "arrowup", "arrowdown", "arrowleft", "arrowright", "shift"];
+    addEventListener("keydown", e => {
+        if (!modo3d || !v3.renderer || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+        const k = e.key.toLowerCase();
+        if (k === "escape") { $("guia3d").hidden = true; if (v3.modo === "caminar") salirDeCaminar(); return; }
+        if (!TECLAS.includes(k)) return;
+        // Con una tecla de caminar se pasa solo al modo caminar
+        if (k !== "shift" && v3.modo !== "caminar") caminarDesdeAqui();
+        e.preventDefault();
+        v3.teclas.add(k);
+    });
+    addEventListener("keyup", e => v3.teclas.delete(e.key.toLowerCase()));
+    addEventListener("blur", () => v3.teclas.clear());
+
+    $("b3Todo").addEventListener("click", () => verTodo());
+    $("b3Orbita").addEventListener("click", () => { if (v3.modo === "caminar") salirDeCaminar(); });
+    $("b3Caminar").addEventListener("click", () => { if (v3.modo !== "caminar") caminarDesdeAqui(); });
+    const VISTAS = { frente: [0, 3], lado: [90, 3], arriba: [0, 89.5] };
+    document.querySelectorAll(".barra3d [data-vista]").forEach(b => b.addEventListener("click", () => verTodo(true, ...VISTAS[b.dataset.vista])));
+    $("b3Girar").addEventListener("click", e => {
+        if (v3.modo !== "orbita") salirDeCaminar();
+        v3.ctl.autoRotate = e.currentTarget.classList.toggle("activo");
+    });
+    $("b3Ayuda").addEventListener("click", () => { $("guia3d").hidden = !$("guia3d").hidden; });
+    $("guiaOk").addEventListener("click", () => {
+        $("guia3d").hidden = true;
+        try { localStorage.setItem("lidarGuia3d", "1"); } catch (e) { }
+    });
+
+    // ---------- Controles ----------
+    function rango(id, fn) { $(id).addEventListener("input", e => fn(+e.target.value)); }
+    const textoTam = () => $("vTam").textContent = opc.tam.toLocaleString("es-CO") + (opc.metros ? " cm" : " px");
+    rango("rngTam", v => { opc.tam = v; textoTam(); dibujar(); });
+    $("chkMetros").addEventListener("change", e => { opc.metros = e.target.checked; textoTam(); dibujar(); });
+    rango("rngAjuste", v => { opc.ajuste = v; $("vAjuste").textContent = (v > 0 ? "+" : "") + v.toLocaleString("es-CO") + " m"; redibujar(); });
+    rango("rngExag", v => { opc.exag = v; $("vExag").textContent = "×" + v; redibujar(); });
+    let espera = null;
+    rango("rngPresupuesto", v => {
+        opc.presupuesto = v * 1e6; $("vPresupuesto").textContent = millones(v * 1e6);
+        clearTimeout(espera); espera = setTimeout(actualizar, 300);
+    });
+    rango("rngDetalle", v => {
+        opc.detalle = v; $("vDetalle").textContent = v < 1 ? "bajo" : v > 1 ? "alto" : "normal";
+        clearTimeout(espera); espera = setTimeout(actualizar, 300);
+    });
+    document.querySelectorAll("#segColor button").forEach(b => b.addEventListener("click", () => fijarModo(b.dataset.modo)));
+    $("btnEncuadrar").addEventListener("click", () => encuadrar(true));
+    $("btnSatelite").addEventListener("click", e => {
+        e.currentTarget.classList.toggle("activo");
+        pintarFondo();
+    });
+    // Nube local: se pone donde el usuario haga clic (empieza mostrando el campus)
+    let eligiendo = false;
+    $("btnUbicar").addEventListener("click", () => {
+        if (!nube || !nube.local) return;
+        if (nube.ubicada) { ubicar(LUGAR_LOCAL); return; }
+        if (eligiendo) return;
+        eligiendo = true;
+        modo3d = false;
+        $("vista3d").hidden = true;
+        cerrar3d();
+        overlay.setProps({ layers: [] });
+        map.setLayoutProperty("cuadricula", "visibility", "none");
+        map.setLayoutProperty($("btnSatelite").classList.contains("activo") ? "sat" : "osm", "visibility", "visible");
+        map.flyTo({ center: [-74.0659, 4.6016], zoom: 17, pitch: 0, bearing: 0 });
+        map.getCanvas().style.cursor = "crosshair";
+        aviso = "Haz clic en el mapa donde va el centro de la nube (puedes moverte antes de hacer clic).";
+        dibujar();
+        const esta = nube;
+        map.once("click", e => {
+            eligiendo = false;
+            aviso = "";
+            map.getCanvas().style.cursor = "";
+            if (nube === esta) ubicar([e.lngLat.lng, e.lngLat.lat]);
+        });
+    });
+
+    // ---------- Comparar dos nubes (A: la abierta, B: la segunda) ----------
+    // Como en Comparador3D.html: cortina que se arrastra, lado a lado con la misma
+    // camara, superpuestas en dos colores, o B pintada segun cuanto cambio frente a A.
+    const MAX_B = 8e6;
+    const comp = { nube: null, unidas: true, activo: "A", giro: 0, centroB: null, modo: "cortina", div: 0.6, objetos: new Map(), umbral: 0.05, dx: 0, dy: 0, dz: 0, calc: 0, sucio: true, gen: 0 };
+    function compEstado(txt, error) {
+        const e = $("compEstado");
+        e.hidden = !txt;
+        e.textContent = txt || "";
+        e.classList.toggle("error", !!error);
+    }
+
+    async function abrirComparar(fuente, nombre) {
+        if (!nube) { compEstado("Primero abre la nube A (la de arriba).", true); return; }
+        const gen = ++comp.gen, A = nube;
+        const vigente = () => gen === comp.gen && nube === A;
+        try {
+            compEstado("Leyendo " + nombre + "…");
+            lazPerf ??= await createLazPerf({ locateFile: f => "https://cdn.jsdelivr.net/npm/laz-perf@0.0.7/lib/web/" + f });
+            if (A.local && A.ubicada) ubicar(LUGAR_LOCAL);
+            const centro = A.local ? A.centro : null;
+            const get = typeof fuente === "string" ? lectorUrl(fuente) : lectorArchivo(fuente);
+            let B;
+            try {
+                const copc = await Copc.create(get);
+                const h = copc.header, pr = proyeccion(copc.wkt, null, h.min, h.max, centro);
+                const { nodes } = await Copc.loadHierarchyPage(get, copc.info.rootHierarchyPage);
+                B = {
+                    get, copc, aGeo: pr.aGeo, fz: pr.fz, local: !!pr.local, nombre, total: h.pointCount, nodos: nodes,
+                    origen: pr.c0, min: h.min, max: h.max, zMin: h.min[2] * pr.fz, zMax: h.max[2] * pr.fz,
+                    tieneRgb: [2, 3, 5, 7, 8, 10].includes(h.pointDataRecordFormat & 0x3f), cache: new Map()
+                };
+                // COPC: de lo grueso a lo fino hasta el maximo de puntos
+                const claves = Object.keys(nodes).filter(k => nodes[k].pointCount > 0).sort((p, q) => +p.split("-")[0] - +q.split("-")[0]);
+                const lista = [];
+                let suma = 0;
+                for (const k of claves) {
+                    if (suma + nodes[k].pointCount > MAX_B && lista.length) break;
+                    suma += nodes[k].pointCount;
+                    lista.push(k);
+                }
+                for (let i = 0; i < lista.length; i += 4) {
+                    const lote = lista.slice(i, i + 4), res = await Promise.all(lote.map(k => cargarNodo(k, B)));
+                    if (!vigente()) return;
+                    lote.forEach((k, j) => B.cache.set(k, res[j]));
+                    compEstado(`Leyendo ${nombre}: ${Math.round(100 * Math.min(lista.length, i + 4) / lista.length)} %`);
+                }
+            } catch (e) {
+                if (!/COPC info VLR|Invalid version/.test(e.message || "")) throw e;
+                B = await abrirCompleto(fuente, nombre, 0, { vigente, centro, max: MAX_B });
+                dibujar(); // abrirCompleto escribe su avance en el estado de A
+            }
+            if (!B || !vigente()) return;
+            if (B.local !== A.local) throw new Error("Una nube tiene coordenadas reales y la otra no: no se pueden poner en el mismo sitio.");
+            // Misma referencia de altura que A, para que el piso coincida
+            B.zSuelo = A.zSuelo ?? A.zMin;
+            B.zTecho = A.zTecho ?? A.zMax;
+            if (B.completo) B.total = B.total || 0;
+            if (comp.nube) quitarComparacion(false);
+            comp.nube = B;
+            comp.auto = null;
+            comp.centroB = null;
+            comp.giro = 0;
+            if (v3.renderer) quitarICP();
+            $("rngBgiro").value = 0;
+            $("vBgiro").textContent = "0°";
+            comp.sucio = true;
+            let leidos = 0;
+            for (const d of B.cache.values()) leidos += d.n;
+            $("compDatos").innerHTML = `<span>A</span><b>${A.nombre}</b><span>B</span><b>${B.nombre} · ${millones(leidos)} de ${millones(B.total || leidos)} puntos</b>`;
+            compEstado("");
+            $("compControles").hidden = false;
+            comp.div = 0;
+            pintarFondo();      // abre la vista 3D (tambien si las nubes tienen coordenadas reales)
+            fijarComp(comp.modo);
+        } catch (e) {
+            console.error(e);
+            if (gen === comp.gen) compEstado(e.message || String(e), true);
+        }
+    }
+
+    function quitarComparacion(repintar = true) {
+        comp.gen++;
+        comp.calc++;
+        if (v3.renderer) activarLado("A");
+        comp.nube = null;
+        if (v3.renderer) limpiarB();
+        $("compControles").hidden = true;
+        $("cortina3d").hidden = $("etqA").hidden = $("etqB").hidden = $("tarjetaDif").hidden = true;
+        compEstado("");
+        if (repintar && nube) { pintarFondo(); dibujar(); }
+    }
+
+    const NOTAS = {
+        cortina: "Arrastra la línea amarilla en el visor: a la izquierda se ve A y a la derecha B.",
+        lado: "Las dos nubes lado a lado, cada una centrada en su mitad. Con el candado del visor eliges: cámaras unidas (lo que giras en una se gira en la otra) o separadas (haz clic en un lado y solo se mueve ese).",
+        superponer: "A en azul y B en naranja, una encima de la otra: donde se ve un solo color, algo cambió.",
+        diferencias: "Cada punto de B se pinta según la distancia al punto más cercano de A: azul es igual, rojo es lo que cambió (o es nuevo)."
+    };
+    function fijarComp(modo) {
+        const cambiaLado = (modo === "lado") !== (comp.modo === "lado");
+        if (cambiaLado && v3.renderer) activarLado("A");
+        comp.modo = modo;
+        if (v3.renderer) {
+            // En media pantalla el zoom hacia el cursor apuntaria mal: se acerca al centro
+            v3.ctl.zoomToCursor = modo !== "lado";
+            if (cambiaLado && modo3d) verTodo(true, null, null);
+        }
+        document.querySelectorAll("#segComp button").forEach(b => b.classList.toggle("activo", b.dataset.comp === modo));
+        $("compNota").textContent = NOTAS[modo];
+        $("compDif").hidden = modo !== "diferencias";
+        if (!comp.div) { const w = $("vista3d").clientWidth || innerWidth; comp.div = (margen() + (w - margen()) / 2) / w; }
+        rotulosComp();
+        dibujar();
+    }
+
+    function materialesComp() {
+        if (!v3.renderer) return;
+        const sup = !!comp.nube && comp.modo === "superponer", dif = !!comp.nube && comp.modo === "diferencias";
+        for (const o of v3.objetos.values()) o.material = sup ? v3.matA : v3.material;
+        for (const o of comp.objetos.values()) {
+            o.material = sup ? v3.matB : v3.material;
+            const c = dif && o.userData.colorDif ? o.userData.colorDif : o.userData.colorReal;
+            if (o.geometry.attributes.color !== c) o.geometry.setAttribute("color", c);
+        }
+    }
+    function posicionB() {
+        const A = nube, B = comp.nube, [sx] = escala3d(A);
+        const base = new T.Vector3((B.origen[0] - A.origen[0]) * sx, (B.origen[1] - A.origen[1]) * M_LAT, 0);
+        if (!comp.auto) calcularAlineacion(base);
+        const auto = $("chkAlinear").checked && comp.auto ? comp.auto : new T.Vector3();
+        if (!comp.centroB) {
+            const caja = new T.Box3();
+            for (const o of comp.objetos.values()) { o.geometry.computeBoundingBox(); caja.union(o.geometry.boundingBox); }
+            if (!caja.isEmpty()) comp.centroB = caja.getCenter(new T.Vector3()).setZ(0);
+        }
+        const c = comp.centroB || new T.Vector3();
+        v3.grupoBin.position.set(-c.x, -c.y, 0);
+        v3.grupoB.position.set(base.x + c.x + auto.x + comp.dx, base.y + c.y + auto.y + comp.dy, auto.z + comp.dz);
+        v3.grupoB.rotation.z = comp.giro * Math.PI / 180;
+        v3.grupoBicp.updateMatrixWorld(true);
+        // Cuanto hay que correr B para que, en "lado a lado", quede centrada como A
+        const caja = new T.Box3().setFromObject(v3.grupoB), cajaA = new T.Box3().setFromObject(v3.grupo);
+        comp.desfase = caja.isEmpty() || cajaA.isEmpty() ? null
+            : cajaA.getCenter(new T.Vector3()).sub(caja.getCenter(new T.Vector3())).setZ(0);
+    }
+
+    // Alineacion automatica: si B quedo lejos de A (escaneos con origenes distintos),
+    // se lleva su centro al de A y su piso al de A. Si ya coinciden, no se toca.
+    function pisoDe(objs) {
+        const zs = [];
+        for (const o of objs) {
+            const p = o.geometry.attributes.position.array, salto = Math.max(1, Math.floor(p.length / 3 / 40000));
+            for (let i = 2; i < p.length; i += 3 * salto) zs.push(p[i]);
+        }
+        if (zs.length < 50) return null;
+        zs.sort((a, b) => a - b);
+        return zs[Math.floor(zs.length * 0.02)]; // el punto mas bajo suele ser ruido
+    }
+    function calcularAlineacion(base) {
+        const objsA = [...v3.objetos.values()], objsB = [...comp.objetos.values()];
+        if (!objsA.length || !objsB.length) return;
+        const cajaA = new T.Box3(), cajaB = new T.Box3();
+        objsA.forEach(o => cajaA.expandByObject(o));
+        objsB.forEach(o => { o.geometry.computeBoundingBox(); cajaB.union(o.geometry.boundingBox); });
+        cajaB.translate(base);
+        const cA = cajaA.getCenter(new T.Vector3()), cB = cajaB.getCenter(new T.Vector3());
+        const tam = Math.max(cajaA.max.x - cajaA.min.x, cajaA.max.y - cajaA.min.y, 0.5), alto = Math.max(cajaA.max.z - cajaA.min.z, 0.5);
+        const pA = pisoDe(objsA), pB = pisoDe(objsB);
+        const lejos = Math.hypot(cA.x - cB.x, cA.y - cB.y), dz = pA != null && pB != null ? pA - pB : 0;
+        const mover = lejos > tam * 0.3, subir = Math.abs(dz) > alto * 0.15;
+        comp.auto = new T.Vector3(mover ? cA.x - cB.x : 0, mover ? cA.y - cB.y : 0, subir ? dz : 0);
+        const m = v => v.toLocaleString("es-CO", { maximumFractionDigits: 2 }) + " m";
+        const txt = mover || subir
+            ? `B estaba ${mover ? `a ${m(lejos)} de A` : ""}${mover && subir ? " y " : ""}${subir ? `${m(Math.abs(dz))} más ${dz > 0 ? "abajo" : "arriba"}` : ""}
+               (otro sistema de coordenadas): se movió para que queden en el mismo sitio. Afina con los controles de abajo.`
+            : "";
+        $("compAuto").hidden = !txt;
+        $("compAuto").textContent = txt;
+        if (mover || subir) verTodo(true, null, null);
+        // Si las coordenadas eran otras, lo normal es que tambien este girada: se busca el giro solo
+        setTimeout(mover ? calzarGiro : () => alinearICP(), 150);
+    }
+
+    // Lado a lado con camaras separadas: los controles mueven la camara del lado activo
+    function activarLado(lado) {
+        if (!v3.renderer || lado === comp.activo) return;
+        const { ctl, cam, camB } = v3;
+        (comp.activo === "B" ? v3.targetB : v3.targetA).copy(ctl.target);
+        ctl.object = lado === "B" ? camB : cam;
+        ctl.target.copy(lado === "B" ? v3.targetB : v3.targetA);
+        v3.viaje = null;
+        if (v3.modo === "orbita") ctl.update();
+        else {
+            const d = ctl.object.getWorldDirection(new T.Vector3());
+            v3.yaw = Math.atan2(d.x, d.y);
+            v3.pitch = Math.asin(Math.max(-1, Math.min(1, d.z)));
+        }
+        comp.activo = lado;
+        rotulosComp();
+    }
+    function unirCamaras(unidas) {
+        if (!v3.renderer) return;
+        activarLado("A");
+        comp.unidas = unidas;
+        if (!unidas) {
+            // B arranca viendo lo mismo que A
+            v3.camB.position.copy(v3.cam.position);
+            v3.camB.quaternion.copy(v3.cam.quaternion);
+            v3.targetB.copy(v3.ctl.target);
+        }
+        rotulosComp();
+    }
+    $("b3Unir").addEventListener("click", () => unirCamaras(!comp.unidas));
+
+    // Giro automatico: prueba giros de B (sobre su centro) y se queda con el que hace
+    // calzar mas puntos de una muestra de B con la nube A
+    async function calzarGiro() {
+        if (!comp.nube || !v3.renderer) return;
+        quitarICP();
+        compEstado("Buscando el giro con el que mejor calzan las dos nubes…");
+        await dormir(30);
+        const celda = 0.08, inv = 1 / celda;
+        const objsA = [...v3.objetos.values()].filter(o => o.visible), objsB = [...comp.objetos.values()];
+        let nA = 0, nB = 0;
+        objsA.forEach(o => nA += o.geometry.attributes.position.count);
+        objsB.forEach(o => nB += o.geometry.attributes.position.count);
+        if (!nA || !nB) { compEstado(""); return; }
+        const sA = Math.max(1, Math.floor(nA / 400000)), PA = [];
+        for (const o of objsA) { const q = o.geometry.attributes.position.array; for (let i = 0; i < q.length; i += 3 * sA) PA.push(q[i], q[i + 1], q[i + 2]); }
+        const TAM = 1 << 20, MASK = TAM - 1, cabeza = new Int32Array(TAM).fill(-1), sig = new Int32Array(PA.length / 3);
+        const hash = (i, j, k) => ((i * 73856093) ^ (j * 19349663) ^ (k * 83492791)) & MASK;
+        for (let i = 0; i < PA.length / 3; i++) {
+            const c = hash(Math.floor(PA[3 * i] * inv), Math.floor(PA[3 * i + 1] * inv), Math.floor(PA[3 * i + 2] * inv));
+            sig[i] = cabeza[c];
+            cabeza[c] = i;
+        }
+        // Muestra de B en el sistema de grupoB (centrada, sin girar)
+        const sB = Math.max(1, Math.floor(nB / 5000)), PB = [], ib = v3.grupoBin.position;
+        for (const o of objsB) { const q = o.geometry.attributes.position.array; for (let i = 0; i < q.length; i += 3 * sB) PB.push(q[i] + ib.x, q[i + 1] + ib.y, q[i + 2]); }
+        const g = v3.grupoB.position, c2 = celda * celda;
+        const puntaje = ang => {
+            const cs = Math.cos(ang), sn = Math.sin(ang);
+            let n = 0;
+            for (let j = 0; j < PB.length; j += 3) {
+                const x = cs * PB[j] - sn * PB[j + 1] + g.x, y = sn * PB[j] + cs * PB[j + 1] + g.y, z = PB[j + 2] + g.z;
+                const ix = Math.floor(x * inv), iy = Math.floor(y * inv), iz = Math.floor(z * inv);
+                busca: for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (let c = -1; c <= 1; c++) {
+                    for (let i = cabeza[hash(ix + a, iy + b, iz + c)]; i !== -1; i = sig[i]) {
+                        const dx = PA[3 * i] - x, dy = PA[3 * i + 1] - y, dz = PA[3 * i + 2] - z;
+                        if (dx * dx + dy * dy + dz * dz < c2) { n++; break busca; }
+                    }
+                }
+            }
+            return n;
+        };
+        let mejor = -1, mejorA = 0;
+        for (let a = -180; a < 180; a += 2) {
+            const p = puntaje(a * Math.PI / 180);
+            if (p > mejor) { mejor = p; mejorA = a; }
+            if (a % 20 === 0) { compEstado(`Buscando el giro… ${Math.round((a + 180) / 3.6)} %`); await dormir(0); }
+        }
+        const grueso = mejorA;
+        for (let a = grueso - 2; a <= grueso + 2; a += 0.25) {
+            const p = puntaje(a * Math.PI / 180);
+            if (p > mejor) { mejor = p; mejorA = a; }
+        }
+        mejorA = ((mejorA + 540) % 360) - 180;
+        comp.giro = mejorA;
+        $("rngBgiro").value = mejorA;
+        $("vBgiro").textContent = mejorA.toLocaleString("es-CO") + "°";
+        posicionB();
+        comp.sucio = true;
+        if (comp.modo === "diferencias") diferenciasLuego();
+        await alinearICP(`Giro: ${mejorA.toLocaleString("es-CO")}°. `);
+    }
+    $("btnCalzar").addEventListener("click", calzarGiro);
+    rango("rngBgiro", v => {
+        comp.giro = v;
+        $("vBgiro").textContent = v.toLocaleString("es-CO") + "°";
+        if (!comp.nube || !v3.renderer) return;
+        quitarICP();
+        posicionB();
+        comp.sucio = true;
+        if (comp.modo === "diferencias") diferenciasLuego();
+    });
+
+    // ---------- Ajuste fino ICP (Iterative Closest Point, como en CloudCompare) ----------
+    // Empareja cada punto de una muestra de B con el mas cercano de A, calcula el giro y el
+    // desplazamiento (en los 3 ejes) que mejor los junta (metodo de Horn) y repite achicando
+    // la distancia de busqueda. Descarta el 15 % de parejas mas lejanas (lo que si cambio).
+    function quitarICP() {
+        v3.grupoBicp.matrix.identity();
+        v3.grupoBicp.updateMatrixWorld(true);
+    }
+    // Vector propio del mayor valor propio de una matriz simetrica 4x4 (Jacobi)
+    function vectorPropioMayor(N) {
+        const a = N.map(f => f.slice()), v = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]];
+        for (let barrido = 0; barrido < 50; barrido++) {
+            let fuera = 0;
+            for (let p = 0; p < 3; p++) for (let q = p + 1; q < 4; q++) fuera += a[p][q] * a[p][q];
+            if (fuera < 1e-18) break;
+            for (let p = 0; p < 3; p++) for (let q = p + 1; q < 4; q++) {
+                if (Math.abs(a[p][q]) < 1e-30) continue;
+                const th = (a[q][q] - a[p][p]) / (2 * a[p][q]);
+                const t = Math.sign(th || 1) / (Math.abs(th) + Math.sqrt(th * th + 1)), c = 1 / Math.sqrt(t * t + 1), sn = t * c;
+                for (let k = 0; k < 4; k++) {
+                    const akp = a[k][p], akq = a[k][q];
+                    a[k][p] = c * akp - sn * akq; a[k][q] = sn * akp + c * akq;
+                }
+                for (let k = 0; k < 4; k++) {
+                    const apk = a[p][k], aqk = a[q][k];
+                    a[p][k] = c * apk - sn * aqk; a[q][k] = sn * apk + c * aqk;
+                }
+                for (let k = 0; k < 4; k++) {
+                    const vkp = v[k][p], vkq = v[k][q];
+                    v[k][p] = c * vkp - sn * vkq; v[k][q] = sn * vkp + c * vkq;
+                }
+            }
+        }
+        let m = 0;
+        for (let i = 1; i < 4; i++) if (a[i][i] > a[m][m]) m = i;
+        return [v[0][m], v[1][m], v[2][m], v[3][m]];
+    }
+    // Transformacion rigida que lleva src sobre dst (pares de puntos [x,y,z,...])
+    function horn(src, dst, n) {
+        let sx = 0, sy = 0, sz = 0, dx = 0, dy = 0, dz = 0;
+        for (let i = 0; i < n; i++) { sx += src[3 * i]; sy += src[3 * i + 1]; sz += src[3 * i + 2]; dx += dst[3 * i]; dy += dst[3 * i + 1]; dz += dst[3 * i + 2]; }
+        sx /= n; sy /= n; sz /= n; dx /= n; dy /= n; dz /= n;
+        let Sxx = 0, Sxy = 0, Sxz = 0, Syx = 0, Syy = 0, Syz = 0, Szx = 0, Szy = 0, Szz = 0;
+        for (let i = 0; i < n; i++) {
+            const px = src[3 * i] - sx, py = src[3 * i + 1] - sy, pz = src[3 * i + 2] - sz;
+            const qx = dst[3 * i] - dx, qy = dst[3 * i + 1] - dy, qz = dst[3 * i + 2] - dz;
+            Sxx += px * qx; Sxy += px * qy; Sxz += px * qz;
+            Syx += py * qx; Syy += py * qy; Syz += py * qz;
+            Szx += pz * qx; Szy += pz * qy; Szz += pz * qz;
+        }
+        const [w, x, y, z] = vectorPropioMayor([
+            [Sxx + Syy + Szz, Syz - Szy, Szx - Sxz, Sxy - Syx],
+            [Syz - Szy, Sxx - Syy - Szz, Sxy + Syx, Szx + Sxz],
+            [Szx - Sxz, Sxy + Syx, -Sxx + Syy - Szz, Syz + Szy],
+            [Sxy - Syx, Szx + Sxz, Syz + Szy, -Sxx - Syy + Szz]
+        ]);
+        const m = new T.Matrix4().makeRotationFromQuaternion(new T.Quaternion(x, y, z, w).normalize());
+        const c = new T.Vector3(sx, sy, sz).applyMatrix4(m);
+        m.setPosition(dx - c.x, dy - c.y, dz - c.z);
+        return m;
+    }
+
+    async function alinearICP(prefijo = "") {
+        if (!comp.nube || !v3.renderer) return;
+        const id = ++comp.calc;
+        compEstado(prefijo + "Ajuste fino: juntando las dos nubes punto a punto…");
+        await dormir(30);
+        const objsA = [...v3.objetos.values()].filter(o => o.visible), objsB = [...comp.objetos.values()];
+        let nA = 0, nB = 0;
+        objsA.forEach(o => nA += o.geometry.attributes.position.count);
+        objsB.forEach(o => nB += o.geometry.attributes.position.count);
+        if (!nA || !nB) { compEstado(""); return; }
+        // Muestra de A (mundo) en una rejilla con celdas del radio de busqueda inicial
+        const tam = Math.max(lado3d(), alto3d());
+        let radio = Math.min(0.5, Math.max(0.08, tam * 0.04));
+        const radioMin = 0.01, inv = 1 / radio;
+        const sA = Math.max(1, Math.floor(nA / 800000)), PAl = [];
+        for (const o of objsA) { const q = o.geometry.attributes.position.array; for (let i = 0; i < q.length; i += 3 * sA) PAl.push(q[i], q[i + 1], q[i + 2]); }
+        const PA = new Float32Array(PAl), nPA = PA.length / 3;
+        const TAM = 1 << 21, MASK = TAM - 1, cabeza = new Int32Array(TAM).fill(-1), sig = new Int32Array(nPA);
+        const hash = (i, j, k) => ((i * 73856093) ^ (j * 19349663) ^ (k * 83492791)) & MASK;
+        for (let i = 0; i < nPA; i++) {
+            const c = hash(Math.floor(PA[3 * i] * inv), Math.floor(PA[3 * i + 1] * inv), Math.floor(PA[3 * i + 2] * inv));
+            sig[i] = cabeza[c];
+            cabeza[c] = i;
+        }
+        // Muestra de B en coordenadas del mundo (con la posicion y el giro actuales)
+        v3.grupoBicp.updateMatrixWorld(true);
+        const sB = Math.max(1, Math.floor(nB / 20000)), PBl = [], v = new T.Vector3();
+        for (const o of objsB) {
+            const q = o.geometry.attributes.position.array;
+            for (let i = 0; i < q.length; i += 3 * sB) { v.set(q[i], q[i + 1], q[i + 2]).applyMatrix4(o.matrixWorld); PBl.push(v.x, v.y, v.z); }
+        }
+        const PB = new Float32Array(PBl), nPB = PB.length / 3;
+        const src = new Float32Array(nPB * 3), dst = new Float32Array(nPB * 3), dist = new Float32Array(nPB), orden = new Uint32Array(nPB);
+        const total = new T.Matrix4();
+        let n = 0, error = 0;
+        for (let it = 0; it < 60; it++) {
+            // Parejas: punto de B -> punto de A mas cercano dentro del radio
+            const r2 = radio * radio;
+            n = 0;
+            for (let j = 0; j < nPB; j++) {
+                const x = PB[3 * j], y = PB[3 * j + 1], z = PB[3 * j + 2];
+                const ix = Math.floor(x * inv), iy = Math.floor(y * inv), iz = Math.floor(z * inv);
+                let mejor = r2, m = -1;
+                for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (let c = -1; c <= 1; c++) {
+                    for (let i = cabeza[hash(ix + a, iy + b, iz + c)]; i !== -1; i = sig[i]) {
+                        const dx = PA[3 * i] - x, dy = PA[3 * i + 1] - y, dz = PA[3 * i + 2] - z, d2 = dx * dx + dy * dy + dz * dz;
+                        if (d2 < mejor) { mejor = d2; m = i; }
+                    }
+                }
+                if (m < 0) continue;
+                src[3 * n] = x; src[3 * n + 1] = y; src[3 * n + 2] = z;
+                dst[3 * n] = PA[3 * m]; dst[3 * n + 1] = PA[3 * m + 1]; dst[3 * n + 2] = PA[3 * m + 2];
+                dist[n] = mejor;
+                n++;
+            }
+            if (n < 30) break;
+            // Se descarta el 15 % de parejas mas lejanas (partes que si cambiaron)
+            for (let i = 0; i < n; i++) orden[i] = i;
+            const ord = orden.subarray(0, n).sort((p, q) => dist[p] - dist[q]), usar = Math.max(30, Math.floor(n * 0.85));
+            const s2 = new Float32Array(usar * 3), d2 = new Float32Array(usar * 3);
+            error = 0;
+            for (let i = 0; i < usar; i++) {
+                const k = ord[i];
+                s2.set(src.subarray(3 * k, 3 * k + 3), 3 * i);
+                d2.set(dst.subarray(3 * k, 3 * k + 3), 3 * i);
+                error += dist[k];
+            }
+            error = Math.sqrt(error / usar);
+            const m = horn(s2, d2, usar);
+            for (let j = 0; j < nPB; j++) {
+                v.set(PB[3 * j], PB[3 * j + 1], PB[3 * j + 2]).applyMatrix4(m);
+                PB[3 * j] = v.x; PB[3 * j + 1] = v.y; PB[3 * j + 2] = v.z;
+            }
+            total.premultiply(m);
+            // Converge cuando el paso ya casi no mueve nada
+            const e = m.elements, mov = Math.hypot(e[12], e[13], e[14]), giro = Math.acos(Math.min(1, (e[0] + e[5] + e[10] - 1) / 2));
+            if (mov < 2e-4 && giro < 2e-5) { if (radio <= radioMin) break; }
+            radio = Math.max(radioMin, radio * 0.85);
+            if (it % 3 === 0) {
+                compEstado(`${prefijo}Ajuste fino… paso ${it + 1}, error medio ${(error * 1000).toFixed(1)} mm`);
+                await dormir(0);
+                if (id !== comp.calc || !comp.nube) return;
+            }
+        }
+        v3.grupoBicp.matrix.premultiply(total);
+        v3.grupoBicp.updateMatrixWorld(true);
+        comp.desfase = null;
+        posicionB();
+        comp.sucio = true;
+        if (comp.modo === "diferencias") diferenciasLuego();
+        const e = total.elements, grados = Math.acos(Math.max(-1, Math.min(1, (e[0] + e[5] + e[10] - 1) / 2))) * 180 / Math.PI;
+        compEstado(`${prefijo}Alineadas con ajuste fino: error medio ${(error * 1000).toFixed(1)} mm en ${mil(n)} puntos de muestra ` +
+            `(se corrigió ${grados.toFixed(2)}° y ${(Math.hypot(e[12], e[13], e[14]) * 100).toFixed(1)} cm). ` +
+            (error > 0.05 ? "El error es alto: quizás no son el mismo objeto o hay mucho cambio; prueba girar B a mano y repetir." : ""));
+    }
+
+    // Rotulos A / B y la linea de la cortina
+    function rotulosComp() {
+        const activa = !!comp.nube && modo3d, m = comp.modo, w = $("vista3d").clientWidth, x0 = margen();
+        const cort = $("cortina3d"), a = $("etqA"), b = $("etqB");
+        verTarjetaDif();
+        cort.hidden = !activa || m !== "cortina";
+        const lado = activa && m === "lado", mitadX = x0 + (w - x0) / 2;
+        $("linea3d").hidden = $("b3Unir").hidden = !lado;
+        $("linea3d").style.left = mitadX + "px";
+        const u = $("b3Unir");
+        u.classList.toggle("separadas", !comp.unidas);
+        u.innerHTML = comp.unidas
+            ? '<i data-lucide="lock"></i> Cámaras unidas'
+            : '<i data-lucide="lock-open"></i> Cámaras separadas: haz clic en un lado para moverlo';
+        u.style.left = mitadX + "px";
+        if (lado) iconos();
+        a.classList.toggle("activa", lado && !comp.unidas && comp.activo === "A");
+        b.classList.toggle("activa", lado && !comp.unidas && comp.activo === "B");
+        a.hidden = !activa || m === "diferencias";
+        b.hidden = !activa;
+        if (!activa) return;
+        const punto = c => `<i style="background:${c}"></i>`;
+        a.innerHTML = (m === "superponer" ? punto("#3fa4ff") : "") + "A · " + nube.nombre;
+        b.innerHTML = (m === "superponer" ? punto("#ff8a2b") : "") + "B · " + comp.nube.nombre + (m === "diferencias" ? " (color = cambio frente a A)" : "");
+        const barra = document.querySelector(".barra3d"), arriba = barra.offsetTop + barra.offsetHeight + 10;
+        a.style.top = b.style.top = arriba + "px";
+        $("b3Unir").style.top = (arriba + 34) + "px";
+        a.style.transform = b.style.transform = "";
+        if (m === "cortina") {
+            const x = w * comp.div;
+            cort.style.left = x + "px";
+            a.style.left = (x - 12) + "px"; a.style.transform = "translateX(-100%)";
+            b.style.left = (x + 12) + "px";
+        } else if (m === "lado") {
+            a.style.left = (x0 + 12) + "px";
+            b.style.left = (x0 + (w - x0) / 2 + 12) + "px";
+        } else {
+            a.style.left = b.style.left = (x0 + 12) + "px";
+            if (m === "superponer") b.style.top = (arriba + 34) + "px";
+        }
+    }
+    (() => {
+        const c = $("cortina3d");
+        let arrastra = false;
+        c.addEventListener("pointerdown", e => { arrastra = true; c.setPointerCapture(e.pointerId); e.stopPropagation(); });
+        c.addEventListener("pointermove", e => {
+            if (!arrastra) return;
+            const r = $("vista3d").getBoundingClientRect();
+            comp.div = Math.min(0.98, Math.max((margen() + 10) / r.width, (e.clientX - r.left) / r.width));
+            rotulosComp();
+        });
+        c.addEventListener("pointerup", () => { arrastra = false; });
+    })();
+
+    // ---------- Diferencias: distancia de cada punto de B al punto mas cercano de A ----------
+    // Rejilla de celdas del tamano del umbral (tabla hash): basta mirar las 27 celdas vecinas.
+    const RAMPA_DIF = [[40, 110, 220], [60, 200, 140], [250, 215, 50], [225, 45, 35]];
+    let esperaDif = null;
+    function diferenciasLuego() {
+        clearTimeout(esperaDif);
+        esperaDif = setTimeout(calcularDiferencias, 350);
+    }
+    async function calcularDiferencias() {
+        if (!comp.nube || comp.modo !== "diferencias" || !v3.renderer) return;
+        const id = ++comp.calc, u = comp.umbral, inv = 1 / u, u2 = u * u;
+        comp.sucio = false;
+        const objsA = [...v3.objetos.values()].filter(o => o.visible), objsB = [...comp.objetos.values()];
+        let nA = 0, nB = 0;
+        objsA.forEach(o => nA += o.geometry.attributes.position.count);
+        objsB.forEach(o => nB += o.geometry.attributes.position.count);
+        if (!nA || !nB) return;
+        compEstado("Calculando diferencias…");
+        const P = new Float32Array(nA * 3);
+        let off = 0;
+        for (const o of objsA) { const a = o.geometry.attributes.position.array; P.set(a, off); off += a.length; }
+        const TAM = 1 << 22, MASK = TAM - 1, cabeza = new Int32Array(TAM).fill(-1), sig = new Int32Array(nA);
+        const hash = (i, j, k) => ((i * 73856093) ^ (j * 19349663) ^ (k * 83492791)) & MASK;
+        for (let i = 0; i < nA; i++) {
+            const c = hash(Math.floor(P[3 * i] * inv), Math.floor(P[3 * i + 1] * inv), Math.floor(P[3 * i + 2] * inv));
+            sig[i] = cabeza[c];
+            cabeza[c] = i;
+            if ((i & 0xfffff) === 0) { await dormir(0); if (id !== comp.calc) return; }
+        }
+        v3.grupoB.updateMatrixWorld(true);
+        const cerca = u2 * 0.0025;
+        let hechos = 0, cambiaron = 0, suma = 0;
+        const NB = 100, hist = new Float64Array(NB + 1); // 100 tramos de 0 a la escala + "la escala o mas"
+        for (const o of objsB) {
+            const pb = o.geometry.attributes.position.array, n = pb.length / 3, col = new Uint8Array(n * 3), M = o.matrixWorld.elements;
+            const dist = new Float32Array(n);
+            for (let q = 0; q < n; q++) {
+                const px = pb[3 * q], py = pb[3 * q + 1], pz = pb[3 * q + 2];
+                const x = M[0] * px + M[4] * py + M[8] * pz + M[12], y = M[1] * px + M[5] * py + M[9] * pz + M[13], z = M[2] * px + M[6] * py + M[10] * pz + M[14];
+                const ix = Math.floor(x * inv), iy = Math.floor(y * inv), iz = Math.floor(z * inv);
+                let mejor = u2;
+                vecinas: for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (let c = -1; c <= 1; c++) {
+                    for (let i = cabeza[hash(ix + a, iy + b, iz + c)]; i !== -1; i = sig[i]) {
+                        const dx = P[3 * i] - x, dy = P[3 * i + 1] - y, dz = P[3 * i + 2] - z, d2 = dx * dx + dy * dy + dz * dz;
+                        if (d2 < mejor) { mejor = d2; if (d2 < cerca) break vecinas; }
+                    }
+                }
+                const t = Math.sqrt(mejor) / u;
+                if (t >= 1) cambiaron++;
+                suma += Math.sqrt(mejor);
+                dist[q] = Math.sqrt(mejor);
+                hist[Math.min(NB, Math.floor(t * NB))]++;
+                const f = t * (RAMPA_DIF.length - 1), j = Math.min(RAMPA_DIF.length - 2, Math.floor(f)), e = f - j;
+                for (let k = 0; k < 3; k++) col[3 * q + k] = RAMPA_DIF[j][k] + (RAMPA_DIF[j + 1][k] - RAMPA_DIF[j][k]) * e;
+                if ((++hechos & 0x3ffff) === 0) {
+                    compEstado(`Calculando diferencias… ${Math.round(100 * hechos / nB)} %`);
+                    await dormir(0);
+                    if (id !== comp.calc) return;
+                }
+            }
+            o.userData.colorDif = new T.BufferAttribute(col, 3, true);
+            o.userData.distDif = dist;
+        }
+        compEstado("");
+        pintarTarjetaDif(hist, nB, suma / nB, u);
+        const cm = v => (v * 100).toLocaleString("es-CO", { maximumFractionDigits: 1 }) + " cm";
+        $("compResumen").innerHTML = `<b>${(100 * cambiaron / nB).toLocaleString("es-CO", { maximumFractionDigits: 1 })} %</b> de los puntos de B
+            está a ${cm(u)} o más de A (cambió o es nuevo). Distancia media: ${cm(suma / nB)}.
+            <br>Se compararon ${mil(nB)} puntos de B con ${mil(nA)} de A.`;
+        materialesComp();
+    }
+
+    // ---------- Tarjeta que explica las diferencias ----------
+    function rampaDif(t) {
+        const f = Math.min(1, Math.max(0, t)) * (RAMPA_DIF.length - 1), j = Math.min(RAMPA_DIF.length - 2, Math.floor(f)), e = f - j;
+        return `rgb(${[0, 1, 2].map(k => Math.round(RAMPA_DIF[j][k] + (RAMPA_DIF[j + 1][k] - RAMPA_DIF[j][k]) * e)).join(",")})`;
+    }
+    function pintarTarjetaDif(hist, n, media, u) {
+        const cm = v => (v * 100).toLocaleString("es-CO", { maximumFractionDigits: 1 });
+        const NB = hist.length - 1, suma = (a, b) => { let s = 0; for (let i = a; i < b; i++) s += hist[i]; return s; };
+        const BANDAS = [
+            [0, 0.25, "Sin cambio", "Coincide con A; la diferencia es del tamaño del ruido del escáner.", 0],
+            [0.25, 0.5, "Cambio pequeño", "Leve: puede ser ruido, densidad distinta o un movimiento mínimo.", 0.35],
+            [0.5, 1, "Cambio moderado a grande", "Se separó de A de forma clara: revisa esa zona.", 0.75],
+            [1, null, "Cambió o es nuevo", "Está a la escala o más de A: se movió, se deformó, es material nuevo o A no lo vio.", 1]
+        ];
+        $("tdBandas").innerHTML = BANDAS.map(([a, b, nombre, txt, t]) => {
+            const cuenta = b == null ? hist[NB] : suma(Math.round(a * NB), Math.round(b * NB)), pct = 100 * cuenta / n;
+            const rango = b == null ? `${cm(u)} cm o más` : `${cm(a * u)} a ${cm(b * u)} cm`;
+            return `<div class="td-banda"><i style="background:${rampaDif(t)}"></i><b>${nombre} · ${rango}</b>
+                <span>${pct.toLocaleString("es-CO", { maximumFractionDigits: 1 })} %</span>
+                <div class="td-barra"><span style="width:${pct.toFixed(1)}%;background:${rampaDif(t)}"></span></div>
+                <small>${txt}</small></div>`;
+        }).join("");
+        // Mediana (con las distancias topadas en la escala)
+        let acum = 0, med = 0;
+        for (let i = 0; i <= NB; i++) { acum += hist[i]; if (acum >= n / 2) { med = Math.min(1, (i + 0.5) / NB) * u; break; } }
+        const rojo = 100 * hist[NB] / n, azul = 100 * suma(0, Math.round(0.25 * NB)) / n;
+        let diag, alerta = false;
+        if (rojo > 35) {
+            alerta = true;
+            diag = `<b>Mucho rojo (${rojo.toFixed(0)} %).</b> Si son paredes o superficies enteras, lo más probable es que las nubes
+                no estén bien alineadas o no sean el mismo objeto: revisa en "Superponer" y usa "Alinear automáticamente" antes de sacar conclusiones.`;
+        } else if (rojo > 8) {
+            diag = `<b>Hay cambios localizados (${rojo.toFixed(0)} % en rojo).</b> Acércate a las manchas rojas: si son pequeñas y concentradas
+                (fisuras, desprendimientos, piezas movidas) es cambio real.`;
+        } else {
+            diag = `<b>Las nubes son casi iguales:</b> ${azul.toFixed(0)} % de los puntos no cambió de forma apreciable.`;
+        }
+        diag += `<br>Distancia típica (mediana): <b>${cm(med)} cm</b> · media: ${cm(media)} cm. Haz clic en un punto para ver su distancia.`;
+        $("tdDiag").innerHTML = diag;
+        $("tdDiag").classList.toggle("alerta", alerta);
+        $("tdDiag").hidden = false;
+    }
+    // Distancia a A del punto en el que se hizo clic (modo Diferencias)
+    function distanciaPunto(nb, info) {
+        if (!comp.nube || nb !== comp.nube || comp.modo !== "diferencias") return "";
+        const o = comp.objetos.get(info.layer.id.slice(1)), d = o && o.userData.distDif;
+        if (!d || info.index >= d.length) return "";
+        const v = d[info.index], u = comp.umbral, cm = x => (x * 100).toLocaleString("es-CO", { maximumFractionDigits: 1 });
+        return `<br><b>Distancia a A: ${v >= u ? cm(u) + " cm o más" : cm(v) + " cm"}</b>`;
+    }
+    function verTarjetaDif() {
+        const t = $("tarjetaDif"), activa = !!comp.nube && modo3d && comp.modo === "diferencias" && !comp.tarjetaCerrada;
+        t.hidden = !activa;
+        if (activa) {
+            const barra = document.querySelector(".barra3d");
+            t.style.top = (barra.offsetTop + barra.offsetHeight + 10) + "px";
+        }
+    }
+    $("tdCerrar").addEventListener("click", () => { comp.tarjetaCerrada = true; verTarjetaDif(); });
+    $("btnTarjeta").addEventListener("click", () => { comp.tarjetaCerrada = false; verTarjetaDif(); });
+
+    // ---------- Controles de la comparacion ----------
+    $("btnCompArchivo").addEventListener("click", () => $("archivoComp").click());
+    $("archivoComp").addEventListener("change", e => {
+        const f = e.target.files[0];
+        if (f) abrirComparar(f, f.name);
+        e.target.value = "";
+    });
+    $("btnCompUrl").addEventListener("click", () => {
+        const u = $("txtCompUrl").value.trim();
+        if (!/^https?:\/\//.test(u)) { compEstado("Escribe una dirección que empiece por https://", true); return; }
+        abrirComparar(u, decodeURIComponent(u.split("/").pop().split("?")[0]));
+    });
+    document.querySelectorAll("#segComp button").forEach(b => b.addEventListener("click", () => fijarComp(b.dataset.comp)));
+    $("btnCompQuitar").addEventListener("click", () => quitarComparacion());
+    $("chkAlinear").addEventListener("change", () => {
+        if (!comp.nube || !v3.renderer) return;
+        quitarICP();
+        posicionB();
+        comp.sucio = true;
+        if (comp.modo === "diferencias") diferenciasLuego();
+    });
+    rango("rngUmbral", v => {
+        comp.umbral = v / 100;
+        $("vUmbral").textContent = v.toLocaleString("es-CO") + " cm";
+        $("vUmbral2").textContent = v.toLocaleString("es-CO") + " cm o más";
+        comp.sucio = true;
+        diferenciasLuego();
+    });
+    [["rngBx", "dx", "vBx"], ["rngBy", "dy", "vBy"], ["rngBz", "dz", "vBz"]].forEach(([id, eje, txt]) => rango(id, v => {
+        comp[eje] = v / 100;
+        $(txt).textContent = v.toLocaleString("es-CO") + " cm";
+        if (!comp.nube || !v3.renderer) return;
+        quitarICP();
+        posicionB();
+        comp.sucio = true;
+        if (comp.modo === "diferencias") diferenciasLuego();
+    }));
+
+    function marcarFuente(id) {
+        $("btnAutzen").classList.toggle("activo", id === "btnAutzen");
+    }
+    $("btnAutzen").addEventListener("click", () => { marcarFuente("btnAutzen"); abrir(AUTZEN, "autzen-classified.copc.laz"); });
+    $("btnUrl").addEventListener("click", () => {
+        const u = $("txtUrl").value.trim();
+        if (!/^https?:\/\//.test(u)) { estado("Escribe una dirección que empiece por https://", true); return; }
+        marcarFuente(""); abrir(u, decodeURIComponent(u.split("/").pop().split("?")[0]));
+    });
+    $("selEjemplo").addEventListener("change", e => {
+        const u = e.target.value;
+        if (!u) return;
+        $("txtUrl").value = u;
+        marcarFuente(""); abrir(u, e.target.selectedOptions[0].textContent.split(" · ")[0]);
+    });
+    $("btnArchivo").addEventListener("click", () => $("archivo").click());
+    $("archivo").addEventListener("change", e => {
+        const f = e.target.files[0];
+        if (f) { marcarFuente(""); abrir(f, f.name); }
+        e.target.value = "";
+    });
+
+    map.on("moveend", () => { clearTimeout(espera); espera = setTimeout(actualizar, 150); });
+    map.on("load", () => abrir(AUTZEN, "autzen-classified.copc.laz"));
+</script>
+</body>
+</html>
