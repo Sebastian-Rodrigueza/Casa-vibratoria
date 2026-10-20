@@ -150,6 +150,8 @@
     }
     .panel-lugares button:hover { background: #fff3ad; }
     .panel-lugares button.activo { background: #f5c400; border-color: #d7aa00; font-weight: 700; }
+    .seg-fuente { display: flex; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #e5e5de; }
+    .seg-fuente button { flex: 1; text-align: center; }
     .panel-lugares label {
         display: flex;
         align-items: center;
@@ -160,6 +162,39 @@
         font-size: 12px;
         cursor: pointer;
     }
+    /* Panel de sol y sombras (abajo al centro) */
+    .panel-sol {
+        position: absolute;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        max-width: calc(100% - 420px);
+        padding: 9px 14px;
+        background: rgba(255,255,255,.96);
+        border-radius: 12px;
+        box-shadow: 0 4px 14px rgba(0,0,0,.2);
+        font-size: 12.5px;
+    }
+    .panel-sol label { display: flex; align-items: center; gap: 6px; font-weight: 700; cursor: pointer; }
+    .panel-sol input[type=date] { font: inherit; padding: 3px 6px; border: 1px solid #ddd; border-radius: 6px; }
+    .panel-sol input[type=range] { width: 200px; accent-color: #d7aa00; }
+    .panel-sol button {
+        padding: 5px 10px; border: 1px solid #ddd; border-radius: 999px;
+        background: #f7f7f3; font: inherit; font-weight: 700; cursor: pointer;
+    }
+    .panel-sol button:hover { background: #fff3ad; }
+    .panel-sol .hora { font: 700 15px/1 "Source Sans 3", sans-serif; min-width: 44px; text-align: center; }
+    .panel-sol .dato { color: #6b6f74; min-width: 150px; }
+    .panel-sol .controles { display: contents; }
+    .panel-sol.apagado .controles > * { opacity: .45; pointer-events: none; }
+    @media (max-width: 900px) {
+        .panel-sol { left: 12px; right: 12px; transform: none; max-width: none; bottom: 232px; }
+    }
 </style>
 </head>
 <body>
@@ -167,6 +202,7 @@
 <header>
     <span class="logo-box">
         <img src="Imagenes/logo-uniandes.png" alt="Universidad de los Andes">
+        <img class="logo-sinergia" src="Imagenes/SinerGIA-oscuro.png" alt="Lab SinergIA" style="height:40px;width:auto;max-width:none;max-height:none;flex:none;margin-left:12px;display:block">
     </span>
     <span class="brand-copy">
         <small>Universidad de los Andes</small>
@@ -189,9 +225,28 @@
 </label>
 <div class="fps" id="fps">-- FPS</div>
 
+<div class="panel-sol apagado" id="panelSol">
+    <label title="Luz y sombras segun la posicion real del sol en Bogota">
+        <input type="checkbox" id="chkSol"> ☀ Sol y sombras
+    </label>
+    <span class="controles">
+        <input type="date" id="solFecha" title="Fecha">
+        <input type="range" id="solHora" min="0" max="1435" step="5" title="Hora (Bogota)">
+        <span class="hora" id="solHoraTxt">--:--</span>
+        <button type="button" id="solPlay" title="Animar el dia">▶ Día</button>
+        <button type="button" id="solAhora" title="Fecha y hora actuales">Ahora</button>
+        <button type="button" id="solNoche" title="Ver la ciudad de noche (8:30 p. m.)">🌙 Noche</button>
+        <span class="dato" id="solDato"></span>
+    </span>
+</div>
+
 <div class="panel-lugares">
     <b>Recorrido por Bogotá</b>
     <div id="listaLugares"></div>
+    <div class="seg-fuente" id="segEdificios" title="Fuente de los edificios 3D">
+        <button type="button" data-fuente="osm" class="activo">OpenStreetMap</button>
+        <button type="button" data-fuente="esri">Esri</button>
+    </div>
     <label>
         <input type="checkbox" id="chkSatelital" checked>
         Imagen satelital del campus
@@ -204,6 +259,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
 <script src="bogota3d_data/transmilenio_estaciones.js"></script>
+<script src="esri3d-edificios.js?v=5"></script>
+<script src="https://cdn.jsdelivr.net/npm/suncalc@1.9.0/suncalc.js"></script>
 <script>
     const UNIANDES = [-74.065173, 4.601613]; // [lng, lat]
 
@@ -220,6 +277,9 @@
         zoom: 15.7,
         pitch: 60,
         bearing: -20,
+        // Inclinacion maxima: MapLibre trae 60 grados por defecto, lo que no deja
+        // levantar la camara para ver el horizonte y los cerros; 85 es su tope
+        maxPitch: 85,
         antialias: false // el antialiasing con terreno 3D es de lo mas pesado que hay -- se ve un poco mas dentado, pero mucho mas fluido
     });
 
@@ -342,15 +402,96 @@
         });
         listaLugares.appendChild(boton);
 
-        new maplibregl.Marker({ color: lugar.edificio ? "#2f6fb0" : "#f5c400" })
-            .setLngLat(lugar.coords)
-            .setPopup(new maplibregl.Popup().setHTML(lugar.popup || `<b>${lugar.nombre}</b>`))
-            .addTo(map);
-
         if (i === 0) boton.classList.add("activo");
     });
 
     map.on("load", () => {
+        // ---------- Pines de los lugares ----------
+        // Van como capa del mapa (no como marcadores HTML): asi quedan pegados
+        // al terreno y desaparecen detras del horizonte. Los marcadores HTML
+        // se dibujan siempre encima, y con la camara muy inclinada los lejanos
+        // quedaban "flotando" en el cielo.
+        function pin(color) {
+            const c = document.createElement("canvas");
+            c.width = 54; c.height = 72; // a doble resolucion (pixelRatio 2)
+            const g = c.getContext("2d");
+            g.beginPath();
+            g.arc(27, 25, 21, Math.PI * 0.82, Math.PI * 0.18);
+            g.lineTo(27, 69);
+            g.closePath();
+            g.fillStyle = color; g.fill();
+            g.lineWidth = 3; g.strokeStyle = "rgba(0,0,0,.25)"; g.stroke();
+            g.beginPath(); g.arc(27, 25, 8, 0, Math.PI * 2);
+            g.fillStyle = "#ffffff"; g.fill();
+            return g.getImageData(0, 0, c.width, c.height);
+        }
+        map.addImage("pin-lugar", pin("#f5c400"), { pixelRatio: 2 });
+        map.addImage("pin-edificio", pin("#2f6fb0"), { pixelRatio: 2 });
+        map.addSource("lugares", {
+            type: "geojson",
+            data: {
+                type: "FeatureCollection",
+                features: LUGARES.map((l) => ({
+                    type: "Feature",
+                    geometry: { type: "Point", coordinates: l.coords },
+                    properties: { icono: l.edificio ? "pin-edificio" : "pin-lugar", popup: l.popup || `<b>${l.nombre}</b>` }
+                }))
+            }
+        });
+        map.addLayer({
+            id: "lugares-pines", type: "symbol", source: "lugares", minzoom: 12.5,
+            layout: {
+                "icon-size": ["interpolate", ["linear"], ["zoom"], 12.5, 0.45, 15, 0.75, 17, 1],
+                "icon-image": ["get", "icono"], "icon-anchor": "bottom",
+                "icon-allow-overlap": true, "icon-ignore-placement": true
+            }
+        });
+        map.on("click", "lugares-pines", (e) => {
+            new maplibregl.Popup({ offset: [0, -34] })
+                .setLngLat(e.features[0].geometry.coordinates)
+                .setHTML(e.features[0].properties.popup)
+                .addTo(map);
+        });
+        map.on("mouseenter", "lugares-pines", () => map.getCanvas().style.cursor = "pointer");
+        map.on("mouseleave", "lugares-pines", () => map.getCanvas().style.cursor = "");
+
+        // ---------- Edificios 3D: OpenStreetMap o Esri ----------
+        // Con Esri se pone debajo del mapa la escena de ArcGIS (ver esri3d-edificios.js)
+        // y se ocultan las capas del mapa base (las del estilo y la imagen del campus).
+        const esri = EsriBajoMapa(map, {
+            capasBase: map.getStyle().layers.map((l) => l.id).filter((id) => id !== "lugares-pines").concat("campus-imagen"),
+            terreno: "terreno"
+        });
+        const botonesFuente = document.querySelectorAll("#segEdificios button");
+        botonesFuente.forEach((b) => b.addEventListener("click", async () => {
+            const fuente = b.dataset.fuente;
+            if (fuente === (esri.activo ? "esri" : "osm")) return;
+            const marcar = (f) => botonesFuente.forEach((x) => x.classList.toggle("activo", x.dataset.fuente === f));
+            marcar(fuente);
+            if (fuente === "osm") {
+                esri.desactivar();
+                aplicarSol();
+                chkTerreno.disabled = false;
+                chkTerreno.checked = !!map.getTerrain();
+                map.setLayoutProperty("campus-imagen", "visibility", chkSatelital.checked ? "visible" : "none");
+                return;
+            }
+            botonesFuente.forEach((x) => x.disabled = true);
+            try {
+                esri.verImagen(chkSatelital.checked);
+                await esri.activar();
+                chkTerreno.checked = true;
+                chkTerreno.disabled = true; // con Esri el relieve siempre esta puesto
+            } catch (e) {
+                console.error("Esri:", e);
+                esri.desactivar();
+                marcar("osm");
+                alert("No se pudo cargar Esri.");
+            }
+            try { aplicarSol(); } catch (e) { console.error("Sol y sombras:", e); }
+            botonesFuente.forEach((x) => x.disabled = false);
+        }));
+
         // ---------- Cielo/atmosfera: le da sensacion de "estar ahi" en vez
         // de ver bloques flotando en un fondo plano ----------
         map.setSky({
@@ -423,6 +564,7 @@
 
         const chkSatelital = document.getElementById("chkSatelital");
         chkSatelital.addEventListener("change", () => {
+            if (esri.activo) { esri.verImagen(chkSatelital.checked); return; }
             map.setLayoutProperty("campus-imagen", "visibility", chkSatelital.checked ? "visible" : "none");
         });
 
@@ -593,7 +735,7 @@
         // planeta (se ve como un parche feo) -- se ocultan mientras se
         // esta alejado y se devuelven a como estaban al volver al campus.
         function mostrarCapasDeCampus(visible) {
-            if (map.getLayer("campus-imagen")) {
+            if (map.getLayer("campus-imagen") && !esri.activo) {
                 map.setLayoutProperty("campus-imagen", "visibility", visible && chkSatelital.checked ? "visible" : "none");
             }
             if (map.getLayer("transmilenio-puntos")) {
@@ -651,6 +793,441 @@
                 }
             });
         });
+
+        // ---------- Sol y sombras segun la fecha y la hora ----------
+        // La posicion del sol sale de SunCalc (formulas astronomicas de la
+        // NOAA, igual que el plugin de sol de GeoLibre) y mueve la luz de
+        // los edificios con setLight. MapLibre no proyecta sombras, asi que
+        // se dibujan aparte: cada edificio se "arrastra" en la direccion
+        // contraria al sol una distancia altura / tan(altura del sol), en un
+        // lienzo (canvas) que va pegado al piso debajo de los edificios.
+        // Con Esri no hace falta: su escena ya proyecta sombras reales y
+        // solo se le pasa la fecha.
+        const LUZ_BASE = { anchor: "map", color: "#fff2d9", intensity: 0.55, position: [1.6, 200, 40] };
+        const CIELO_BASE = {
+            "sky-color": "#87ceeb", "sky-horizon-blend": 0.5, "horizon-color": "#ffffff",
+            "horizon-fog-blend": 0.6, "fog-color": "#d8e6ec", "fog-ground-blend": 0.5
+        };
+        const panelSol = document.getElementById("panelSol");
+        const chkSol = document.getElementById("chkSol");
+        const solFecha = document.getElementById("solFecha");
+        const solHora = document.getElementById("solHora");
+        const solHoraTxt = document.getElementById("solHoraTxt");
+        const solPlay = document.getElementById("solPlay");
+        const solDato = document.getElementById("solDato");
+        const UTC_BOGOTA = 5; // Colombia es UTC-5 todo el ano (sin horario de verano)
+        const M_MERC = 40075016.686; // metros de una unidad Mercator en el ecuador
+
+        // Lienzo de sombras: cuadrado alrededor del centro del mapa
+        const LADO_PX = 2048;
+        const lienzo = document.createElement("canvas");
+        lienzo.width = lienzo.height = LADO_PX;
+        const ctx = lienzo.getContext("2d");
+        map.addSource("sombras", {
+            type: "canvas", canvas: lienzo, animate: false,
+            coordinates: [[-74.07, 4.61], [-74.06, 4.61], [-74.06, 4.60], [-74.07, 4.60]]
+        });
+        map.addLayer({
+            id: "sombras", type: "raster", source: "sombras",
+            layout: { visibility: "none" },
+            paint: { "raster-opacity": 0.4, "raster-fade-duration": 0 }
+        }, "building-3d");
+
+        // ---------- Ciudad de noche ----------
+        // Cuando el sol se oculta: un velo oscuro sobre el piso (mapa e imagen
+        // satelital), las vias principales encendidas como alumbrado publico,
+        // ventanas iluminadas en los edificios y, de lejos, las luces reales
+        // de la ciudad vistas por satelite (NASA Black Marble, VIIRS 2016,
+        // gratis y sin clave). Todo se mezcla poco a poco en el crepusculo.
+        map.addSource("noche-velo", {
+            type: "geojson",
+            data: { type: "Polygon", coordinates: [[[-180, -85], [180, -85], [180, 85], [-180, 85], [-180, -85]]] }
+        });
+        map.addLayer({
+            id: "noche-velo", type: "fill", source: "noche-velo",
+            layout: { visibility: "none" },
+            paint: { "fill-color": "#040814", "fill-opacity": 0 }
+        }, "building-3d");
+
+        map.addSource("luces-nasa", {
+            type: "raster",
+            tiles: ["https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png"],
+            tileSize: 256, maxzoom: 8,
+            attribution: "Luces nocturnas: NASA Black Marble"
+        });
+        map.addLayer({
+            id: "luces-nasa", type: "raster", source: "luces-nasa",
+            layout: { visibility: "none" },
+            paint: { "raster-opacity": 0, "raster-fade-duration": 0 }
+        }, "building-3d");
+
+        // Alumbrado: un halo ancho y difuso + una linea delgada brillante
+        const VIAS_ILUMINADAS = ["all",
+            ["in", ["get", "class"], ["literal", ["motorway", "trunk", "primary", "secondary", "tertiary", "minor"]]],
+            ["!=", ["get", "brunnel"], "tunnel"]];
+        const pesoVia = ["match", ["get", "class"], ["motorway", "trunk", "primary"], 2.2, ["secondary", "tertiary"], 1.4, 0.6];
+        const anchoVia = (k) => ["interpolate", ["exponential", 1.6], ["zoom"], 12, ["*", k, pesoVia], 18, ["*", k * 9, pesoVia]];
+        map.addLayer({
+            id: "noche-vias-halo", type: "line", source: "openmaptiles", "source-layer": "transportation",
+            filter: VIAS_ILUMINADAS, minzoom: 11,
+            layout: { visibility: "none", "line-cap": "round", "line-join": "round" },
+            paint: { "line-color": "#ff9a2e", "line-width": anchoVia(3), "line-blur": anchoVia(2.4), "line-opacity": 0 }
+        }, "building-3d");
+        map.addLayer({
+            id: "noche-vias", type: "line", source: "openmaptiles", "source-layer": "transportation",
+            filter: VIAS_ILUMINADAS, minzoom: 11,
+            layout: { visibility: "none", "line-cap": "round", "line-join": "round" },
+            paint: { "line-color": "#ffe1a1", "line-width": anchoVia(0.6), "line-blur": anchoVia(0.3), "line-opacity": 0 }
+        }, "building-3d");
+
+        // Fachada nocturna: textura con ventanas encendidas al azar (calidas y
+        // algunas frias, como oficinas), generada aqui mismo en un canvas
+        (function () {
+            const T = 64, c = document.createElement("canvas");
+            c.width = c.height = T;
+            const g = c.getContext("2d");
+            g.fillStyle = "#1a2030";
+            g.fillRect(0, 0, T, T);
+            const tonos = ["#ffd27a", "#ffe6a8", "#ffc864", "#d6e6ff"];
+            for (let y = 3; y < T; y += 10) {
+                for (let x = 3; x < T; x += 8) {
+                    const prendida = Math.random() < 0.45;
+                    g.fillStyle = prendida ? tonos[Math.floor(Math.random() * tonos.length)] : "#2a3245";
+                    g.fillRect(x, y, 4, 6);
+                }
+            }
+            map.addImage("ventanas-noche", g.getImageData(0, 0, T, T));
+        })();
+        const COLOR_EDIFICIOS = map.getPaintProperty("building-3d", "fill-extrusion-color");
+
+
+        // Postes de alumbrado: de cerca, en vez de vias encendidas como una
+        // tira LED, puntos de luz cada ~30 m a lo largo de las vias (como los
+        // postes reales), cada uno con su charco de luz en el piso. Los puntos
+        // se calculan sobre las vias de OpenStreetMap que hay en pantalla.
+        map.addSource("postes", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        map.addLayer({
+            id: "postes-charco", type: "circle", source: "postes", minzoom: 14,
+            layout: { visibility: "none" },
+            paint: {
+                "circle-pitch-alignment": "map", "circle-pitch-scale": "map",
+                "circle-color": "#ffae4a", "circle-blur": 1, "circle-opacity": 0,
+                // ~14 m de radio en el piso
+                "circle-radius": ["interpolate", ["exponential", 2], ["zoom"], 14, 1.5, 20, 96]
+            }
+        }, "building-3d");
+        map.addLayer({
+            id: "postes-luz", type: "circle", source: "postes", minzoom: 14,
+            layout: { visibility: "none" },
+            paint: {
+                "circle-pitch-alignment": "map",
+                "circle-color": "#fff3d1", "circle-blur": 0.5, "circle-opacity": 0,
+                "circle-radius": ["interpolate", ["exponential", 2], ["zoom"], 14, 1, 17, 2.2, 20, 6]
+            }
+        }, "building-3d");
+
+        const PASO_POSTES = { motorway: 28, trunk: 28, primary: 28, secondary: 32, tertiary: 32, minor: 38 };
+        const ZOOM_POSTES = 14.5;
+        function calcularPostes() {
+            const zoom = map.getZoom();
+            if (zoom < ZOOM_POSTES) return { puntos: [], caja: null };
+            const c = map.getCenter();
+            const mLat = 110540, mLng = 111320 * Math.cos(c.lat * Math.PI / 180);
+            const mitad = Math.min(2500, 800 * Math.pow(2, 16 - zoom)); // metros
+            const caja = [c.lng - mitad / mLng, c.lat - mitad / mLat, c.lng + mitad / mLng, c.lat + mitad / mLat];
+            const dentro = (q) => q[0] > caja[0] && q[0] < caja[2] && q[1] > caja[1] && q[1] < caja[3];
+            const vistos = new Set(), puntos = [];
+            const poner = (q) => {
+                // Sin repetidos: las vias vienen partidas por teselas y se solapan en los bordes
+                const k = Math.round(q[0] * mLng / 12) + ":" + Math.round(q[1] * mLat / 12);
+                if (vistos.has(k) || !dentro(q)) return;
+                vistos.add(k);
+                puntos.push(q);
+            };
+            for (const f of map.querySourceFeatures("openmaptiles", { sourceLayer: "transportation" })) {
+                const paso = PASO_POSTES[f.properties.class];
+                if (!paso || f.properties.brunnel === "tunnel") continue;
+                const g = f.geometry;
+                const lineas = g.type === "LineString" ? [g.coordinates] : g.type === "MultiLineString" ? g.coordinates : [];
+                for (const linea of lineas) {
+                    let resto = paso / 2; // metros que faltan para el siguiente poste
+                    for (let i = 0; i < linea.length - 1; i++) {
+                        const [x1, y1] = linea[i], [x2, y2] = linea[i + 1];
+                        const largo = Math.hypot((x2 - x1) * mLng, (y2 - y1) * mLat);
+                        let d = resto;
+                        while (d <= largo) {
+                            const t = d / largo;
+                            poner([x1 + (x2 - x1) * t, y1 + (y2 - y1) * t]);
+                            d += paso;
+                        }
+                        resto = d - largo;
+                    }
+                }
+                if (puntos.length > 20000) break;
+            }
+            return { puntos, caja };
+        }
+
+        let nocheActual = 0, esperaPostes = null, postesEnEsri = false;
+        function postesLuego() {
+            clearTimeout(esperaPostes);
+            esperaPostes = setTimeout(ponerPostes, 250);
+        }
+        function ponerPostes() {
+            const n = nocheActual;
+            const { puntos, caja } = n > 0 ? calcularPostes() : { puntos: [], caja: null };
+            // Con Esri van dentro de su escena (sus edificios los tapan); si no se puede, con MapLibre
+            let enEsri = false;
+            try { enEsri = esri.postes(esri.activo && puntos.length ? puntos.slice(0, 8000) : null, caja, n) === true && esri.activo; }
+            catch (e) { console.error("Postes en Esri:", e); }
+            const enMapa = !enEsri && puntos.length > 0;
+            map.getSource("postes").setData({
+                type: "FeatureCollection",
+                features: enMapa ? puntos.map((q) => ({ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: q } })) : []
+            });
+            ["postes-charco", "postes-luz"].forEach((id) => map.setLayoutProperty(id, "visibility", enMapa ? "visible" : "none"));
+            if (enMapa) {
+                map.setPaintProperty("postes-charco", "circle-opacity", 0.32 * n);
+                map.setPaintProperty("postes-luz", "circle-opacity", 0.95 * n);
+            }
+        }
+        map.on("moveend", () => { if (nocheActual > 0) postesLuego(); });
+        map.on("sourcedata", (e) => {
+            if (nocheActual > 0 && e.sourceId === "openmaptiles" && e.isSourceLoaded && map.getZoom() >= ZOOM_POSTES) postesLuego();
+        });
+
+        const CAPAS_NOCHE = ["noche-velo", "luces-nasa", "noche-vias-halo", "noche-vias"];
+        let ventanasPuestas = false;
+        function aplicarNoche(n) {
+            // Con Esri el alumbrado va dentro de su escena (asi sus edificios
+            // lo tapan) y el velo y las ventanas no aplican: ArcGIS ya oscurece solo
+            // Si ArcGIS no logra poner las vias, se dibujan con MapLibre encima
+            let esriPusoVias = false;
+            try {
+                const fuenteVias = map.getSource("openmaptiles");
+                esriPusoVias = esri.noche(esri.activo ? n : 0, fuenteVias && fuenteVias.tiles) === true && esri.activo;
+            } catch (e) {
+                console.error("Alumbrado en Esri:", e);
+            }
+            const nPiso = esri.activo ? 0 : n;            // velo, luces NASA y ventanas: solo sin Esri
+            const nVias = esriPusoVias ? 0 : n;
+            const fuerza = { "noche-velo": nPiso, "luces-nasa": nPiso, "noche-vias-halo": nVias, "noche-vias": nVias };
+            CAPAS_NOCHE.forEach((id) => map.setLayoutProperty(id, "visibility", fuerza[id] > 0 ? "visible" : "none"));
+            if (nPiso > 0) {
+                map.setPaintProperty("noche-velo", "fill-opacity", 0.78 * nPiso);
+                // Las luces de la NASA solo de lejos: a nivel de calle se ven pixeladas
+                map.setPaintProperty("luces-nasa", "raster-opacity", ["interpolate", ["linear"], ["zoom"], 8, nPiso, 12.5, 0]);
+            }
+            if (nVias > 0) {
+                // De lejos las vias encendidas dan el "resplandor" de la ciudad;
+                // al acercarse se desvanecen y quedan los postes
+                const segunZoom = (v) => ["interpolate", ["linear"], ["zoom"], 13, v * nVias, 15, v * 0.12 * nVias];
+                map.setPaintProperty("noche-vias-halo", "line-opacity", segunZoom(0.55));
+                map.setPaintProperty("noche-vias", "line-opacity", segunZoom(0.9));
+            }
+            const cambio = (n > 0) !== (nocheActual > 0) || Math.abs(n - nocheActual) > 0.05 || esri.activo !== postesEnEsri;
+            nocheActual = n;
+            postesEnEsri = esri.activo; // al cambiar entre Esri y OSM los postes se pasan de un lado al otro
+            if (cambio) postesLuego();
+            const ventanas = nPiso > 0.5;
+            if (ventanas !== ventanasPuestas) {
+                ventanasPuestas = ventanas;
+                // La textura se pone con una expresion que "depende" de cada edificio:
+                // con un valor fijo MapLibre no vuelve a armar los edificios ya
+                // cargados y la textura no aparece
+                map.setPaintProperty("building-3d", "fill-extrusion-pattern", ventanas
+                    ? ["case", ["has", "render_height"], ["image", "ventanas-noche"], ["image", "ventanas-noche"]]
+                    : undefined);
+                map.setPaintProperty("building-3d", "fill-extrusion-color", ventanas ? "#ffffff" : COLOR_EDIFICIOS);
+            }
+        }
+
+        function ponerAhora() {
+            const ahora = new Date(Date.now() - UTC_BOGOTA * 3600e3); // hora de Bogota leida como UTC
+            solFecha.value = ahora.toISOString().slice(0, 10);
+            const min = ahora.getUTCHours() * 60 + ahora.getUTCMinutes();
+            solHora.value = Math.min(+solHora.max, Math.max(+solHora.min, min));
+        }
+        ponerAhora();
+
+        function fechaElegida() {
+            const [a, m, d] = solFecha.value.split("-").map(Number);
+            const min = +solHora.value;
+            return new Date(Date.UTC(a, m - 1, d, Math.floor(min / 60) + UTC_BOGOTA, min % 60));
+        }
+
+        function posicionSol() {
+            const c = map.getCenter();
+            const p = SunCalc.getPosition(fechaElegida(), c.lat, c.lng);
+            // SunCalc mide el azimut desde el sur hacia el oeste; se pasa a rumbo (norte = 0, horario)
+            return { alt: p.altitude * 180 / Math.PI, az: (p.azimuth * 180 / Math.PI + 180 + 360) % 360 };
+        }
+
+        function mezclar(a, b, t) {
+            const h = (s) => [1, 3, 5].map((i) => parseInt(s.slice(i, i + 2), 16));
+            const x = h(a), y = h(b);
+            return "#" + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, "0")).join("");
+        }
+
+        function aplicarSol() {
+            const m = +solHora.value;
+            solHoraTxt.textContent = String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+            panelSol.classList.toggle("apagado", !chkSol.checked);
+            if (!chkSol.checked) {
+                map.setLight(LUZ_BASE);
+                if (!esri.activo) map.setSky(CIELO_BASE); // con Esri el cielo de MapLibre va transparente
+                map.setLayoutProperty("sombras", "visibility", "none");
+                if (esri.vista) esri.vista.environment.lighting.date = new Date();
+                aplicarNoche(0);
+                solDato.textContent = "";
+                return;
+            }
+            const { alt, az } = posicionSol();
+            const dia = Math.max(0, Math.min(1, alt / 25)); // 0 de noche, 1 con el sol ya alto
+            const rumbos = ["N", "NE", "E", "SE", "S", "SO", "O", "NO"];
+            solDato.textContent = alt > 0
+                ? `Sol a ${alt.toFixed(0)}° de altura, por el ${rumbos[Math.round(az / 45) % 8]}`
+                : "El sol está bajo el horizonte";
+            map.setLight({
+                anchor: "map",
+                position: [1.5, az, Math.max(0, Math.min(90, 90 - alt))],
+                color: alt > 0 ? mezclar("#ffb169", "#fffaf0", dia) : "#8aa0c8",
+                intensity: alt > 0 ? 0.3 + 0.35 * dia : 0.15
+            });
+            // Con Esri no se toca el cielo: el de MapLibre debe seguir transparente,
+            // si no tapa la escena de ArcGIS desde el horizonte (se ve "cortado")
+            if (!esri.activo) map.setSky({
+                ...CIELO_BASE,
+                "sky-color": alt > 0 ? mezclar("#f2a45c", "#87ceeb", dia) : "#0b1a33",
+                "horizon-color": alt > 0 ? mezclar("#ffcf8a", "#ffffff", dia) : "#25324d",
+                "fog-color": alt > 0 ? mezclar("#e8c9a6", "#d8e6ec", dia) : "#1c2638"
+            });
+            if (esri.vista) esri.vista.environment.lighting.date = fechaElegida();
+            // Noche: de 2 grados sobre el horizonte (0) a 8 grados bajo el (1), el crepusculo
+            aplicarNoche(Math.max(0, Math.min(1, (2 - alt) / 10)));
+            dibujarSombras(alt, az);
+        }
+
+        // Pasa lng/lat a Mercator (0..1), que es como el mapa estira el lienzo
+        const mercX = (lng) => (lng + 180) / 360;
+        const mercY = (lat) => (1 - Math.asinh(Math.tan(lat * Math.PI / 180)) / Math.PI) / 2;
+        const lngDe = (x) => x * 360 - 180;
+        const latDe = (y) => Math.atan(Math.sinh(Math.PI * (1 - 2 * y))) * 180 / Math.PI;
+
+        // Agrega un poligono al trazo, siempre en el mismo sentido de giro: asi,
+        // con la regla "nonzero", los pedazos que se cruzan se suman en vez de
+        // abrir huecos donde se superponen
+        function trazo(pts) {
+            let area = 0;
+            for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) area += (pts[j][0] - pts[i][0]) * (pts[j][1] + pts[i][1]);
+            if (area < 0) pts = pts.slice().reverse();
+            pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+            ctx.closePath();
+        }
+
+        function dibujarSombras(alt, az) {
+            const zoom = map.getZoom();
+            const visible = alt > 2 && zoom >= 14.5 && !esri.activo;
+            map.setLayoutProperty("sombras", "visibility", visible ? "visible" : "none");
+            if (!visible) return;
+
+            const c = map.getCenter();
+            const mPorUnidad = M_MERC * Math.cos(c.lat * Math.PI / 180);
+            // Lado del cuadro: mas grande al alejarse, con tope para no perder detalle
+            const mitad = Math.min(3000, Math.max(400, 900 * Math.pow(2, 16 - zoom))) / mPorUnidad;
+            const x0 = mercX(c.lng) - mitad, y0 = mercY(c.lat) - mitad, escala = LADO_PX / (2 * mitad);
+
+            // Desplazamiento de la sombra por cada metro de altura (en unidades Mercator)
+            const largo = 1 / Math.tan(Math.max(alt, 3) * Math.PI / 180);
+            const rumbo = (az + 180) * Math.PI / 180;
+            const dx = largo * Math.sin(rumbo) / mPorUnidad * escala;
+            const dy = -largo * Math.cos(rumbo) / mPorUnidad * escala; // y de Mercator crece al sur
+            const TOPE = 600; // metros: sombra maxima al amanecer/atardecer
+
+            ctx.clearRect(0, 0, LADO_PX, LADO_PX);
+            ctx.fillStyle = "#000";
+            const edificios = map.querySourceFeatures("openmaptiles", { sourceLayer: "building" });
+            for (const f of edificios) {
+                const alto = +f.properties.render_height || 0;
+                if (alto <= 0) continue;
+                const base = +f.properties.render_min_height || 0;
+                const f1 = Math.min(base, TOPE / largo), f2 = Math.min(alto, TOPE / largo);
+                const g = f.geometry;
+                const poligonos = g.type === "Polygon" ? [g.coordinates] : g.type === "MultiPolygon" ? g.coordinates : [];
+                for (const anillos of poligonos) {
+                    const anillo = anillos[0].map(([lng, lat]) => [(mercX(lng) - x0) * escala, (mercY(lat) - y0) * escala]);
+                    if (anillo.some(([x, y]) => x > -LADO_PX && x < 2 * LADO_PX && y > -LADO_PX && y < 2 * LADO_PX) === false) continue;
+                    // Huella proyectada desde la base y desde el techo, y las "paredes" entre las dos:
+                    // juntas forman la sombra completa del volumen
+                    ctx.beginPath();
+                    for (const h of [f1, f2]) trazo(anillo.map(([x, y]) => [x + dx * h, y + dy * h]));
+                    for (let i = 0; i < anillo.length - 1; i++) {
+                        const [ax, ay] = anillo[i], [bx, by] = anillo[i + 1];
+                        trazo([[ax + dx * f1, ay + dy * f1], [bx + dx * f1, by + dy * f1],
+                               [bx + dx * f2, by + dy * f2], [ax + dx * f2, ay + dy * f2]]);
+                    }
+                    ctx.fill("nonzero");
+                }
+            }
+
+            const x1 = x0 + 2 * mitad, y1 = y0 + 2 * mitad;
+            const fuente = map.getSource("sombras");
+            fuente.setCoordinates([
+                [lngDe(x0), latDe(y0)], [lngDe(x1), latDe(y0)],
+                [lngDe(x1), latDe(y1)], [lngDe(x0), latDe(y1)]
+            ]);
+            // Mas suaves con el sol muy bajo (luz difusa del amanecer/atardecer)
+            map.setPaintProperty("sombras", "raster-opacity", 0.22 + 0.2 * Math.min(1, alt / 30));
+            // El lienzo es estatico: se "reproduce" un cuadro para que el mapa suba el dibujo nuevo
+            fuente.play();
+            map.once("render", () => fuente.pause());
+        }
+
+        // Recalcular al mover el mapa o cuando llegan edificios nuevos
+        // (no en cada cuadro: al girar la camara las sombras no cambian)
+        let esperaSombras = null, claveSombras = "";
+        function sombrasLuego() {
+            if (!chkSol.checked) return;
+            clearTimeout(esperaSombras);
+            esperaSombras = setTimeout(() => {
+                const c = map.getCenter();
+                const clave = [c.lng.toFixed(4), c.lat.toFixed(4), map.getZoom().toFixed(1), solFecha.value, solHora.value].join();
+                if (clave === claveSombras) return;
+                claveSombras = clave;
+                aplicarSol();
+            }, 200);
+        }
+        map.on("moveend", sombrasLuego);
+        map.on("sourcedata", (e) => { if (e.sourceId === "openmaptiles" && e.isSourceLoaded) { claveSombras = ""; sombrasLuego(); } });
+
+        chkSol.addEventListener("change", () => { claveSombras = ""; aplicarSol(); });
+        solHora.addEventListener("input", aplicarSol);
+        solFecha.addEventListener("change", aplicarSol);
+        document.getElementById("solAhora").addEventListener("click", () => { ponerAhora(); aplicarSol(); });
+        document.getElementById("solNoche").addEventListener("click", () => {
+            chkSol.checked = true;
+            solHora.value = 20 * 60 + 30;
+            claveSombras = "";
+            aplicarSol();
+        });
+
+        // Animacion del dia: 10 minutos cada 120 ms, hasta la medianoche
+        let animandoDia = null;
+        function pararDia() {
+            clearInterval(animandoDia); animandoDia = null;
+            solPlay.textContent = "▶ Día";
+        }
+        solPlay.addEventListener("click", () => {
+            if (animandoDia) { pararDia(); return; }
+            if (+solHora.value >= +solHora.max) solHora.value = solHora.min;
+            solPlay.textContent = "⏸ Pausa";
+            animandoDia = setInterval(() => {
+                solHora.value = +solHora.value + 10;
+                if (+solHora.value >= +solHora.max) pararDia();
+                aplicarSol();
+            }, 120);
+        });
+        aplicarSol();
 
         // ---------- Contador de FPS real ----------
         // Para saber con un numero exacto si los cambios de arriba
