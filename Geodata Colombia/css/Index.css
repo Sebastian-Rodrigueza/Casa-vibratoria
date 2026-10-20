@@ -103,7 +103,7 @@ svg {
 }
 
 .logo-box {
-    width: 178px;
+    width: auto;
     height: 52px;
     display: flex;
     align-items: center;
@@ -507,7 +507,7 @@ footer {
     }
 
     .logo-box {
-        width: 120px;
+        width: auto;
         height: 44px;
         padding-right: 10px;
     }

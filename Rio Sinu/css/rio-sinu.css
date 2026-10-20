@@ -98,7 +98,7 @@ svg {
 }
 
 .logo-box {
-    width: 178px;
+    width: auto;
     height: 52px;
     display: flex;
     align-items: center;

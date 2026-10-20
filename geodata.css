@@ -97,7 +97,7 @@ svg {
 }
 
 .logo-wrap {
-    width: 178px;
+    width: auto;
     height: 52px;
     display: flex;
     align-items: center;
@@ -627,7 +627,7 @@ footer {
     }
 
     .logo-wrap {
-        width: 122px;
+        width: auto;
         height: 46px;
         padding-right: 10px;
     }
