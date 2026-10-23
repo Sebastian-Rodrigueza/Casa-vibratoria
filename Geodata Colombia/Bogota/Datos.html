@@ -9,7 +9,7 @@
           content="width=device-width, initial-scale=1.0">
 
     <meta name="description"
-          content="Catálogo de datos geográficos de Datos Abiertos Bogotá para abrir en el mapa del Laboratorio Digital CIAM">
+          content="Catálogo de datos geográficos de Datos Abiertos Bogotá para abrir en el mapa del Lab SinergIA">
 
     <title>
         Datos Bogotá | Universidad de los Andes
@@ -273,7 +273,7 @@
             <div class="brand">
                 <div class="brand-mark">DB</div>
                 <div class="brand-text">
-                    <small>Universidad de los Andes · CIAM</small>
+                    <small>Universidad de los Andes · Lab SinergIA</small>
                     <h1>Datos Abiertos Bogotá</h1>
                 </div>
             </div>
@@ -347,7 +347,7 @@
         </main>
 
         <footer class="footer" id="pie">
-            Fuente: Datos Abiertos Bogotá (datosabiertos.bogota.gov.co) · Laboratorio Digital CIAM · Universidad de los Andes
+            Fuente: Datos Abiertos Bogotá (datosabiertos.bogota.gov.co) · Lab SinergIA · Universidad de los Andes
         </footer>
 
     </div>
@@ -401,7 +401,7 @@
                 `${numero(CAT.datasets.length)} conjuntos de datos geográficos publicados por las entidades del Distrito; ` +
                 `${numero(conMapa)} se pueden abrir directamente en nuestro mapa.`;
             document.getElementById("pie").textContent =
-                `Fuente: ${CAT.fuente} · Catálogo actualizado el ${fecha(CAT.actualizado)} · Laboratorio Digital CIAM · Universidad de los Andes`;
+                `Fuente: ${CAT.fuente} · Catálogo actualizado el ${fecha(CAT.actualizado)} · Lab SinergIA · Universidad de los Andes`;
 
             // ---------- Tarjetas de categorias ----------
             function pintarCategorias() {
@@ -550,6 +550,7 @@
         })();
     </script>
 
+<script src="../../marca/pie.js?v=1" data-pie="en-footer" defer></script>
 </body>
 
 </html>

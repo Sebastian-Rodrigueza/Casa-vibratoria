@@ -195,7 +195,7 @@ def arcgis_proxy():
     if not re.match(r"^https?://", destino):
         return jsonify({"error": "Falta el parametro url"}), 400
 
-    cabeceras = {"User-Agent": "Mozilla/5.0 (CIAM Geodata)", "Accept": "application/json"}
+    cabeceras = {"User-Agent": "Mozilla/5.0 (SinergIA Geodata)", "Accept": "application/json"}
     try:
         if request.method == "POST":
             params = {k: v for k, v in request.form.items() if k != "url"}
@@ -325,7 +325,7 @@ def convert_gdb():
 if __name__ == "__main__":
     print("")
     print("============================================================")
-    print(" CIAM - SERVIDOR LOCAL CON SOPORTE FILE GEODATABASE (.GDB)")
+    print(" SinergIA - SERVIDOR LOCAL CON SOPORTE FILE GEODATABASE (.GDB)")
     print("============================================================")
     print(f"HTML esperado: {BASE_DIR / HTML_NAME}")
     print(f"ogrinfo: {OGRINFO or 'NO ENCONTRADO'}")
