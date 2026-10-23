@@ -35,6 +35,10 @@
     const ICONO_LUGAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>';
 
     const CSS = `
+/* logos de los encabezados: que la caja de logos no se encoja (si se encoge, el logo de
+   SinergIA, que es horizontal, se monta sobre el texto de al lado) */
+:is(span, div, a, button, header):has(> img[src*="marca/sinergia-logo"]) { flex-shrink: 0; }
+img[src*="marca/sinergia-logo"], img[src*="marca/uniandes-logo-cabecera"] { flex: none; max-width: none; object-fit: contain; }
 .ps-pie, .ps-pie *, .ps-tira, .ps-tira *, .ps-ventana, .ps-ventana * {
     box-sizing: border-box; margin: 0; padding: 0; letter-spacing: normal; text-transform: none;
     font-family: "Geist", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -81,7 +85,7 @@
     <div class="ps-rejilla">
         <div>
             <div class="ps-firma">
-                <img src="${raiz}marca/uniandes-logo.svg" alt="Universidad de los Andes">
+                <img src="${raiz}marca/uniandes-logo.svg?v=2" alt="Universidad de los Andes">
                 <span class="ps-linea"></span>
                 <span class="ps-nivel"><span class="ps-facultad">Facultad</span><span class="ps-facultad">de Ingeniería</span></span>
                 <span class="ps-linea"></span>

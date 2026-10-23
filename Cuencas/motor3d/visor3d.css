@@ -28,7 +28,7 @@ button, select, input { font: inherit; }
 .marca { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; min-width: 0; }
 .logos { display: flex; align-items: center; gap: 10px; padding-right: 14px; border-right: 1px solid var(--linea); }
 .logos img { height: 38px; width: auto; display: block; }
-.logos .logo-sinergia { height: 26px; }
+.logos .logo-sinergia { height: 20px; }
 .marca small { display: block; color: #898d91; font-size: 9px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .marca strong { display: block; color: var(--carbon); font: 700 17px/1.1 "Source Sans 3", sans-serif; white-space: nowrap; }
 .topbar nav { margin-left: auto; display: flex; gap: 8px; }
