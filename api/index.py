@@ -41,6 +41,9 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 
 
 def conectar():
+    # Sin la variable, psycopg2 intenta un Postgres local (localhost:5432) y el error confunde
+    if not DATABASE_URL:
+        raise RuntimeError("Falta la variable DATABASE_URL (cadena de Supabase): definela antes de 'flask run'")
     return psycopg2.connect(DATABASE_URL)
 
 
@@ -358,7 +361,7 @@ def agente_consultar():
 
     prompt = (
         "Eres el asistente del portal ICDE (Infraestructura Colombiana de Datos "
-        "Espaciales) del Laboratorio Digital CIAM, Universidad de los Andes. "
+        "Espaciales) del Lab SinergIA, Universidad de los Andes. "
         "Ayudas a las personas a encontrar los datasets geograficos que necesitan.\n\n"
         "Instrucciones:\n"
         "- Responde en espanol, en un maximo de 100 palabras, en tono claro y directo.\n"
@@ -457,13 +460,38 @@ TM_ALMACEN = "https://validaciones.datosabiertos.transmilenio.gov.co"
 TM_CABECERAS = {"User-Agent": "LabSinergIA-Uniandes/1.0 (datos abiertos)"}
 
 
+# Memoria de las paginas ya leidas: el sitio responde 429 (demasiadas peticiones)
+# si se le pide la misma pagina muchas veces seguidas. Dura mientras el proceso
+# este vivo (en local, hasta reiniciar flask; en Vercel, mientras la funcion siga caliente).
+_MEMORIA_TM = {}
+TM_MEMORIA_SEG = 3 * 3600
+
+
+def _get_tm(url, timeout=20, stream=False):
+    """GET al sitio de TransMilenio; si responde 429 espera un poco y reintenta."""
+    for intento in range(3):
+        r = req_lib.get(url, headers=TM_CABECERAS, timeout=timeout, stream=stream)
+        if r.status_code != 429:
+            return r
+        espera = r.headers.get("Retry-After", "")
+        time.sleep(min(int(espera), 5) if espera.isdigit() else 1.5 * (intento + 1))
+    return r
+
+
 def _listar_tm(pagina, carpeta):
     """Nombres de archivo ('Salidas/salidas20261018.zip') enlazados en una pagina del sitio."""
-    r = req_lib.get(f"{TM_ALMACEN}/{pagina}", headers=TM_CABECERAS, timeout=20)
+    guardado = _MEMORIA_TM.get(pagina)
+    if guardado and time.time() - guardado[0] < TM_MEMORIA_SEG:
+        return guardado[1]
+    r = _get_tm(f"{TM_ALMACEN}/{pagina}")
     if r.status_code in (401, 403):
         raise _SinAcceso()
+    if r.status_code == 429 and guardado:
+        return guardado[1]  # mejor la lista de hace un rato que un error
     r.raise_for_status()
-    return sorted(set(re.findall(rf"/({carpeta}/[^\"'<>\s]+)", r.text)))
+    nombres = sorted(set(re.findall(rf"/({carpeta}/[^\"'<>\s]+)", r.text)))
+    _MEMORIA_TM[pagina] = (time.time(), nombres)
+    return nombres
 
 
 # Si el sitio vuelve a negar el acceso se avisa eso en vez de "no hay datos".
@@ -857,6 +885,18 @@ def _ruta(texto):
     return (m.group(1), m.group(2).strip()) if m else (texto or "", texto or "")
 
 
+def _error_zonal(fecha, e):
+    """404 solo si el archivo de verdad no existe; si TransMilenio no respondio
+    (429, tiempo agotado...) se dice eso y no se guarda en cache."""
+    if isinstance(e, req_lib.HTTPError) and e.response is not None and e.response.status_code == 404:
+        return _con_cache(jsonify({"ok": False, "error": f"TransMilenio no tiene validaciones zonales para {fecha}"}), 3600), 404
+    print("Validaciones zonales", fecha, "-", repr(e))
+    r = jsonify({"ok": False, "reintentar": True,
+                 "error": "TransMilenio no respondió a tiempo (a veces bloquea un rato si se le piden muchos días seguidos). Intenta de nuevo en un minuto."})
+    r.headers["Cache-Control"] = "no-store"
+    return r, 503
+
+
 def _validaciones_zonales(fecha):
     """Recorre las validaciones zonales de un dia. Devuelve (encabezado, generador de columnas)."""
     url = f"{TM_ALMACEN}/ValidacionZonal/validacionZonal{fecha.replace('-', '')}.zip"
@@ -872,7 +912,7 @@ def _lineas_zip_flujo(url):
     se lee la cabecera local del primer archivo y se descomprime en flujo."""
     import struct
     import zlib
-    r = req_lib.get(url, headers=TM_CABECERAS, timeout=60, stream=True)
+    r = _get_tm(url, timeout=60, stream=True)
     if r.status_code in (401, 403):
         raise _SinAcceso()
     r.raise_for_status()
@@ -899,14 +939,35 @@ def _lineas_zip_flujo(url):
         yield resto
 
 
+_FLOTA = {"hora": 0, "datos": {}}
+
+
 def _flota():
-    """Archivo de flota mas reciente: numero del bus (sin letras) -> datos del bus."""
+    """Archivo de flota mas reciente: numero del bus (sin letras) -> datos del bus.
+
+    Se guarda en memoria 6 horas (cambia muy poco). Si TransMilenio no responde, se
+    devuelve la ultima flota leida, o {} (los buses salen sin placa, pero la ruta funciona)."""
+    if _FLOTA["datos"] and time.time() - _FLOTA["hora"] < 6 * 3600:
+        return _FLOTA["datos"]
+    try:
+        flota = _leer_flota()
+    except Exception as e:
+        print("Flota de TransMilenio no disponible:", e)
+        return _FLOTA["datos"]
+    if flota:
+        _FLOTA.update(hora=time.time(), datos=flota)
+    return flota
+
+
+def _leer_flota():
     import csv
     import io
     nombres = [n for n in _listar_tm("FlotaVinculada.html", "FlotaVinculada") if n.endswith(".csv")]
     if not nombres:
         return {}
-    texto = req_lib.get(f"{TM_ALMACEN}/{nombres[-1]}", headers=TM_CABECERAS, timeout=30).content.decode("utf-8", "replace")
+    r = _get_tm(f"{TM_ALMACEN}/{nombres[-1]}", timeout=30)
+    r.raise_for_status()
+    texto = r.content.decode("utf-8", "replace")
     flota = {}
     for f in csv.DictReader(io.StringIO(texto)):
         clave = re.sub(r"\D", "", f.get("codigo_bus", "")).lstrip("0")
@@ -927,8 +988,8 @@ def transmilenio_sitp_indice():
         enc, filas = _validaciones_zonales(fecha)
     except _SinAcceso:
         return _sin_acceso()
-    except Exception:
-        return _con_cache(jsonify({"ok": False, "error": f"TransMilenio no tiene validaciones zonales para {fecha}"}), 3600), 404
+    except Exception as e:
+        return _error_zonal(fecha, e)
     i_v, i_l, i_t, i_p = (enc.index("ID_Vehiculo"), enc.index("Linea"),
                           enc.index("Fecha_Transaccion"), enc.index("Estacion_Parada"))
     rutas, buses, por_paradero = {}, {}, {}
@@ -999,8 +1060,8 @@ def transmilenio_sitp_ruta():
         enc, filas = _validaciones_zonales(fecha)
     except _SinAcceso:
         return _sin_acceso()
-    except Exception:
-        return _con_cache(jsonify({"ok": False, "error": f"TransMilenio no tiene validaciones zonales para {fecha}"}), 3600), 404
+    except Exception as e:
+        return _error_zonal(fecha, e)
     i_v, i_l, i_t, i_p = (enc.index("ID_Vehiculo"), enc.index("Linea"),
                           enc.index("Fecha_Transaccion"), enc.index("Estacion_Parada"))
     prefijo = f"({ruta})".encode()
