@@ -1,0 +1,16 @@
+{
+ "oeste": -74.86347222222221,
+ "norte": 5.3276388888888855,
+ "dx": 0.0008333333333333385,
+ "dy": 0.0008333333333333371,
+ "ancho": 2207,
+ "alto": 1954,
+ "este": -73.02430555555554,
+ "sur": 3.6993055555555445,
+ "factor": 3,
+ "fuente": "DEM 1 segundo de arco (dem.tif), remuestreado",
+ "alt_min": 159,
+ "alt_max": 4256,
+ "umbral_cauce_km2": 4.0,
+ "rios_grabados": "OpenStreetMap (waterway=river y canales con nombre), 15 m"
+}

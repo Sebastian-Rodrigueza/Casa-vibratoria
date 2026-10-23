@@ -36,3 +36,9 @@ capas_pesadas/
 
 .vercel
 .env*
+
+# Datos crudos de cuencas de Cundinamarca (855MB: DEM 30 m y shapefile).
+# El visor usa las versiones livianas de Cuencas/Cundinamarca/datos/
+# (las genera Cuencas/Cundinamarca/herramientas/preparar_datos.py).
+Cuencas/Cundinamarca/info/
+Cuencas/Rio Sinu/Sinu_capas_base/

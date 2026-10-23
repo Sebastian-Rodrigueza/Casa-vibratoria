@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#ffffff">
+<meta name="description" content="Relieve 3D de la cuenca del río Sinú: 58 subcuencas del POMCA, ríos y perfil del terreno sobre el DEM Copernicus. Lab SinergIA, Universidad de los Andes.">
+<title>Relieve 3D · Río Sinú | Universidad de los Andes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Sans+3:wght@600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css" rel="stylesheet">
+<link rel="stylesheet" href="../motor3d/visor3d.css?v=2">
+</head>
+<body>
+
+<!-- ================= ENCABEZADO ================= -->
+<header class="topbar">
+    <a class="marca" href="../../Index.html">
+        <span class="logos">
+            <img src="../../Imagenes/logo-uniandes.png" alt="Universidad de los Andes">
+            <img class="logo-sinergia" src="../../Imagenes/SinerGIA-oscuro.png" alt="Lab SinergIA">
+        </span>
+        <span>
+            <small>Universidad de los Andes · Lab SinergIA</small>
+            <strong>Relieve 3D · Río Sinú</strong>
+        </span>
+    </a>
+    <nav>
+        <button type="button" id="btnInfo"><i data-lucide="info"></i><span>Fuentes y método</span></button>
+        <a href="RioSinu.html"><i data-lucide="layers"></i><span>Visor de capas</span></a>
+        <a href="Index.html"><i data-lucide="arrow-left"></i><span>Río Sinú</span></a>
+        <a class="primario" href="../../Index.html"><i data-lucide="house"></i><span>Inicio</span></a>
+    </nav>
+</header>
+
+<div id="mapa"></div>
+
+<!-- ================= PANEL ================= -->
+<aside class="panel" id="panel">
+    <div class="panel-cab">
+        <div class="eti">Relieve 3D</div>
+        <h1>Cuenca del río Sinú</h1>
+        <p>58 subcuencas del POMCA sobre el modelo de terreno Copernicus GLO-30, del nudo de Paramillo
+           a la desembocadura en Tinajones.</p>
+    </div>
+    <div class="pestanas" role="tablist">
+        <button type="button" class="activo" data-pestana="explorar"><i data-lucide="layers"></i>Explorar</button>
+        <button type="button" data-pestana="simular"><i data-lucide="chart-spline"></i>Perfil</button>
+    </div>
+
+    <div class="panel-cuerpo">
+
+        <!-- ---------- EXPLORAR ---------- -->
+        <section data-seccion="explorar">
+            <div class="grupo">
+                <h3>Mapa de fondo</h3>
+                <div class="seg" id="segBase">
+                    <button type="button" class="activo" data-base="satelite">Satélite</button>
+                    <button type="button" data-base="topo">Topográfico</button>
+                    <button type="button" data-base="claro">Claro</button>
+                </div>
+            </div>
+            <div class="grupo">
+                <h3>Relieve</h3>
+                <div class="fila"><label><input type="checkbox" id="chk3d" checked> Terreno en 3D</label></div>
+                <div class="fila"><small style="width:96px">Exageración</small><input type="range" id="rngExag" min="1" max="4" step="0.1" value="1.6"><small id="txtExag">1,6×</small></div>
+                <div class="fila"><label><input type="checkbox" id="chkSombra" checked> Sombreado del relieve</label></div>
+            </div>
+            <div class="grupo">
+                <h3>Capas</h3>
+                <div class="fila"><label><input type="checkbox" id="chkSub" checked> Subcuencas</label></div>
+                <div class="fila"><label><input type="checkbox" id="chkEtq" checked> Nombres de subcuencas</label></div>
+                <div class="fila"><label><input type="checkbox" id="chkRios" checked> Red de drenaje</label></div>
+                <div class="fila"><label><input type="checkbox" id="chkFlujo" checked> Agua en movimiento</label></div>
+            </div>
+            <div class="grupo">
+                <h3>Edificios 3D</h3>
+                <div class="seg" id="segEdif">
+                    <button type="button" class="activo" data-edif="no">Sin edificios</button>
+                    <button type="button" data-edif="osm">OpenStreetMap</button>
+                    <button type="button" data-edif="esri">Esri 3D</button>
+                </div>
+                <p class="nota" id="notaEdif">Se ven al acercarse a una ciudad (Montería, Cereté, Lorica…).</p>
+            </div>
+            <div class="grupo">
+                <h3>Colorear subcuencas por</h3>
+                <select id="selColor">
+                    <option value="cuenca">Zona del Sinú (alto, medio, bajo)</option>
+                    <option value="alt_media">Altura media</option>
+                    <option value="pendiente_media">Pendiente media</option>
+                    <option value="integral_hipsometrica">Integral hipsométrica (madurez)</option>
+                </select>
+                <div class="leyenda" id="leyenda"></div>
+            </div>
+            <div class="grupo">
+                <h3>Ir a una subcuenca</h3>
+                <select id="selIr"><option value="">Elige una subcuenca…</option></select>
+            </div>
+            <p class="nota">La red de drenaje se calculó con el modelo de terreno (el agua baja por la pendiente más
+                fuerte de celda en celda), guiada por los ríos de HydroRIVERS para que en el valle plano siga el cauce real.
+                Su grosor es el <b>orden de Strahler</b>: mientras más afluentes se juntan, más grande el río.</p>
+        </section>
+
+        <!-- ---------- PERFIL ---------- -->
+        <section data-seccion="simular" hidden>
+            <div class="grupo">
+                <h3>Corte del terreno</h3>
+                <div class="herramientas">
+                    <button type="button" class="herr" data-herr="perfil"><i data-lucide="chart-spline"></i><b>Perfil del terreno</b><span>Haz clic en dos puntos del mapa.</span></button>
+                </div>
+            </div>
+            <div class="caja vacia" id="resultado">Activa la herramienta y marca dos puntos.</div>
+            <button type="button" class="boton ancho" id="btnLimpiar"><i data-lucide="rotate-ccw"></i> Borrar el perfil</button>
+        </section>
+    </div>
+</aside>
+<button type="button" class="boton primario mostrar-panel" id="btnPanel"><i data-lucide="layers"></i> Panel</button>
+
+<!-- ================= FICHA ================= -->
+<aside class="ficha" id="ficha" hidden></aside>
+
+<!-- ================= PERFIL ================= -->
+<section class="perfil" id="perfil" hidden>
+    <header>
+        <b><i data-lucide="chart-spline"></i> Perfil del terreno</b>
+        <div class="pf-cifras" id="perfilInfo"></div>
+        <button type="button" class="pf-cerrar" id="btnCerrarPerfil" title="Cerrar el perfil"><i data-lucide="x"></i></button>
+    </header>
+    <div class="pf-zona" id="perfilZona">
+        <svg id="perfilSvg"></svg>
+        <div class="pf-tip" id="perfilTip" hidden></div>
+    </div>
+</section>
+
+<!-- ================= FUENTES Y METODO ================= -->
+<div class="modal" id="modalInfo" hidden>
+    <div class="modal-caja">
+        <button type="button" class="cerrar" id="cerrarInfo" title="Cerrar"><i data-lucide="x"></i></button>
+        <h2>Fuentes y cómo se hizo</h2>
+        <p>Vista en 3D de la cuenca del río Sinú con el mismo motor del visor de Cundinamarca. <b>Todo lo que usa es gratis</b>
+            y no necesita claves ni pagos. Las demás capas (áreas protegidas, infraestructura, suelos, estaciones) están en el
+            <a href="RioSinu.html">visor de capas</a>.</p>
+
+        <h3>De dónde sale la información</h3>
+        <table>
+            <tr><th>Qué</th><th>Fuente</th><th>Costo</th><th>Cómo se usa</th></tr>
+            <tr><td>Modelo de terreno (DEM)</td><td><a href="https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM" target="_blank" rel="noopener">Copernicus GLO-30</a> (ESA, 2024), recortado a la cuenca</td><td><span class="gratis">Gratis</span></td>
+                <td>De 30 m se pasó a unos 90 m para que pese poco (1,4 MB). De aquí salen alturas, pendientes, red de drenaje y perfil.</td></tr>
+            <tr><td>Cuenca y 58 subcuencas</td><td>Delimitación del POMCA del río Sinú (capas base GeoIngenIA, 2026)</td><td><span class="gratis">Gratis</span></td>
+                <td>Polígonos con estadísticas calculadas sobre el DEM y los caudales que reporta el POMCA.</td></tr>
+            <tr><td>Ríos</td><td><a href="https://www.hydrosheds.org/products/hydrorivers" target="_blank" rel="noopener">HydroRIVERS</a> (WWF / HydroSHEDS)</td><td><span class="gratis">Gratis</span></td>
+                <td>Se "graban" en el terreno antes de calcular el drenaje, para que en el valle plano los ríos sigan su cauce real.</td></tr>
+            <tr><td>Relieve 3D del mapa</td><td>Terrain Tiles de Mapzen en AWS (datos abiertos)</td><td><span class="gratis">Gratis</span></td><td>Solo para dibujar el 3D.</td></tr>
+            <tr><td>Imagen satelital y mapas</td><td>Esri World Imagery y World Topo, CARTO</td><td><span class="gratis">Gratis</span></td><td>Fondos del mapa (con atribución).</td></tr>
+            <tr><td>Edificios 3D</td><td>OpenStreetMap vía OpenFreeMap; Esri 3D Buildings (ArcGIS, sin clave)</td><td><span class="gratis">Gratis</span></td><td>Opcional en "Explorar".</td></tr>
+        </table>
+
+        <h3>Cómo se calculó</h3>
+        <ul>
+            <li><b>Red de drenaje.</b> Se graban en el DEM los ríos de HydroRIVERS (15 m más hondos, <i>stream burning</i>) y se rellenan
+                los huecos falsos (<i>priority-flood</i>). En el bajo Sinú, que es muy plano, el agua avanza más fácil por esos cauces.
+                Luego cada celda le manda su agua a la vecina más baja de las 8 que la rodean (<i>D8</i>) y donde se juntan más de
+                4 km² de terreno se dibuja un cauce, con grosor según el <b>orden de Strahler</b>.</li>
+            <li><b>Estadísticas de cada subcuenca.</b> Alturas y pendiente del DEM; <b>curva e integral hipsométrica</b>
+                (qué parte del área está por encima de cada altura); <b>coeficiente de Gravelius</b> (0,28 × perímetro / √área).</li>
+            <li><b>Caudales.</b> Son los que reporta el POMCA para cada subcuenca (medio, máximo, mínimo, ambiental y disponible).
+                La subcuenca "Valle del Sinú y cauce principal" es nueva en la delimitación y no trae caudales.</li>
+        </ul>
+
+        <h3>Para tener en cuenta</h3>
+        <ul>
+            <li>Copernicus es un modelo de <b>superficie</b>: en bosques y pueblos mide la altura de los árboles o techos.</li>
+            <li>Con 90 m de resolución no se ven canales pequeños, jarillones ni el detalle de las ciénagas.</li>
+        </ul>
+        <p class="nota">Los datos se generan con <i>herramientas/actualizar_capas.py</i> y <i>herramientas/preparar_relieve.py</i>.</p>
+    </div>
+</div>
+
+<div class="cursor" id="cursor">Mueve el mouse sobre el mapa</div>
+<div class="aviso-herr" id="avisoHerr" hidden><i data-lucide="mouse-pointer-click"></i><span></span></div>
+<div class="cargando" id="cargando"><div class="giro"></div><span id="cargandoTxt">Cargando el modelo de terreno…</span></div>
+
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@1.52.0/dist/umd/lucide.min.js"></script>
+<script src="../../esri3d-edificios.js?v=5"></script>
+<script>
+    // Configuracion de este visor (ver ../motor3d/visor3d.js)
+    window.VISOR3D = {
+        datos: "datos/",
+        colores: { "Alto Sinú y cauce principal": "#26a69a", "Medio Sinú": "#f5c400", "Bajo Sinú": "#ef6c00" },
+        embalses: false, ideam: false, clima: false, gota: false,
+        ciudad: { centro: [-75.885, 8.757], texto: "Se ven al acercarse a una ciudad (Montería, Cereté, Lorica…)." }
+    };
+</script>
+<script src="../motor3d/visor3d.js?v=1"></script>
+</body>
+</html>

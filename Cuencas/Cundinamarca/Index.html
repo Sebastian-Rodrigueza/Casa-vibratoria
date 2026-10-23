@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#ffffff">
+<meta name="description" content="Gemelo digital de las cuencas de Cundinamarca: relieve 3D, red de drenaje, simulaciones de agua y lluvia en vivo. Lab SinergIA, Universidad de los Andes.">
+<title>Gemelo digital · Cuencas de Cundinamarca | Universidad de los Andes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Sans+3:wght@600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css" rel="stylesheet">
+<link rel="stylesheet" href="../motor3d/visor3d.css?v=2">
+</head>
+<body>
+
+<!-- ================= ENCABEZADO ================= -->
+<header class="topbar">
+    <a class="marca" href="../../Index.html">
+        <span class="logos">
+            <img src="../../Imagenes/logo-uniandes.png" alt="Universidad de los Andes">
+            <img class="logo-sinergia" src="../../Imagenes/SinerGIA-oscuro.png" alt="Lab SinergIA">
+        </span>
+        <span>
+            <small>Universidad de los Andes · Lab SinergIA</small>
+            <strong>Gemelo digital · Cuencas de Cundinamarca</strong>
+        </span>
+    </a>
+    <nav>
+        <button type="button" id="btnInfo"><i data-lucide="info"></i><span>Fuentes y método</span></button>
+        <a href="../Index.html"><i data-lucide="arrow-left"></i><span>Cuencas</span></a>
+        <a class="primario" href="../../Index.html"><i data-lucide="house"></i><span>Inicio</span></a>
+    </nav>
+</header>
+
+<div id="mapa"></div>
+
+<!-- ================= PANEL ================= -->
+<aside class="panel" id="panel">
+    <div class="panel-cab">
+        <div class="eti">Gemelo digital</div>
+        <h1>Cuencas de Cundinamarca</h1>
+        <p>80 subcuencas de los ríos Bogotá, Sumapaz, Guavio, Gachetá, Guatiquía, Guayuriba y Humea,
+           sobre un modelo de terreno de 30 m.</p>
+    </div>
+    <div class="pestanas" role="tablist">
+        <button type="button" class="activo" data-pestana="explorar"><i data-lucide="layers"></i>Explorar</button>
+        <button type="button" data-pestana="simular"><i data-lucide="droplet"></i>Simular</button>
+        <button type="button" data-pestana="clima"><i data-lucide="cloud-rain"></i>Lluvia</button>
+        <button type="button" data-pestana="embalses"><i data-lucide="waves-horizontal"></i>Embalses</button>
+        <button type="button" data-pestana="ideam"><i data-lucide="activity"></i>Ríos IDEAM</button>
+    </div>
+
+    <div class="panel-cuerpo">
+
+        <!-- ---------- EXPLORAR ---------- -->
+        <section data-seccion="explorar">
+            <div class="grupo">
+                <h3>Mapa de fondo</h3>
+                <div class="seg" id="segBase">
+                    <button type="button" class="activo" data-base="satelite">Satélite</button>
+                    <button type="button" data-base="topo">Topográfico</button>
+                    <button type="button" data-base="claro">Claro</button>
+                </div>
+            </div>
+            <div class="grupo">
+                <h3>Relieve</h3>
+                <div class="fila"><label><input type="checkbox" id="chk3d" checked> Terreno en 3D</label></div>
+                <div class="fila"><small style="width:96px">Exageración</small><input type="range" id="rngExag" min="1" max="4" step="0.1" value="1.6"><small id="txtExag">1,6×</small></div>
+                <div class="fila"><label><input type="checkbox" id="chkSombra" checked> Sombreado del relieve</label></div>
+            </div>
+            <div class="grupo">
+                <h3>Capas</h3>
+                <div class="fila"><label><input type="checkbox" id="chkSub" checked> Subcuencas</label></div>
+                <div class="fila"><label><input type="checkbox" id="chkEtq" checked> Nombres de subcuencas</label></div>
+                <div class="fila"><label><input type="checkbox" id="chkRios" checked> Red de drenaje</label></div>
+                <div class="fila"><label><input type="checkbox" id="chkFlujo" checked> Agua en movimiento</label></div>
+                <div class="fila"><label><input type="checkbox" id="chkEmb" checked> Embalses</label></div>
+                <div class="fila"><label><input type="checkbox" id="chkIdeam" checked> Estaciones del IDEAM</label></div>
+            </div>
+            <div class="grupo">
+                <h3>Edificios 3D</h3>
+                <div class="seg" id="segEdif">
+                    <button type="button" class="activo" data-edif="no">Sin edificios</button>
+                    <button type="button" data-edif="osm">OpenStreetMap</button>
+                    <button type="button" data-edif="esri">Esri 3D</button>
+                </div>
+                <p class="nota" id="notaEdif">Se ven al acercarse a una ciudad (Bogotá, Zipaquirá, Chía…).</p>
+            </div>
+            <div class="grupo">
+                <h3>Colorear subcuencas por</h3>
+                <select id="selColor">
+                    <option value="cuenca">Cuenca a la que pertenecen</option>
+                    <option value="alt_media">Altura media</option>
+                    <option value="pendiente_media">Pendiente media</option>
+                    <option value="integral_hipsometrica">Integral hipsométrica (madurez)</option>
+                    <option value="lluvia_pasada">Lluvia de las últimas 24 h</option>
+                    <option value="lluvia_futura">Lluvia pronosticada próximas 24 h</option>
+                </select>
+                <div class="leyenda" id="leyenda"></div>
+            </div>
+            <div class="grupo">
+                <h3>Ir a una subcuenca</h3>
+                <select id="selIr"><option value="">Elige una subcuenca…</option></select>
+            </div>
+            <p class="nota">La red de drenaje no viene de un archivo: se calculó con el mismo modelo de terreno
+                (el agua baja por la pendiente más fuerte de celda en celda). Su grosor es el <b>orden de Strahler</b>:
+                mientras más afluentes se juntan, más grande el río.</p>
+        </section>
+
+        <!-- ---------- SIMULAR ---------- -->
+        <section data-seccion="simular" hidden>
+            <div class="grupo">
+                <h3>Elige una herramienta y haz clic en el mapa</h3>
+                <div class="herramientas">
+                    <button type="button" class="herr" data-herr="gota"><i data-lucide="droplet"></i><b>Gota de lluvia</b><span>¿Hasta dónde llega el agua que cae aquí?</span></button>
+                    <button type="button" class="herr" data-herr="cuenca"><i data-lucide="scan-search"></i><b>Área que drena aquí</b><span>Todo el terreno que le manda agua a un punto.</span></button>
+                    <button type="button" class="herr" data-herr="inundacion"><i data-lucide="waves-arrow-up"></i><b>Inundación</b><span>Sube el nivel del agua en un río.</span></button>
+                    <button type="button" class="herr" data-herr="perfil"><i data-lucide="chart-spline"></i><b>Perfil del terreno</b><span>Corte del relieve entre dos puntos.</span></button>
+                </div>
+            </div>
+            <div class="caja vacia" id="resultado">Elige una herramienta para empezar.</div>
+            <div class="grupo" id="grupoNivel" hidden style="margin-top:12px">
+                <h3>Subida del agua</h3>
+                <div class="fila"><input type="range" id="rngNivel" min="0" max="40" step="0.5" value="5"><b id="txtNivel" style="min-width:52px;text-align:right">5 m</b></div>
+                <p class="nota">Modelo de "bañera": se llena todo lo que esté conectado al punto y quede por debajo del nuevo nivel.
+                    No considera caudal, tiempo ni diques: sirve para ver qué zonas son bajas y cuáles se inundarían primero.</p>
+            </div>
+            <button type="button" class="boton ancho" id="btnRioBogota"><i data-lucide="route"></i> Seguir el río Bogotá desde su nacimiento</button>
+            <button type="button" class="boton ancho" id="btnLimpiar"><i data-lucide="rotate-ccw"></i> Limpiar simulaciones</button>
+        </section>
+
+        <!-- ---------- CLIMA ---------- -->
+        <section data-seccion="clima" hidden>
+            <div class="grupo">
+                <h3>Lluvia hora a hora (pasadas 24 h y próximas 48 h)</h3>
+                <p class="nota" id="climaEstado">Cargando el pronóstico…</p>
+                <div id="climaCont" hidden>
+                    <div class="reloj">
+                        <button type="button" class="boton" id="btnPlay" title="Reproducir"><i data-lucide="play"></i></button>
+                        <b id="txtHora">—</b>
+                    </div>
+                    <input type="range" id="rngHora" min="0" max="71" step="1" value="24">
+                    <div class="datos" id="climaTotales"></div>
+                    <div class="leyenda" id="leyendaLluvia"></div>
+                </div>
+            </div>
+            <div class="grupo" id="grupoRanking" hidden>
+                <h3>Dónde más va a llover (próximas 24 h)</h3>
+                <ul class="ranking" id="ranking"></ul>
+            </div>
+            <p class="nota">Fuente: <b>Open-Meteo</b> (modelos meteorológicos, gratis y abiertos), consultado en vivo para el
+                centro de cada subcuenca. Es un modelo, no la medición de una estación. El volumen es la lluvia que cae sobre
+                la subcuenca (mm × área), no el caudal del río.</p>
+        </section>
+
+        <!-- ---------- EMBALSES ---------- -->
+        <section data-seccion="embalses" hidden>
+            <div class="grupo">
+                <h3>Embalses de la zona</h3>
+                <p class="nota" style="margin:0 0 8px">Contorno real de OpenStreetMap y cota del espejo de agua medida en el modelo de terreno.
+                    Haz clic en uno para ver su ficha y simular qué pasaría si sube el agua.</p>
+                <ul class="lista" id="listaEmb"></ul>
+            </div>
+            <p class="nota">Capacidades: Acueducto de Bogotá, citado en La República (2025). El nivel de llenado diario lo publica la CAR
+                en boletines, pero no como datos abiertos consultables, por eso aquí no aparece en vivo.</p>
+        </section>
+
+        <!-- ---------- IDEAM ---------- -->
+        <section data-seccion="ideam" hidden>
+            <div class="grupo">
+                <h3>Nivel de los ríos (IDEAM, últimos 7 días)</h3>
+                <p class="nota" id="ideamEstado">Consultando las estaciones del IDEAM…</p>
+                <ul class="lista" id="listaIdeam"></ul>
+            </div>
+            <p class="nota"><b>Cómo leerlo:</b> el IDEAM mide la altura del agua en una regla junto al río. Aquí se compara el último dato con
+                el más bajo de la semana: esa <b>subida</b> se puede llevar al simulador de inundación para ver qué zonas bajas alcanzaría
+                el agua si subiera así en otra parte. Fuente: IDEAM, Datos Abiertos Colombia (conjunto <i>bdmn-sqnh</i>), gratis.</p>
+        </section>
+    </div>
+</aside>
+<button type="button" class="boton primario mostrar-panel" id="btnPanel"><i data-lucide="layers"></i> Panel</button>
+
+<!-- ================= FICHA ================= -->
+<aside class="ficha" id="ficha" hidden></aside>
+
+<!-- ================= PERFIL ================= -->
+<section class="perfil" id="perfil" hidden>
+    <header>
+        <b><i data-lucide="chart-spline"></i> Perfil del terreno</b>
+        <div class="pf-cifras" id="perfilInfo"></div>
+        <button type="button" class="pf-cerrar" id="btnCerrarPerfil" title="Cerrar el perfil"><i data-lucide="x"></i></button>
+    </header>
+    <div class="pf-zona" id="perfilZona">
+        <svg id="perfilSvg"></svg>
+        <div class="pf-tip" id="perfilTip" hidden></div>
+    </div>
+</section>
+
+<!-- ================= FUENTES Y METODO ================= -->
+<div class="modal" id="modalInfo" hidden>
+    <div class="modal-caja">
+        <button type="button" class="cerrar" id="cerrarInfo" title="Cerrar"><i data-lucide="x"></i></button>
+        <h2>Fuentes y cómo se hizo</h2>
+        <p>Este visor es un <b>gemelo digital</b> sencillo de las cuencas de Cundinamarca: una copia del territorio en el computador
+            (relieve, ríos, embalses) a la que se le conectan datos en vivo (lluvia y niveles de los ríos) y con la que se pueden
+            hacer simulaciones. <b>Todo lo que usa es gratis</b> y no necesita claves ni pagos.</p>
+
+        <h3>De dónde sale la información</h3>
+        <table>
+            <tr><th>Qué</th><th>Fuente</th><th>Costo</th><th>Cómo se usa</th></tr>
+            <tr><td>Modelo de terreno (DEM) de 30 m</td><td>Archivo <i>dem.tif</i> (1 segundo de arco) entregado por el Lab SinergIA</td><td><span class="gratis">Gratis</span></td>
+                <td>Se pasó a 92 m para que pese poco (4 MB). De aquí salen alturas, pendientes, red de drenaje y simulaciones.</td></tr>
+            <tr><td>80 subcuencas</td><td>Archivo <i>SubCuenca</i> (2020), códigos de la zonificación hidrográfica del IDEAM (p. ej. 2120 = río Bogotá)</td><td><span class="gratis">Gratis</span></td>
+                <td>Polígonos simplificados con estadísticas calculadas sobre el DEM.</td></tr>
+            <tr><td>Embalses</td><td><a href="https://www.openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap</a> (licencia ODbL)</td><td><span class="gratis">Gratis</span></td>
+                <td>Contorno de cada embalse; su área y la cota del agua se miden en el visor.</td></tr>
+            <tr><td>Trazado de los ríos</td><td><a href="https://www.openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap</a> (licencia ODbL)</td><td><span class="gratis">Gratis</span></td>
+                <td>Se "graban" en el terreno antes de calcular el drenaje, para que en la Sabana los ríos sigan su cauce real.</td></tr>
+            <tr><td>Capacidad de los embalses</td><td>Acueducto de Bogotá, en <a href="https://www.larepublica.co/analisis/natasha-avendano-3083918/tomine-con-agua-suficiente-que-no-se-puede-usar-4056102" target="_blank" rel="noopener">La República (2025)</a></td><td><span class="gratis">Gratis</span></td>
+                <td>Dato de referencia (millones de m³).</td></tr>
+            <tr><td>Nivel de los ríos</td><td>IDEAM en <a href="https://www.datos.gov.co/resource/bdmn-sqnh" target="_blank" rel="noopener">Datos Abiertos Colombia (bdmn-sqnh)</a></td><td><span class="gratis">Gratis</span></td>
+                <td>Se consulta en vivo al abrir la pestaña "Ríos IDEAM". Suele llegar con unas horas de retraso.</td></tr>
+            <tr><td>Lluvia (pasada y pronóstico)</td><td><a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (CC BY 4.0)</td><td><span class="gratis">Gratis</span></td>
+                <td>Se consulta en vivo para el centro de cada subcuenca. Es un modelo meteorológico, no una estación.</td></tr>
+            <tr><td>Relieve 3D del mapa</td><td>Terrain Tiles de Mapzen en AWS (datos abiertos)</td><td><span class="gratis">Gratis</span></td><td>Solo para dibujar el 3D.</td></tr>
+            <tr><td>Imagen satelital y mapas</td><td>Esri World Imagery y World Topo, CARTO</td><td><span class="gratis">Gratis</span></td><td>Fondos del mapa (con atribución).</td></tr>
+            <tr><td>Edificios 3D</td><td>OpenStreetMap vía OpenFreeMap; Esri 3D Buildings (ArcGIS, sin clave)</td><td><span class="gratis">Gratis</span></td><td>Opcional en "Explorar".</td></tr>
+        </table>
+
+        <h3>Cómo se calculó</h3>
+        <ul>
+            <li><b>Red de drenaje.</b> Primero se graban en el DEM los ríos conocidos de OpenStreetMap (15 m más hondos, <i>stream burning</i>)
+                y se rellenan los huecos falsos (método <i>priority-flood</i>) para que el agua siempre pueda salir. En las zonas planas, como la
+                Sabana, el relleno deja el agua avanzar mucho más fácil por esos cauces que por el resto; sin eso salen líneas rectas paralelas
+                que no existen. Luego cada celda le manda su agua a la vecina más baja de las 8 que la rodean (método <i>D8</i>), se suma cuántas
+                celdas le llegan a cada una y donde se juntan más de 4 km² de terreno se dibuja un cauce. El grosor es el <b>orden de Strahler</b>
+                (dos ríos del mismo orden forman uno de orden mayor). Comprobación: una gota desde el nacimiento del río Bogotá recorre en orden
+                sus tramos hasta el Bajo Bogotá.</li>
+            <li><b>Gota de lluvia.</b> Sigue esas mismas direcciones celda por celda hasta salir del mapa.</li>
+            <li><b>Área que drena a un punto.</b> Busca hacia atrás todas las celdas cuyo camino pasa por ese punto.</li>
+            <li><b>Inundación.</b> Modelo de "bañera": desde el punto elegido se llenan todas las celdas conectadas que quedan por debajo del nuevo
+                nivel. No tiene en cuenta caudal, velocidad, tiempo, diques ni alcantarillado.</li>
+            <li><b>Estadísticas de cada subcuenca.</b> Área y perímetro del polígono; alturas y pendiente del DEM; <b>curva e integral
+                hipsométrica</b> (qué parte del área está por encima de cada altura: indica si el relieve es "joven" o está muy erosionado);
+                <b>coeficiente de Gravelius</b> (0,28 × perímetro / √área: qué tan redonda o alargada es la cuenca).</li>
+            <li><b>Cota de los embalses.</b> Mediana del DEM dentro del contorno del embalse (el DEM mide la superficie del agua el día que se tomó).</li>
+        </ul>
+
+        <h3>Qué no hace (todavía)</h3>
+        <ul>
+            <li>No calcula caudales: la lluvia se muestra como volumen que cae, no como agua que llega al río.</li>
+            <li>La inundación es una aproximación por altura, útil para ver zonas bajas, no un modelo hidráulico.</li>
+            <li>Con 92 m de resolución no se ven canales pequeños, jarillones ni la ciudad en detalle.</li>
+        </ul>
+        <p class="nota">Los datos crudos (855 MB) no se suben a la web. El script <i>herramientas/preparar_datos.py</i> genera la versión liviana y
+            <i>herramientas/embalses.py</i> descarga los embalses; se pueden volver a correr si cambian los archivos.</p>
+    </div>
+</div>
+
+<div class="cursor" id="cursor">Mueve el mouse sobre el mapa</div>
+<div class="aviso-herr" id="avisoHerr" hidden><i data-lucide="mouse-pointer-click"></i><span></span></div>
+<div class="cargando" id="cargando"><div class="giro"></div><span id="cargandoTxt">Cargando el modelo de terreno…</span></div>
+
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@1.52.0/dist/umd/lucide.min.js"></script>
+<script src="../../esri3d-edificios.js?v=5"></script>
+<script>
+    // Configuracion de este visor (ver ../motor3d/visor3d.js)
+    window.VISOR3D = {
+        datos: "datos/",
+        colores: {
+            "Río Bogotá": "#f5c400", "Río Sumapaz": "#ef6c00", "Río Guavio": "#26a69a", "Río Gachetá": "#7cb342",
+            "Río Guatiquía": "#5c6bc0", "Río Guayuriba": "#ab47bc", "Río Humea": "#ec407a"
+        },
+        embalses: true, ideam: true, clima: true, gota: true,
+        ciudad: { centro: [-74.072, 4.6], texto: "Se ven al acercarse a una ciudad (Bogotá, Zipaquirá, Chía…)." }
+    };
+</script>
+<script src="../motor3d/visor3d.js?v=1"></script>
+</body>
+</html>

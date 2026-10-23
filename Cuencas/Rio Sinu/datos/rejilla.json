@@ -1,0 +1,16 @@
+{
+ "oeste": -76.518,
+ "norte": 9.44811,
+ "dx": 0.00081,
+ "dy": 0.00081,
+ "ancho": 1354,
+ "alto": 2657,
+ "este": -75.42126,
+ "sur": 7.29594,
+ "factor": 3,
+ "fuente": "Copernicus GLO-30 (2024), remuestreado a ~90 m",
+ "alt_min": 0,
+ "alt_max": 2182,
+ "umbral_cauce_km2": 4.0,
+ "rios_grabados": "HydroRIVERS (WWF / HydroSHEDS), 15 m"
+}

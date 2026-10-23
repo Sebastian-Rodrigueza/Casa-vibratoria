@@ -43,7 +43,7 @@ body::before {
     width: 280px;
     height: 280px;
     transform: translate(-50%, -50%);
-    background: url("../../Imagenes/escudoandes.jpg") center / contain no-repeat;
+    background: url("../../../Imagenes/escudoandes.jpg") center / contain no-repeat;
     opacity: .08;
     mix-blend-mode: multiply;
     pointer-events: none;

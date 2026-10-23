@@ -28,8 +28,9 @@ capas_pesadas/
 # Landsat 1985 (92 MB): ya ninguna pagina lo usa (se quito el boton de
 # Mapa.html). Sacarlo baja cada despliegue de ~199 MB a ~106 MB, porque
 # Vercel guarda todas las versiones y cuentan para el limite de 10 GB.
-# (DEM_web.tif SI se usa en RioSinu.html, no quitarlo.)
 /capas_web/img_1985_Landsat_web.tif
+# DEM anterior del Sinu (45 MB): RioSinu.html ahora usa DEM_Sinu_Copernicus_web.tif (8 MB)
+/capas_web/DEM_web.tif
 
 # Proyectos aparte que no usa ningun html del sitio
 # (ojo: agente1/ SI se usa -- Index.html carga agente1/agente.js y
@@ -46,3 +47,11 @@ __pycache__/
 # Copias de la base de datos (eran solo para migrar una vez)
 *.sql
 import_ensayos.bat
+
+# Notas internas para Claude (traspaso entre sesiones)
+/CONTEXTO-SESION.md
+
+# Datos crudos de cuencas de Cundinamarca (855MB), ver .gitignore
+Cuencas/Cundinamarca/info/
+# capas base crudas del Sinu (41 MB): la pagina usa lo que genera herramientas/actualizar_capas.py
+Cuencas/Rio Sinu/Sinu_capas_base/

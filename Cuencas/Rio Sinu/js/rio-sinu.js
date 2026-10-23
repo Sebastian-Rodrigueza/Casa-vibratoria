@@ -40,7 +40,7 @@
 
     function volverInicio() {
         cerrarMenu();
-        window.location.href = "../Index.html";
+        window.location.href = "../../Index.html";
     }
 
     function seleccionarColeccion(tarjeta) {
@@ -62,7 +62,8 @@
         nav.classList.toggle("navigation-open");
     });
 
-    brandBtn.addEventListener("click", () => mostrarMensaje("Río Sinú"));
+    // Tambien lo usa Cuencas/Index.html, que pone su nombre en data-nombre
+    brandBtn.addEventListener("click", () => mostrarMensaje(brandBtn.dataset.nombre || "Río Sinú"));
 
     btnVolverInicio.addEventListener("click", volverInicio);
 
