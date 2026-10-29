@@ -229,3 +229,14 @@ select { width: 100%; padding: 8px 10px; border: 1px solid var(--linea); border-
     .topbar nav a span, .topbar nav button span { display: none; }
     .mostrar-panel { display: inline-flex; position: absolute; z-index: 11; left: 14px; bottom: 14px; }
 }
+
+/* Sobrevuelo: se esconden los paneles y queda un boton para detener */
+.panel, .ficha { transition: opacity .5s; }
+body.en-sobrevuelo .panel, body.en-sobrevuelo .ficha, body.en-sobrevuelo .perfil, body.en-sobrevuelo .cursor { opacity: 0; pointer-events: none; }
+.chip-sobrevuelo {
+    position: absolute; z-index: 12; bottom: 46px; left: 50%; transform: translateX(-50%);
+    padding: 9px 16px; border: 0; border-radius: 999px; background: rgba(15, 20, 24, .82); color: #fff; font: 600 13px/1 inherit;
+    box-shadow: var(--sombra); display: flex; align-items: center; gap: 8px; cursor: pointer; backdrop-filter: blur(6px);
+}
+.chip-sobrevuelo:hover { background: rgba(15, 20, 24, .95); }
+.chip-sobrevuelo svg { width: 14px; height: 14px; fill: currentColor; }

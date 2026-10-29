@@ -9,7 +9,13 @@
         ideam: false,             // niveles del IDEAM en vivo
         clima: false,             // lluvia de Open-Meteo
         gota: true,               // boton "Gota desde lo mas alto" en la ficha
-        ciudad: { centro: [-74.072, 4.6], texto: "Se ven al acercarse a una ciudad." }
+        ciudad: { centro: [-74.072, 4.6], texto: "Se ven al acercarse a una ciudad." },
+        ordenBase: 0,             // se resta al orden de Strahler para el grosor (redes que empiezan en orden 3)
+        // Ganchos para que una pagina agregue lo suyo sin tocar el motor:
+        alIniciar: null,          // (api) cuando el mapa y los datos estan listos
+        alClic: null,             // (evento) antes de seleccionar subcuenca; si devuelve true no sigue
+        alPestana: null,          // (pestana) al cambiar de pestana
+        alFicha: null             // (propiedades, ficha) despues de armar la ficha de una subcuenca
     }, window.VISOR3D || {});
     const $ = (id) => document.getElementById(id);
     const num = (v, d = 0) => Number(v).toLocaleString("es-CO", { maximumFractionDigits: d, minimumFractionDigits: d });
@@ -149,8 +155,8 @@
                     tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"] },
                 topo: { type: "raster", tileSize: 256, maxzoom: 19, attribution: "Mapa: Esri",
                     tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}"] },
-                claro: { type: "raster", tileSize: 256, maxzoom: 19, attribution: "© OpenStreetMap, © CARTO",
-                    tiles: ["https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png", "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"] },
+                claro: { type: "raster", tileSize: 256, maxzoom: 16, attribution: "Mapa: Esri, HERE, Garmin, © OpenStreetMap",
+                    tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"] },
                 terreno: { type: "raster-dem", encoding: "terrarium", tileSize: 256, maxzoom: 14, attribution: "Relieve: Mapzen / AWS",
                     tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"] },
                 sombra: { type: "raster-dem", encoding: "terrarium", tileSize: 256, maxzoom: 14,
@@ -190,14 +196,17 @@
             paint: { "line-color": "#ffffff", "line-width": ["case", ["boolean", ["feature-state", "sel"], false], 3.2, 1], "line-opacity": 0.85 } });
         // Drenaje
         map.addSource("rios", { type: "geojson", data: S.rios });
-        const ancho = ["interpolate", ["linear"], ["zoom"], 7, ["*", 0.35, ["get", "orden"]], 12, ["*", 1.4, ["get", "orden"]]];
+        const orden = ["max", 1, ["-", ["get", "orden"], CFG.ordenBase]];
+        // el zoom solo puede ir en el "interpolate" de mas afuera: el factor y la suma van dentro de cada parada
+        const anchoRio = (k = 1, mas = 0) => ["interpolate", ["linear"], ["zoom"], 7, ["+", ["*", 0.35 * k, orden], mas], 12, ["+", ["*", 1.4 * k, orden], mas]];
+        const ancho = anchoRio();
         map.addLayer({ id: "rios-halo", type: "line", source: "rios", layout: { "line-cap": "round", "line-join": "round" },
-            paint: { "line-color": "#0b3d6e", "line-width": ["+", ancho, 1.5], "line-opacity": 0.5 } });
+            paint: { "line-color": "#0b3d6e", "line-width": anchoRio(1, 1.5), "line-opacity": 0.5 } });
         map.addLayer({ id: "rios", type: "line", source: "rios", layout: { "line-cap": "round", "line-join": "round" },
-            paint: { "line-color": ["interpolate", ["linear"], ["get", "orden"], 1, "#90caf9", 3, "#42a5f5", 5, "#1565c0"], "line-width": ancho } });
-        map.addLayer({ id: "rios-flujo", type: "line", source: "rios", filter: [">=", ["get", "orden"], 2],
+            paint: { "line-color": ["interpolate", ["linear"], orden, 1, "#90caf9", 3, "#42a5f5", 5, "#1565c0"], "line-width": ancho } });
+        map.addLayer({ id: "rios-flujo", type: "line", source: "rios", filter: [">=", ["get", "orden"], 2 + CFG.ordenBase],
             layout: { "line-cap": "butt", "line-join": "round" },
-            paint: { "line-color": "#e3f2fd", "line-width": ["*", 0.55, ancho], "line-opacity": 0.85, "line-dasharray": [0, 4, 3] } });
+            paint: { "line-color": "#e3f2fd", "line-width": anchoRio(0.55), "line-opacity": 0.85, "line-dasharray": [0, 4, 3] } });
         // Simulaciones
         map.addSource("cuenca-img", { type: "image", url: PIXEL, coordinates: COORD0 });
         map.addLayer({ id: "cuenca-img", type: "raster", source: "cuenca-img", paint: { "raster-opacity": 0.8, "raster-fade-duration": 0, "raster-resampling": "nearest" } });
@@ -268,9 +277,13 @@
         [0, 0.5, 3, 3.5], [0, 1, 3, 3], [0, 1.5, 3, 2.5], [0, 2, 3, 2], [0, 2.5, 3, 1.5], [0, 3, 3, 1], [0, 3.5, 3, 0.5]
     ];
     let pasoFlujo = -1;
+    // Cada paso cambia el estilo, y con el relieve 3D eso obliga a redibujar todas las capas sobre el
+    // terreno: con muchas capas (rio Sinu) el mapa se trababa. Con 3D se avanza mas despacio y nunca
+    // mientras el mapa se mueve o esta cargando.
     function animarFlujo(t) {
-        if ($("chkFlujo").checked && $("chkRios").checked && map.getLayer("rios-flujo")) {
-            const paso = Math.floor(t / 70) % PASOS.length;
+        const en3d = !!map.getTerrain();
+        if ($("chkFlujo").checked && $("chkRios").checked && map.getLayer("rios-flujo") && !(en3d && (map.isMoving() || !map.areTilesLoaded()))) {
+            const paso = Math.floor(t / (en3d ? 260 : 70)) % PASOS.length;
             if (paso !== pasoFlujo) {
                 map.setPaintProperty("rios-flujo", "line-dasharray", PASOS[paso]);
                 pasoFlujo = paso;
@@ -372,14 +385,15 @@
             <h3>Forma</h3>
             <p class="explica">Coeficiente de compacidad (Gravelius) <b>${kc == null ? "—" : num(kc, 2)}</b>: ${forma}.</p>
             <div class="acciones">
-                <button type="button" class="boton primario" id="fichaVolar"><i data-lucide="plane"></i> Volar a la subcuenca</button>
+                <button type="button" class="boton primario" id="fichaVolar"><i data-lucide="video"></i> Sobrevuelo</button>
                 ${CFG.gota ? `<button type="button" class="boton" id="fichaGota"><i data-lucide="droplet"></i> Gota desde lo más alto</button>` : ""}
             </div>`;
         $("ficha").hidden = false;
         lucide.createIcons();
         dibujarHipso(p);
+        if (CFG.alFicha) CFG.alFicha(p, $("ficha"));
         $("fichaCerrar").onclick = () => { $("ficha").hidden = true; map.setFeatureState({ source: "subcuencas", id }, { sel: false }); S.sel = null; };
-        $("fichaVolar").onclick = () => volarA(f);
+        $("fichaVolar").onclick = () => sobrevuelo(f);
         if (CFG.gota) $("fichaGota").onclick = () => {
             activarPestana("simular");
             lanzarGota(celdaAlta(id), true);
@@ -388,13 +402,78 @@
     }
     function cajaDe(f) {
         let a = [180, 90, -180, -90];
-        f.geometry.coordinates[0].forEach(([x, y]) => { a = [Math.min(a[0], x), Math.min(a[1], y), Math.max(a[2], x), Math.max(a[3], y)]; });
+        // sirve para Polygon y MultiPolygon (y cualquier geometria): se recorren todos los puntos
+        const recorrer = (c) => { if (typeof c[0] === "number") a = [Math.min(a[0], c[0]), Math.min(a[1], c[1]), Math.max(a[2], c[0]), Math.max(a[3], c[1])]; else c.forEach(recorrer); };
+        recorrer(f.geometry.coordinates);
         return [[a[0], a[1]], [a[2], a[3]]];
     }
     function volarA(f) {
         const izq = window.innerWidth > 900 ? 360 : 20, der = window.innerWidth > 900 ? 370 : 20;
         map.fitBounds(cajaDe(f), { padding: { top: 90, bottom: 60, left: izq, right: der }, pitch: 60, bearing: map.getBearing(), duration: 2200 });
     }
+
+    // ---------- Sobrevuelo ----------
+    // Llega en diagonal, baja y da una vuelta completa alrededor de la subcuenca mirando al centro,
+    // con los paneles escondidos, la subcuenca casi transparente y el relieve mas exagerado.
+    // Cualquier clic, rueda o toque lo detiene y deja todo como estaba.
+    const SOBRE = { anim: 0, activo: false, antes: null, f: null };
+    function sobrevuelo(f) {
+        pararSobrevuelo(false);
+        const caja = cajaDe(f);
+        const centro = f.properties.centro || [(caja[0][0] + caja[1][0]) / 2, (caja[0][1] + caja[1][1]) / 2];
+        const cam = map.cameraForBounds(caja, { padding: 30 });
+        const z0 = Math.min(cam ? cam.zoom + 0.35 : map.getZoom(), 14.5);
+        const ter = map.getTerrain();
+        SOBRE.antes = { op: map.getPaintProperty("sub-relleno", "fill-opacity"), ter, ficha: !$("ficha").hidden };
+        SOBRE.activo = true; SOBRE.f = f;
+        document.body.classList.add("en-sobrevuelo");
+        $("ficha").hidden = true;
+        map.setPaintProperty("sub-relleno", "fill-opacity", ["case", ["boolean", ["feature-state", "sel"], false], 0.1, 0.03]);
+        if (ter) map.setTerrain({ source: "terreno", exaggeration: Math.max(ter.exaggeration || 1, 2.2) });
+        let chip = $("chipSobrevuelo");
+        if (!chip) {
+            chip = document.createElement("button");
+            chip.type = "button"; chip.id = "chipSobrevuelo"; chip.className = "chip-sobrevuelo";
+            document.body.appendChild(chip);
+        }
+        chip.innerHTML = `<i data-lucide="square"></i><span>${f.properties.nombre} · detener sobrevuelo</span>`;
+        chip.hidden = false;
+        chip.onclick = () => pararSobrevuelo(true);
+        lucide.createIcons();
+        const b0 = map.getBearing() - 40;
+        // 1) entrada en diagonal, desde arriba
+        map.flyTo({ center: centro, zoom: z0, pitch: 68, bearing: b0, duration: 4200, curve: 1.6, essential: true });
+        map.once("moveend", () => {
+            if (!SOBRE.activo) return;
+            // 2) vuelta completa: arranca y frena suave, se acerca a la mitad y sube el angulo de camara
+            const dur = 38000, t0 = performance.now();
+            const paso = (t) => {
+                if (!SOBRE.activo) return;
+                const u = Math.min(1, (t - t0) / dur);
+                const s = u - Math.sin(2 * Math.PI * u) / (2 * Math.PI);
+                const cerca = Math.sin(Math.PI * u);
+                map.jumpTo({ center: centro, bearing: b0 + 360 * s, zoom: z0 + 0.75 * cerca, pitch: 68 + 10 * cerca });
+                if (u < 1) SOBRE.anim = requestAnimationFrame(paso);
+                else pararSobrevuelo(true);
+            };
+            SOBRE.anim = requestAnimationFrame(paso);
+        });
+    }
+    function pararSobrevuelo(volver) {
+        if (!SOBRE.activo) return;
+        SOBRE.activo = false;
+        cancelAnimationFrame(SOBRE.anim);
+        document.body.classList.remove("en-sobrevuelo");
+        if ($("chipSobrevuelo")) $("chipSobrevuelo").hidden = true;
+        const a = SOBRE.antes;
+        map.setPaintProperty("sub-relleno", "fill-opacity", a.op);
+        if (a.ter) map.setTerrain(a.ter);
+        if (a.ficha) $("ficha").hidden = false;
+        if (volver) volarA(SOBRE.f);
+    }
+    ["mousedown", "wheel", "touchstart"].forEach((ev) => map.getCanvasContainer().addEventListener(ev, () => {
+        if (SOBRE.activo) { map.stop(); pararSobrevuelo(false); }
+    }, { passive: true }));
     function dibujarHipso(p) {
         const svg = $("hipso");
         if (!p.hipsometrica) { svg.innerHTML = ""; return; }
@@ -1216,6 +1295,7 @@
         if (p === "clima") abrirClima();
         if (p === "embalses") listaEmbalses();
         if (p === "ideam") abrirIdeam();
+        if (CFG.alPestana) CFG.alPestana(p);
     }
     document.querySelectorAll(".pestanas button").forEach((b) => b.onclick = () => activarPestana(b.dataset.pestana));
 
@@ -1289,6 +1369,7 @@
                 else if (S.herr === "perfil") herramientaPerfil(e.lngLat);
                 return;
             }
+            if (CFG.alClic && CFG.alClic(e)) return;
             const est = map.queryRenderedFeatures(e.point, { layers: ["ideam-punto"] })[0];
             if (est) { fichaEstacion(est.properties.k); return; }
             const emb = map.queryRenderedFeatures(e.point, { layers: ["emb-relleno"] })[0];
@@ -1313,6 +1394,7 @@
         map.fitBounds([[R.oeste, R.sur], [R.este, R.norte]], {
             padding: { top: 80, bottom: 40, left: window.innerWidth > 900 ? 360 : 20, right: 40 }, pitch: 55, bearing: -15, duration: 2500
         });
+        if (CFG.alIniciar) CFG.alIniciar({ map, S, $, num, seleccionar, activarPestana, volarA, distM, colorear });
         if (CFG.clima) cargarClima().catch(() => {});
         if (CFG.ideam) cargarIdeam().catch((e) => console.warn("IDEAM:", e));
     }).catch((e) => {

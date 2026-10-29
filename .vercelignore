@@ -53,5 +53,8 @@ import_ensayos.bat
 
 # Datos crudos de cuencas de Cundinamarca (855MB), ver .gitignore
 Cuencas/Cundinamarca/info/
-# capas base crudas del Sinu (41 MB): la pagina usa lo que genera herramientas/actualizar_capas.py
-Cuencas/Rio Sinu/Sinu_capas_base/
+# capas crudas del Sinu (GeoIngenIA, camellones, mapas historicos e indices espectrales, unos 800 MB): la pagina usa lo que genera herramientas/preparar_geoingenia.py
+Cuencas/Rio Sinu/Capas_Rio_Sinu_GeoIngenIA/
+Cuencas/Rio Sinu/Camellones_Zenu_Geovisor/
+Cuencas/Rio Sinu/Mapas_Historicos_Agua_como_archivo/
+Cuencas/Rio Sinu/Indices_Espectrales_Geovisor/

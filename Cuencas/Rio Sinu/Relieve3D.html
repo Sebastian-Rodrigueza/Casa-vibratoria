@@ -4,13 +4,42 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#ffffff">
-<meta name="description" content="Relieve 3D de la cuenca del río Sinú: 58 subcuencas del POMCA, ríos y perfil del terreno sobre el DEM Copernicus. Lab SinergIA, Universidad de los Andes.">
+<meta name="description" content="Cuenca del río Sinú en 3D: subcuencas del POMCA, red de drenaje, inundación y sequía 1984-2026, 175 estaciones del IDEAM, infraestructura y áreas protegidas. Lab SinergIA y GeoIngenIA, Universidad de los Andes.">
 <title>Relieve 3D · Río Sinú | Universidad de los Andes</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Sans+3:wght@600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css" rel="stylesheet">
-<link rel="stylesheet" href="../motor3d/visor3d.css?v=4">
+<link rel="stylesheet" href="../motor3d/visor3d.css?v=5">
+<link rel="stylesheet" href="css/graficas.css?v=1">
+<style>
+    /* Lo propio de esta pagina (el resto viene del motor compartido) */
+    .pestanas { gap: 2px; padding: 8px 6px; }
+    .pestanas button { font-size: 9.5px; padding: 7px 0; }
+    .capa-sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; flex: none; }
+    .fila .capa-sw + span { flex: 1; }
+    .reloj input[type=range] { flex: 1; }
+    .anio { font: 700 22px/1 "Source Sans 3", sans-serif; color: var(--carbon); min-width: 52px; text-align: right; }
+    .datos.tres { grid-template-columns: 1fr 1fr 1fr; }
+    .datos.tres .dato b { font-size: 13.5px; }
+    .datos.tres .dato small + small { color: var(--gris); }
+    /* aviso al prender una capa */
+    .aviso-sinu { position: absolute; z-index: 12; top: 80px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px;
+        padding: 9px 14px; border-radius: 12px; background: rgba(20, 24, 30, .9); color: #fff; font-size: 13px; box-shadow: var(--sombra); }
+    .aviso-sinu i { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+    /* listas */
+    .lista li { grid-template-columns: 1fr auto; }
+    .lista .chip + .chip { margin-left: 4px; }
+    .lista-buscar { width: 100%; padding: 8px 10px; border: 1px solid var(--linea); border-radius: 10px; font-size: 13px; margin: 8px 0 4px; }
+    #listaEst { max-height: 46vh; overflow-y: auto; }
+    /* ficha de estacion y popups */
+    .t-ficha, .pop-t { width: 100%; border-collapse: collapse; font-size: 12px; margin: 6px 0; }
+    .t-ficha td, .pop-t td { padding: 3px 0; vertical-align: top; border-bottom: 1px solid var(--linea); }
+    .t-ficha td:first-child, .pop-t td:first-child { color: var(--gris); padding-right: 10px; }
+    .t-ficha td:last-child, .pop-t td:last-child { text-align: right; font-weight: 600; color: var(--carbon); }
+    .pop-titulo { font-weight: 800; font-size: 13px; color: var(--carbon); margin-bottom: 4px; }
+    .maplibregl-popup-content p { margin: 0 0 6px; font-size: 12px; line-height: 1.45; }
+</style>
 </head>
 <body>
 
@@ -28,6 +57,7 @@
     </a>
     <nav>
         <button type="button" id="btnInfo"><i data-lucide="info"></i><span>Fuentes y método</span></button>
+        <a href="Dashboard.html"><i data-lucide="chart-column"></i><span>Dashboard</span></a>
         <a href="RioSinu.html"><i data-lucide="layers"></i><span>Visor de capas</span></a>
         <a href="Index.html"><i data-lucide="arrow-left"></i><span>Río Sinú</span></a>
         <a class="primario" href="../../Index.html"><i data-lucide="house"></i><span>Inicio</span></a>
@@ -39,13 +69,17 @@
 <!-- ================= PANEL ================= -->
 <aside class="panel" id="panel">
     <div class="panel-cab">
-        <div class="eti">Relieve 3D</div>
+        <div class="eti">Relieve 3D · GeoIngenIA</div>
         <h1>Cuenca del río Sinú</h1>
-        <p>58 subcuencas del POMCA sobre el modelo de terreno Copernicus GLO-30, del nudo de Paramillo
-           a la desembocadura en Tinajones.</p>
+        <p>58 subcuencas sobre el modelo de terreno ALOS PALSAR, con 41 años de inundación y sequía,
+           175 estaciones del IDEAM y las capas del territorio.</p>
     </div>
     <div class="pestanas" role="tablist">
         <button type="button" class="activo" data-pestana="explorar"><i data-lucide="layers"></i>Explorar</button>
+        <button type="button" data-pestana="agua"><i data-lucide="droplets"></i>Agua</button>
+        <button type="button" data-pestana="indices"><i data-lucide="leaf"></i>Índices</button>
+        <button type="button" data-pestana="estaciones"><i data-lucide="map-pin"></i>Estaciones</button>
+        <button type="button" data-pestana="territorio"><i data-lucide="trees"></i>Territorio</button>
         <button type="button" data-pestana="simular"><i data-lucide="chart-spline"></i>Perfil</button>
     </div>
 
@@ -69,10 +103,11 @@
             </div>
             <div class="grupo">
                 <h3>Capas</h3>
+                <div class="fila"><label><input type="checkbox" id="chkCuenca" checked> Límite de la cuenca</label></div>
                 <div class="fila"><label><input type="checkbox" id="chkSub" checked> Subcuencas</label></div>
                 <div class="fila"><label><input type="checkbox" id="chkEtq" checked> Nombres de subcuencas</label></div>
                 <div class="fila"><label><input type="checkbox" id="chkRios" checked> Red de drenaje</label></div>
-                <div class="fila"><label><input type="checkbox" id="chkFlujo" checked> Agua en movimiento</label></div>
+                <div class="fila"><label><input type="checkbox" id="chkFlujo"> Agua en movimiento <small>(más lento con muchas capas)</small></label></div>
             </div>
             <div class="grupo">
                 <h3>Edificios 3D</h3>
@@ -97,9 +132,148 @@
                 <h3>Ir a una subcuenca</h3>
                 <select id="selIr"><option value="">Elige una subcuenca…</option></select>
             </div>
-            <p class="nota">La red de drenaje se calculó con el modelo de terreno (el agua baja por la pendiente más
-                fuerte de celda en celda), guiada por los ríos de HydroRIVERS para que en el valle plano siga el cauce real.
-                Su grosor es el <b>orden de Strahler</b>: mientras más afluentes se juntan, más grande el río.</p>
+            <p class="nota">La red de drenaje es la de GeoIngenIA (órdenes 3 a 8 de Strahler): mientras más afluentes se juntan,
+                más grueso el río. Las 57 subcuencas son las del POMCA; la 58 es el resto de la cuenca (valle y cauce principal).</p>
+        </section>
+
+        <!-- ---------- AGUA ---------- -->
+        <section data-seccion="agua" hidden>
+            <div class="grupo">
+                <h3>Agua en la cuenca, año por año (1984–2026)</h3>
+                <div class="seg" id="segAgua">
+                    <button type="button" class="activo" data-modo="inundacion">Inundación máx.</button>
+                    <button type="button" data-modo="sequia">Agua persistente</button>
+                    <button type="button" data-modo="ambas">Las dos</button>
+                </div>
+                <div class="reloj">
+                    <button type="button" class="boton" id="btnPlayAgua" title="Reproducir los años"><i data-lucide="play"></i></button>
+                    <input type="range" id="rngAnio" min="0" max="40" step="1" value="40">
+                    <span class="anio" id="txtAnio">—</span>
+                </div>
+                <div class="datos tres" id="aguaDatos"></div>
+                <div class="g-caja">
+                    <div class="g-titulo">Área de agua por año (km²)</div>
+                    <div class="g-ley"><span><i style="background:#1f6feb"></i>Inundación máxima</span><span><i style="background:#f0883e"></i>Agua persistente (época seca)</span></div>
+                    <div class="g-lienzo"><svg id="gArea"></svg><div class="g-tip" hidden></div></div>
+                </div>
+                <div class="g-caja">
+                    <div class="g-titulo">Fenómeno de El Niño / La Niña: ONI promedio del año</div>
+                    <div class="g-ley"><span><i style="background:#c4472c"></i>El Niño (≥ 0,5)</span><span><i style="background:#2f6db3"></i>La Niña (≤ −0,5)</span><span><i style="background:#a9adb2"></i>Neutral</span></div>
+                    <div class="g-lienzo"><svg id="gOni"></svg><div class="g-tip" hidden></div></div>
+                </div>
+                <p class="nota">Haz clic en una barra o en la gráfica para ir a ese año. <b>Inundación máxima</b>: toda el área que tuvo agua en algún
+                    momento del año. <b>Agua persistente</b>: la que siguió con agua en la época seca. Faltan 1988 y 1992 (sin imágenes).</p>
+            </div>
+            <div class="grupo">
+                <h3>Agua que corre y agua quieta (2020)</h3>
+                <div class="fila"><label><input type="checkbox" id="chkLotico"> <span class="capa-sw" style="background:linear-gradient(90deg,#1565c0 50%,#2e7d32 50%)"></span> Ver la clasificación en el mapa</label></div>
+                <p class="nota" style="margin:0 0 6px">Lótico (azul) = ríos y caños; léntico (verde) = ciénagas y lagunas. Subcuencas con más agua:</p>
+                <ul class="ranking" id="listaLotico"></ul>
+                <p class="nota">Clasificación Random Forest de 2020, validada contra HydroLAKES/HydroSHEDS. Es el único año clasificado.</p>
+            </div>
+        </section>
+
+        <!-- ---------- INDICES ESPECTRALES ---------- -->
+        <section data-seccion="indices" hidden>
+            <div class="grupo">
+                <h3>Vegetación y agua desde el satélite (1985–2026)</h3>
+                <div class="seg" id="segIdx3d">
+                    <button type="button" class="activo" data-i="NDVI">NDVI</button>
+                    <button type="button" data-i="NDWI">NDWI</button>
+                    <button type="button" data-i="MNDWI">MNDWI</button>
+                </div>
+                <div class="seg" id="segIdxVista3d" style="margin-top:6px">
+                    <button type="button" class="activo" data-v="pixel">Píxeles (250 m)</button>
+                    <button type="button" data-v="sub">Por subcuenca</button>
+                </div>
+                <div class="reloj">
+                    <button type="button" class="boton" id="btnPlayIdx3d" title="Reproducir los años"><i data-lucide="play"></i></button>
+                    <input type="range" id="rngIdx3d" min="0" max="41" step="1" value="40">
+                    <span class="anio" id="txtIdx3d">—</span>
+                </div>
+                <div class="leyenda" id="leyIdx3d"></div>
+                <div class="datos tres" id="idxDatos"></div>
+                <div class="g-caja">
+                    <div class="g-titulo" id="tituloIdx3d">NDVI promedio por año</div>
+                    <div class="g-ley"><span><i style="background:#26292d"></i>Cuenca</span><span><i style="background:#2a78d6"></i>Alto</span><span><i style="background:#e0a100"></i>Medio</span><span><i style="background:#2a9d8f"></i>Bajo</span><span id="leySubIdx3d" hidden><i style="background:#c4472c"></i>Subcuenca elegida</span></div>
+                    <div class="g-lienzo"><svg id="gIdx3d"></svg><div class="g-tip" hidden></div></div>
+                </div>
+                <p class="nota" id="notaIdx3d"></p>
+                <p class="nota"><b>NDVI</b>: vigor de la vegetación (bosque denso 0,8–0,9; pastos 0,4–0,7; suelo y ciudad 0,1–0,3).
+                    <b>NDWI</b> y <b>MNDWI</b>: agua (por encima de 0 suele ser agua abierta; el MNDWI la separa mejor del suelo y de lo urbano).
+                    La franja gris de la gráfica es el cambio de Landsat 5/7 a Landsat 8 (2012 → 2013): el salto del NDVI ahí no es real.
+                    Los huecos son zonas sin ninguna imagen sin nubes ese año. Haz clic en una subcuenca para ver su serie en la ficha.</p>
+            </div>
+        </section>
+
+        <!-- ---------- ESTACIONES ---------- -->
+        <section data-seccion="estaciones" hidden>
+            <div class="grupo">
+                <h3>Estaciones del IDEAM en la cuenca</h3>
+                <div class="fila"><label><input type="checkbox" id="chkEstaciones" data-capa-sinu="estaciones"> Ver en el mapa</label></div>
+                <div class="g-ley"><span><i style="background:#1f6feb"></i>Con serie de caudal</span><span><i style="background:#2a9d8f"></i>Solo lluvia</span><span><i style="background:#9aa0a6"></i>Sin series</span></div>
+                <div class="seg" id="segEst" style="margin-top:8px">
+                    <button type="button" class="activo" data-filtro="activas">Activas</button>
+                    <button type="button" data-filtro="datos">Con datos</button>
+                    <button type="button" data-filtro="caudal">Caudal</button>
+                    <button type="button" data-filtro="lluvia">Lluvia</button>
+                    <button type="button" data-filtro="todas">Todas</button>
+                </div>
+                <input class="lista-buscar" id="buscaEst" type="search" placeholder="Buscar por nombre, municipio o código">
+                <p class="nota" id="estCuenta" style="margin:0 0 4px">Cargando…</p>
+                <ul class="lista" id="listaEst"></ul>
+            </div>
+            <p class="nota">De las 175 estaciones, 61 están activas y solo <b>21 traen series</b> en el paquete (8 de caudal y 14 de lluvia,
+                casi todas de 1980 a 2026); esas se ven más grandes. "Todas" incluye las 114 suspendidas. Haz clic en una estación para ver
+                el promedio de cada año y cómo se reparte en los meses. Fuente: IDEAM, procesado por GeoIngenIA.</p>
+        </section>
+
+        <!-- ---------- TERRITORIO ---------- -->
+        <section data-seccion="territorio" hidden>
+            <div class="grupo">
+                <h3>Agua e infraestructura</h3>
+                <div class="fila"><label><input type="checkbox" data-capa-sinu="embalse"> <span class="capa-sw" style="background:#0288d1;border:2px solid #01579b"></span><span>Embalse de Urrá</span></label></div>
+                <div class="fila"><label><input type="checkbox" data-capa-sinu="lagunas"> <span class="capa-sw" style="background:#00acc1;border:2px solid #006064"></span><span>Lagunas y ciénagas</span></label></div>
+                <div class="fila"><label><input type="checkbox" data-capa-sinu="poblaciones"> <span class="capa-sw" style="background:#ff8f00;border:2px solid #bf360c"></span><span>Cabeceras y centros poblados</span></label></div>
+                <div class="fila"><label><input type="checkbox" data-capa-sinu="vias"> <span class="capa-sw" style="background:#212121;height:4px"></span><span>Vías principales</span></label></div>
+                <div class="fila"><label><input type="checkbox" data-capa-sinu="puentes"> <span class="capa-sw" style="background:#111;border-radius:50%"></span><span>Puentes</span></label></div>
+                <div class="fila"><label><input type="checkbox" data-capa-sinu="plantas"> <span class="capa-sw" style="background:#00bfa5;border-radius:50%"></span><span>Plantas de tratamiento</span></label></div>
+                <div class="fila"><label><input type="checkbox" data-capa-sinu="rellenos"> <span class="capa-sw" style="background:#8e24aa;border:2px solid #4a148c"></span><span>Rellenos sanitarios</span></label></div>
+                <div class="fila"><label><input type="checkbox" data-capa-sinu="desastres"> <span class="capa-sw" style="background:#c62828;border-radius:50%"></span><span>Desastres registrados (prensa, 1988–2026)</span></label></div>
+            </div>
+            <div class="grupo">
+                <h3>Áreas de interés ambiental</h3>
+                <div class="fila"><label><input type="checkbox" data-capa-sinu="parque_paramillo"> <span class="capa-sw" style="background:#2e7d32;border:2px solid #1b5e20"></span><span>Parque Nacional Paramillo</span></label></div>
+                <div class="fila"><label><input type="checkbox" data-capa-sinu="sinap"> <span class="capa-sw" style="background:#43a047;border:2px solid #1b5e20"></span><span>Otras áreas del SINAP</span></label></div>
+                <div class="fila"><label><input type="checkbox" data-capa-sinu="reserva_ley2"> <span class="capa-sw" style="background:#afb42b;border:2px solid #827717"></span><span>Reserva forestal Ley 2ª</span></label></div>
+                <div class="fila"><label><input type="checkbox" data-capa-sinu="dmi"> <span class="capa-sw" style="background:#00897b;border:2px solid #004d40"></span><span>Distritos de manejo integrado</span></label></div>
+                <div class="fila"><label><input type="checkbox" data-capa-sinu="conservacion_suelo"> <span class="capa-sw" style="background:#7cb342;border:2px solid #33691e"></span><span>Distritos de conservación de suelo</span></label></div>
+                <div class="fila"><label><input type="checkbox" data-capa-sinu="rnsc"> <span class="capa-sw" style="background:#d81b60;border:2px solid #880e4f"></span><span>Reservas de la sociedad civil</span></label></div>
+                <div class="fila"><label><input type="checkbox" data-capa-sinu="clase_suelo"> <span class="capa-sw" style="background:linear-gradient(90deg,#fff176,#ff8a65,#795548,#4e342e)"></span><span>Clase agrológica del suelo (1 a 8)</span></label></div>
+            </div>
+            <div class="grupo">
+                <h3>Camellones zenúes</h3>
+                <p class="nota">No hay camellones confirmados dentro de la cuenca del Sinú. Los 1.605 confirmados están en San Marcos
+                    (bajo San Jorge), unos 44 km al oriente; del bajo Sinú hay dos franjas candidatas en Isla Pérez y los sitios de 1992.</p>
+                <div class="fila"><label><input type="checkbox" id="chkLidar"> <span class="capa-sw" style="background:linear-gradient(90deg,#222,#eee)"></span><span>Relieve LiDAR 1 m de San Marcos</span></label></div>
+                <div class="fila"><label><input type="checkbox" data-capa-sinu="camellones"> <span class="capa-sw" style="background:linear-gradient(90deg,#fde68a,#f59e0b,#c2410c)"></span><span>Camellones confirmados (San Jorge)</span></label></div>
+                <div class="fila"><label><input type="checkbox" data-capa-sinu="plataformas"> <span class="capa-sw" style="background:#22d3ee;border:2px solid #cffafe"></span><span>Plataformas de vivienda (San Jorge)</span></label></div>
+                <div class="fila"><label><input type="checkbox" data-capa-sinu="cauces_antiguos"> <span class="capa-sw" style="background:#3b82f6;border:2px solid #60a5fa"></span><span>Cauces antiguos (San Jorge e Isla Pérez)</span></label></div>
+                <div class="fila"><label><input type="checkbox" data-capa-sinu="franjas"> <span class="capa-sw" style="background:#e879f9;border:2px dashed #f0abfc"></span><span>Franjas candidatas, no confirmadas (Isla Pérez)</span></label></div>
+                <div class="fila"><label><input type="checkbox" data-capa-sinu="montejo"> <span class="capa-sw" style="background:transparent;border:2px dashed #fde047"></span><span>Áreas de Montejo y Rojas (1992) y de Vieri (2026)</span></label></div>
+                <div class="fila"><label><input type="checkbox" data-capa-sinu="sitios_montejo"> <span class="capa-sw" style="background:#fde047;border-radius:50%"></span><span>Sitios prospectados en 1992</span></label></div>
+                <div class="fila"><label><input type="checkbox" data-capa-sinu="zonas_revisadas"> <span class="capa-sw" style="background:#22c55e;height:4px"></span><span>Zonas revisadas en Google Earth</span></label></div>
+            </div>
+            <div class="grupo">
+                <h3>Mapas históricos</h3>
+                <div class="fila"><label><input type="checkbox" id="chkHis1864"> <span class="capa-sw" style="background:#d8c9a8;border:1px solid #8d7b5a"></span><span>Carta de Bolívar, 1864 (bajo Sinú)</span></label></div>
+                <div class="fila"><label><input type="checkbox" id="chkHis1963"> <span class="capa-sw" style="background:#fff;border:1px solid #999"></span><span>Planchas INCORA, fotos aéreas de 1963</span></label></div>
+                <div class="fila"><label><input type="checkbox" data-capa-sinu="cienagas_1963"> <span class="capa-sw" style="background:#22d3ee;border:2px solid #0e7490"></span><span>Ciénagas de 1963 (37, ≈ 89 ha)</span></label></div>
+                <div class="fila"><label style="width:100%">Opacidad de los mapas <input type="range" id="rngHis" min="20" max="100" value="85" style="flex:1"></label></div>
+                <p class="nota">El mapa de 1864 tiene una posición aproximada (error de kilómetros entre poblaciones). Las planchas de 1963 están a 5–7 m;
+                    solo hay dos, cerca de Montería, y la mayoría de esas ciénagas hoy son potreros.</p>
+            </div>
+            <p class="nota">Al prender una capa el mapa va a ella. Haz clic sobre cualquier elemento para ver su información.</p>
         </section>
 
         <!-- ---------- PERFIL ---------- -->
@@ -138,42 +312,44 @@
     <div class="modal-caja">
         <button type="button" class="cerrar" id="cerrarInfo" title="Cerrar"><i data-lucide="x"></i></button>
         <h2>Fuentes y cómo se hizo</h2>
-        <p>Vista en 3D de la cuenca del río Sinú con el mismo motor del visor de Cundinamarca. <b>Todo lo que usa es gratis</b>
-            y no necesita claves ni pagos. Las demás capas (áreas protegidas, infraestructura, suelos, estaciones) están en el
-            <a href="RioSinu.html">visor de capas</a>.</p>
+        <p>Vista en 3D de la cuenca del río Sinú con el mismo motor del visor de Cundinamarca. Las capas vienen del paquete del
+            <b>proyecto Río Sinú de GeoIngenIA</b> (2026); los fondos del mapa y el relieve 3D son servicios abiertos y gratuitos.</p>
 
         <h3>De dónde sale la información</h3>
         <table>
-            <tr><th>Qué</th><th>Fuente</th><th>Costo</th><th>Cómo se usa</th></tr>
-            <tr><td>Modelo de terreno (DEM)</td><td><a href="https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM" target="_blank" rel="noopener">Copernicus GLO-30</a> (ESA, 2024), recortado a la cuenca</td><td><span class="gratis">Gratis</span></td>
-                <td>De 30 m se pasó a unos 90 m para que pese poco (1,4 MB). De aquí salen alturas, pendientes, red de drenaje y perfil.</td></tr>
-            <tr><td>Cuenca y 58 subcuencas</td><td>Delimitación del POMCA del río Sinú (capas base GeoIngenIA, 2026)</td><td><span class="gratis">Gratis</span></td>
-                <td>Polígonos con estadísticas calculadas sobre el DEM y los caudales que reporta el POMCA.</td></tr>
-            <tr><td>Ríos</td><td><a href="https://www.hydrosheds.org/products/hydrorivers" target="_blank" rel="noopener">HydroRIVERS</a> (WWF / HydroSHEDS)</td><td><span class="gratis">Gratis</span></td>
-                <td>Se "graban" en el terreno antes de calcular el drenaje, para que en el valle plano los ríos sigan su cauce real.</td></tr>
-            <tr><td>Relieve 3D del mapa</td><td>Terrain Tiles de Mapzen en AWS (datos abiertos)</td><td><span class="gratis">Gratis</span></td><td>Solo para dibujar el 3D.</td></tr>
-            <tr><td>Imagen satelital y mapas</td><td>Esri World Imagery y World Topo, CARTO</td><td><span class="gratis">Gratis</span></td><td>Fondos del mapa (con atribución).</td></tr>
-            <tr><td>Edificios 3D</td><td>OpenStreetMap vía OpenFreeMap; Esri 3D Buildings (ArcGIS, sin clave)</td><td><span class="gratis">Gratis</span></td><td>Opcional en "Explorar".</td></tr>
+            <tr><th>Qué</th><th>Fuente</th><th>Cómo se usa</th></tr>
+            <tr><td>Modelo de terreno (DEM)</td><td>ALOS PALSAR 12,5 m (modelo de superficie), macrocuenca</td>
+                <td>Se pasó a unos 87 m para que pese poco (3,8 MB). De aquí salen alturas, pendientes y el perfil.</td></tr>
+            <tr><td>Cuenca y subcuencas</td><td>Cuenca completa (14.069 km²) y 57 subcuencas del POMCA con sus caudales</td>
+                <td>La subcuenca 58 es el resto de la cuenca (valle y cauce principal), que el POMCA no delimita.</td></tr>
+            <tr><td>Red de drenaje</td><td>Drenaje de GeoIngenIA, órdenes de Strahler 1 a 8</td>
+                <td>Se dibujan los órdenes 3 a 8. Se quitaron las líneas rectas falsas que el cálculo original deja en las zonas
+                    planas (cienagas): tramos de más de 1,5 km casi perfectamente rectos y lo que cae dentro de los cuerpos de agua
+                    anchos que se inundan seguido (según los 41 años de inundación).</td></tr>
+            <tr><td>Inundación y sequía</td><td>Extensión de agua máxima y persistente por año, 1984–2026 (41 años)</td>
+                <td>Las imágenes no traían georreferencia: se ubicaron calzando su agua con Urrá, las lagunas y el lótico/léntico
+                    (coinciden con la caja de la cuenca + 20 km, píxel de 118 m).</td></tr>
+            <tr><td>Estaciones</td><td>175 estaciones del IDEAM con series de caudal y precipitación mensual y anual (el archivo trae cada una dos veces)</td>
+                <td>Ficha de cada estación con sus gráficas.</td></tr>
+            <tr><td>Índices espectrales</td><td>NDVI, NDWI y MNDWI anuales 1985–2026, Landsat C2 L2 (GeoIngenIA, Earth Engine)</td><td>Ráster de 90 m llevado a 250 m; promedios por cuenca, zona IDEAM y subcuenca.</td></tr>
+            <tr><td>ONI / RONI</td><td>Índices de El Niño / La Niña (NOAA), mensual 1950–2026</td><td>Promedio anual en la pestaña Agua.</td></tr>
+            <tr><td>Lótico / léntico</td><td>Clasificación Random Forest 2020</td><td>Capa y resumen por subcuenca.</td></tr>
+            <tr><td>Territorio</td><td>Embalse, lagunas, poblaciones, vías, puentes, plantas, rellenos, desastres; parques, reservas, distritos y clase de suelo</td>
+                <td>Capas para prender y apagar con su ficha.</td></tr>
+            <tr><td>Camellones zenúes</td><td>Vieri et al. 2026 (CC BY 4.0; LiDAR 1 m de San Marcos), Montejo y Rojas 1992 y revisión del equipo en Google Earth</td>
+                <td>Camellones, plataformas y cauces antiguos del bajo San Jorge; franjas candidatas y sitios del bajo Sinú.</td></tr>
+            <tr><td>Mapas históricos</td><td>Carta corográfica del Estado de Bolívar (1864, dominio público) y planchas INCORA 61-IB-4d y 61-IB-2b (fotos aéreas de 1963)</td>
+                <td>Georreferenciados por el proyecto (1864 con 29 poblaciones; 1963 con la cuadrícula de 500 m) y puestos sobre el terreno, con las ciénagas de 1963.</td></tr>
+            <tr><td>Relieve 3D, fondos y edificios</td><td>Terrain Tiles (AWS), Esri, CARTO, OpenFreeMap</td><td>Gratis, con atribución.</td></tr>
         </table>
-
-        <h3>Cómo se calculó</h3>
-        <ul>
-            <li><b>Red de drenaje.</b> Se graban en el DEM los ríos de HydroRIVERS (15 m más hondos, <i>stream burning</i>) y se rellenan
-                los huecos falsos (<i>priority-flood</i>). En el bajo Sinú, que es muy plano, el agua avanza más fácil por esos cauces.
-                Luego cada celda le manda su agua a la vecina más baja de las 8 que la rodean (<i>D8</i>) y donde se juntan más de
-                4 km² de terreno se dibuja un cauce, con grosor según el <b>orden de Strahler</b>.</li>
-            <li><b>Estadísticas de cada subcuenca.</b> Alturas y pendiente del DEM; <b>curva e integral hipsométrica</b>
-                (qué parte del área está por encima de cada altura); <b>coeficiente de Gravelius</b> (0,28 × perímetro / √área).</li>
-            <li><b>Caudales.</b> Son los que reporta el POMCA para cada subcuenca (medio, máximo, mínimo, ambiental y disponible).
-                La subcuenca "Valle del Sinú y cauce principal" es nueva en la delimitación y no trae caudales.</li>
-        </ul>
 
         <h3>Para tener en cuenta</h3>
         <ul>
-            <li>Copernicus es un modelo de <b>superficie</b>: en bosques y pueblos mide la altura de los árboles o techos.</li>
-            <li>Con 90 m de resolución no se ven canales pequeños, jarillones ni el detalle de las ciénagas.</li>
+            <li>ALOS es un modelo de <b>superficie</b>: en bosques y pueblos mide la altura de los árboles o techos.</li>
+            <li>Las capas de inundación y sequía son imágenes (no los GeoTIFF originales); su ubicación es una estimación muy ajustada.</li>
+            <li>La lista de desastres trae 10 eventos con coordenadas (de 17 en la hoja); la capa de centrales hidroeléctricas venía vacía.</li>
         </ul>
-        <p class="nota">Los datos se generan con <i>herramientas/actualizar_capas.py</i> y <i>herramientas/preparar_relieve.py</i>.</p>
+        <p class="nota">Los datos se generan con <i>herramientas/preparar_geoingenia.py</i> a partir de la carpeta <i>Capas_Rio_Sinu_GeoIngenIA</i>.</p>
     </div>
 </div>
 
@@ -185,15 +361,18 @@
 <script src="https://cdn.jsdelivr.net/npm/lucide@1.52.0/dist/umd/lucide.min.js"></script>
 <script src="../../esri3d-edificios.js?v=5"></script>
 <script>
-    // Configuracion de este visor (ver ../motor3d/visor3d.js)
+    // Configuracion de este visor (ver ../motor3d/visor3d.js); lo propio del Sinu esta en js/relieve3d.js
     window.VISOR3D = {
         datos: "datos/",
         colores: { "Alto Sinú y cauce principal": "#26a69a", "Medio Sinú": "#f5c400", "Bajo Sinú": "#ef6c00" },
         embalses: false, ideam: false, clima: false, gota: false,
+        ordenBase: 2,   // la red oficial empieza en orden 3
         ciudad: { centro: [-75.885, 8.757], texto: "Se ven al acercarse a una ciudad (Montería, Cereté, Lorica…)." }
     };
 </script>
-<script src="../motor3d/visor3d.js?v=1"></script>
+<script src="js/graficas.js?v=4"></script>
+<script src="js/relieve3d.js?v=11"></script>
+<script src="../motor3d/visor3d.js?v=7"></script>
 <script src="../../marca/pie.js?v=3" defer></script>
 </body>
 </html>

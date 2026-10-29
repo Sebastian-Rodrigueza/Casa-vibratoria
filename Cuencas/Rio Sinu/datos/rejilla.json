@@ -1,16 +1,16 @@
 {
- "oeste": -76.518,
- "norte": 9.44811,
- "dx": 0.00081,
- "dy": 0.00081,
- "ancho": 1354,
- "alto": 2657,
- "este": -75.42126,
- "sur": 7.29594,
+ "oeste": -76.5000804379764,
+ "norte": 9.50080702366909,
+ "dx": 0.0007860258736045813,
+ "dy": 0.0007860258736045813,
+ "ancho": 1908,
+ "alto": 2800,
+ "este": -75.00034307113886,
+ "sur": 7.299934577576262,
  "factor": 3,
- "fuente": "Copernicus GLO-30 (2024), remuestreado a ~90 m",
- "alt_min": 0,
- "alt_max": 2182,
+ "fuente": "ALOS PALSAR 12,5 m (GeoIngenIA), remuestreado a ~87 m",
+ "alt_min": -46,
+ "alt_max": 3091,
  "umbral_cauce_km2": 4.0,
- "rios_grabados": "HydroRIVERS (WWF / HydroSHEDS), 15 m"
+ "rios_grabados": "Red de drenaje oficial GeoIngenIA (orden >= 3), 15 m"
 }

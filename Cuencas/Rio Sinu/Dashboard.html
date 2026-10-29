@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#ffffff">
+<meta name="description" content="Dashboard de la cuenca del río Sinú: cuerpos lóticos y lénticos, estaciones del IDEAM con lluvia y caudal, inundación y sequía 1984-2026, ONI/RONI y cambio de cobertura. Lab SinergIA y GeoIngenIA, Universidad de los Andes.">
+<title>Dashboard · Río Sinú | Universidad de los Andes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css" rel="stylesheet">
+<link rel="stylesheet" href="css/graficas.css?v=1">
+<style>
+    /* Colores del kit de identidad (identidad-uniandes/react/colors.css) */
+    :root {
+        --fondo: #f5f5f7; --blanco: #fff; --negro: #000; --tinta: #26292d; --gris: #6e6e73;
+        --borde: #e5e5e7; --borde-fuerte: #d2d2d7; --amarillo: #ffde00; --amarillo-tinta: #7a6100;
+        --lotico: #1c6fb0; --lentico: #2f8f4e; --inundacion: #1f6feb; --sequia: #f0883e;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    body { margin: 0; font-family: "Geist", -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: var(--tinta); background: var(--fondo); }
+    button, select, input { font: inherit; }
+    a { color: inherit; }
+    [hidden] { display: none !important; }
+
+    /* Encabezado (firma de unidad) */
+    .cab { position: sticky; top: 0; z-index: 20; background: rgba(255, 255, 255, .9); backdrop-filter: blur(16px); border-bottom: 1px solid var(--borde); }
+    .cab .dentro { max-width: 1240px; margin: 0 auto; padding: 0 24px; height: 64px; display: flex; align-items: center; gap: 16px; }
+    .cab .marca { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+    .cab .marca img { height: 40px; width: auto; display: block; }
+    .cab .marca .linea { width: 1px; height: 28px; background: rgba(0, 0, 0, .2); }
+    .cab .marca b { font-size: 15px; font-weight: 600; color: var(--negro); }
+    .cab nav { margin-left: auto; display: flex; gap: 4px; flex-wrap: wrap; }
+    .cab nav a { padding: 8px 14px; font-size: 13px; font-weight: 500; text-decoration: none; color: var(--gris); border-radius: 999px; }
+    .cab nav a:hover { color: var(--negro); background: rgba(0, 0, 0, .05); }
+    .indice { max-width: 1240px; margin: 0 auto; padding: 0 24px; display: flex; gap: 6px; overflow-x: auto; }
+    .indice a { white-space: nowrap; padding: 9px 12px; font-size: 12.5px; text-decoration: none; color: var(--gris); border-bottom: 2px solid transparent; }
+    .indice a:hover { color: var(--negro); border-color: var(--amarillo); }
+
+    main { max-width: 1240px; margin: 0 auto; padding: 28px 24px 64px; }
+    .eyebrow { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--amarillo-tinta); }
+    h1 { font-size: clamp(30px, 4vw, 44px); font-weight: 600; letter-spacing: -.02em; margin: 6px 0 10px; color: var(--negro); }
+    .intro { font-size: 17px; line-height: 1.6; color: var(--gris); max-width: 760px; margin: 0; }
+
+    /* Cifras */
+    .cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 26px 0 8px; }
+    .cifra { background: var(--blanco); border: 1px solid var(--borde); border-radius: 16px; padding: 14px 16px; }
+    .cifra small { display: block; font-size: 12px; color: var(--gris); }
+    .cifra b { display: block; font-size: 26px; font-weight: 600; color: var(--negro); margin: 4px 0 2px; font-variant-numeric: tabular-nums; }
+    .cifra span { font-size: 12px; color: var(--gris); }
+
+    /* Secciones */
+    section.bloque { margin-top: 44px; scroll-margin-top: 110px; }
+    section.bloque > h2 { font-size: 26px; font-weight: 600; color: var(--negro); margin: 4px 0 6px; letter-spacing: -.01em; }
+    section.bloque > p.lead { font-size: 15px; line-height: 1.6; color: var(--gris); margin: 0 0 16px; max-width: 820px; }
+    .rejilla { display: grid; gap: 14px; grid-template-columns: 1fr; }
+    @media (min-width: 960px) { .rejilla.dos { grid-template-columns: 1fr 1fr; } .rejilla.mapa { grid-template-columns: 1.15fr 1fr; } }
+    .tarjeta { background: var(--blanco); border: 1px solid var(--borde); border-radius: 18px; padding: 16px 18px; min-width: 0; }
+    .tarjeta h3 { font-size: 15px; font-weight: 600; color: var(--negro); margin: 0 0 2px; }
+    .tarjeta .sub { font-size: 12.5px; color: var(--gris); margin: 0 0 10px; line-height: 1.5; }
+    .mapa { height: 430px; border-radius: 14px; overflow: hidden; border: 1px solid var(--borde); }
+    .mini { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 10px 0; }
+    .mini div { background: var(--fondo); border-radius: 10px; padding: 8px 10px; }
+    .mini small { display: block; font-size: 11px; color: var(--gris); }
+    .mini b { font-size: 16px; font-weight: 600; color: var(--negro); font-variant-numeric: tabular-nums; }
+    .nota { font-size: 12px; line-height: 1.55; color: var(--gris); margin: 8px 0 0; }
+    .controles { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+    select { padding: 8px 10px; border: 1px solid var(--borde-fuerte); border-radius: 10px; background: var(--blanco); font-size: 13px; color: var(--tinta); max-width: 100%; }
+    .seg { display: inline-flex; padding: 3px; gap: 3px; border-radius: 999px; background: var(--fondo); border: 1px solid var(--borde); }
+    .seg button { border: 0; background: none; padding: 6px 12px; border-radius: 999px; font-size: 12.5px; cursor: pointer; color: var(--gris); }
+    .seg button.activo { background: var(--negro); color: #fff; }
+    .boton { border: 1px solid var(--borde-fuerte); background: var(--blanco); border-radius: 999px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
+    .anio { font-size: 22px; font-weight: 600; color: var(--negro); min-width: 54px; font-variant-numeric: tabular-nums; }
+    input[type=range] { accent-color: #000; flex: 1; min-width: 160px; }
+    .pendiente { border-style: dashed; background: #fafafa; }
+    .pendiente h3::before { content: "Sin datos todavía · "; color: var(--amarillo-tinta); font-weight: 600; }
+    table.datos { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 10px; font-variant-numeric: tabular-nums; }
+    table.datos th, table.datos td { padding: 6px 8px; border-bottom: 1px solid var(--borde); text-align: right; }
+    table.datos th:first-child, table.datos td:first-child { text-align: left; }
+    table.datos th { font-size: 11px; color: var(--gris); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+    .maplibregl-popup-content { font-family: inherit; font-size: 12px; border-radius: 10px; }
+    /* Comparador antes / despues (cortina) */
+    .comparador { position: relative; height: 540px; border-radius: 14px; overflow: hidden; border: 1px solid var(--borde); background: #111; touch-action: none; }
+    .cmp-mapa { position: absolute; inset: 0; }
+    .cmp-barra { position: absolute; top: 0; bottom: 0; left: 50%; width: 4px; margin-left: -2px; background: #fff; z-index: 3; cursor: ew-resize;
+        box-shadow: 0 0 6px rgba(0, 0, 0, .5); }
+    .cmp-asa { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 38px; height: 38px; border-radius: 50%; background: #fff;
+        display: flex; align-items: center; justify-content: center; font-size: 18px; color: #000; box-shadow: 0 2px 8px rgba(0, 0, 0, .35); }
+    .cmp-et { position: absolute; top: 12px; z-index: 2; padding: 5px 10px; border-radius: 999px; background: rgba(0, 0, 0, .7); color: #fff;
+        font-size: 13px; font-weight: 600; pointer-events: none; }
+    .cmp-et.izq { left: 12px; } .cmp-et.der { right: 12px; }
+    @media (max-width: 700px) { .comparador { height: 420px; } }
+    .multiples { display: grid; gap: 10px 16px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+    .multiples h4 { margin: 0; font-size: 12.5px; font-weight: 600; color: var(--negro); display: flex; align-items: center; gap: 6px; }
+    .multiples h4 i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+    .multiples h4 small { margin-left: auto; font-weight: 500; color: var(--gris); font-variant-numeric: tabular-nums; }
+    .multiples .g-lienzo svg { height: 92px; }
+    .aviso { background: #fff8e1; border: 1px solid #f1d27a; border-radius: 14px; padding: 12px 16px; font-size: 13.5px; line-height: 1.55; margin: 0 0 12px; max-width: 920px; }
+    .rampa { height: 30px; margin-top: 8px; font-size: 11px; color: var(--gris); }
+    .rampa .barra { height: 10px; border-radius: 3px; }
+    .rampa .marcas { display: flex; justify-content: space-between; margin-top: 3px; font-variant-numeric: tabular-nums; }
+    .capas-cam label { font-size: 12.5px; color: var(--gris); display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<header class="cab">
+    <div class="dentro">
+        <a class="marca" href="../../Index.html">
+            <img src="../../marca/uniandes-logo-cabecera.svg?v=2" alt="Universidad de los Andes">
+            <span class="linea"></span>
+            <b>Río Sinú en datos</b>
+        </a>
+        <nav>
+            <a href="Relieve3D.html">Relieve 3D</a>
+            <a href="RioSinu.html">Visor de capas</a>
+            <a href="Index.html">Río Sinú</a>
+            <a href="../../Index.html">Inicio</a>
+        </nav>
+    </div>
+    <div class="indice">
+        <a href="#agua">Lóticos y lénticos</a>
+        <a href="#estaciones">Estaciones IDEAM</a>
+        <a href="#inundacion">Inundación y sequía</a>
+        <a href="#oni">ONI y RONI</a>
+        <a href="#suelos">Cambio de suelos</a>
+        <a href="#camellones">Camellones</a>
+        <a href="#indices">Índices espectrales</a>
+        <a href="#turbidez">Turbidez</a>
+        <a href="#historicos">Mapas históricos</a>
+    </div>
+</header>
+
+<main>
+    <div class="eyebrow">Cuenca del río Sinú · Córdoba</div>
+    <h1>El Sinú en datos</h1>
+    <p class="intro">Agua superficial, lluvia y caudal, inundaciones y sequías de 41 años, el fenómeno de El Niño y La Niña y el cambio
+        de cobertura del suelo, con los datos del proyecto Río Sinú de GeoIngenIA.</p>
+    <div class="cifras" id="cifras"></div>
+
+    <!-- 1. Loticos y lenticos -->
+    <section class="bloque" id="agua">
+        <div class="eyebrow">Agua superficial · 2020</div>
+        <h2>Cuerpos lóticos y lénticos</h2>
+        <p class="lead"><b>Lóticos</b>: agua que corre (ríos, caños). <b>Lénticos</b>: agua quieta (ciénagas, lagunas, embalse). Clasificación
+            Random Forest de 2020, validada contra HydroLAKES/HydroSHEDS; es el único año clasificado.</p>
+        <div class="rejilla mapa">
+            <div class="tarjeta">
+                <h3>Dónde están</h3>
+                <p class="sub">Azul: lóticos · verde: lénticos. Haz clic en un cuerpo de agua para ver su ficha.</p>
+                <div class="mapa" id="mapaAgua"></div>
+            </div>
+            <div class="tarjeta">
+                <h3>Por subcuenca</h3>
+                <p class="sub">Hectáreas de agua lótica y léntica en las 15 subcuencas con más agua. Haz clic en una para verla en el mapa.</p>
+                <div class="mini" id="miniAgua"></div>
+                <div class="g-ley"><span><i style="background:var(--lotico)"></i>Lótico</span><span><i style="background:var(--lentico)"></i>Léntico</span></div>
+                <div class="g-lienzo"><svg id="gSubAgua"></svg><div class="g-tip" hidden></div></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 2. Estaciones -->
+    <section class="bloque" id="estaciones">
+        <div class="eyebrow">IDEAM</div>
+        <h2>Estaciones: precipitación y caudal</h2>
+        <p class="lead">Las 175 estaciones del IDEAM dentro de la cuenca. Solo 21 traen series en el paquete (14 de lluvia y 8 de caudal).
+            Los promedios por año usan solo los años con al menos 10 meses medidos.</p>
+        <div class="rejilla mapa">
+            <div class="tarjeta">
+                <h3>Mapa de estaciones</h3>
+                <div class="controles">
+                    <div class="seg" id="segEst">
+                        <button type="button" class="activo" data-f="activas">Activas</button>
+                        <button type="button" data-f="datos">Con datos</button>
+                        <button type="button" data-f="todas">Todas</button>
+                    </div>
+                </div>
+                <div class="g-ley"><span><i style="background:var(--inundacion)"></i>Caudal</span><span><i style="background:#2a9d8f"></i>Lluvia</span><span><i style="background:#9aa0a6"></i>Sin series</span></div>
+                <div class="mapa" id="mapaEst"></div>
+                <p class="nota" id="notaEst"></p>
+            </div>
+            <div class="tarjeta">
+                <h3>Precipitación</h3>
+                <div class="controles"><select id="selLluvia"></select></div>
+                <div class="mini" id="miniLluvia"></div>
+                <div class="g-titulo">Lluvia promedio por año (mm al mes)</div>
+                <div class="g-lienzo"><svg id="gLluA"></svg><div class="g-tip" hidden></div></div>
+                <div class="g-titulo">Cómo se reparte en el año (promedio de cada mes, mm)</div>
+                <div class="g-lienzo"><svg id="gLluM"></svg><div class="g-tip" hidden></div></div>
+                <p class="nota" id="notaLluvia"></p>
+                <h3 style="margin-top:18px">Caudal</h3>
+                <div class="controles"><select id="selCaudal"></select></div>
+                <div class="mini" id="miniCaudal"></div>
+                <div class="g-titulo">Caudal promedio por año (m³/s)</div>
+                <div class="g-lienzo"><svg id="gCauA"></svg><div class="g-tip" hidden></div></div>
+                <div class="g-titulo">Cómo se reparte en el año (promedio de cada mes, m³/s)</div>
+                <div class="g-lienzo"><svg id="gCauM"></svg><div class="g-tip" hidden></div></div>
+                <p class="nota" id="notaCaudal"></p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. Inundacion y sequia -->
+    <section class="bloque" id="inundacion">
+        <div class="eyebrow">1984 – 2026</div>
+        <h2>Área de inundación y sequía por año</h2>
+        <p class="lead"><b>Inundación máxima</b>: toda el área que tuvo agua en algún momento del año. <b>Agua persistente</b> (sequía): la
+            que siguió con agua en la época seca. Faltan 1988 y 1992, sin imágenes.</p>
+        <div class="rejilla mapa">
+            <div class="tarjeta">
+                <div class="controles">
+                    <button type="button" class="boton" id="btnPlay">Reproducir</button>
+                    <input type="range" id="rngAnio" min="0" max="40" value="40">
+                    <span class="anio" id="txtAnio">—</span>
+                    <div class="seg" id="segAgua">
+                        <button type="button" class="activo" data-m="inundacion">Inundación</button>
+                        <button type="button" data-m="sequia">Persistente</button>
+                        <button type="button" data-m="ambas">Las dos</button>
+                    </div>
+                </div>
+                <div class="mapa" id="mapaInund"></div>
+            </div>
+            <div class="tarjeta">
+                <h3>Área de agua cada año (km²)</h3>
+                <p class="sub">Haz clic en la gráfica para ver ese año en el mapa.</p>
+                <div class="mini" id="miniInund"></div>
+                <div class="g-ley"><span><i style="background:var(--inundacion)"></i>Inundación máxima</span><span><i style="background:var(--sequia)"></i>Agua persistente</span></div>
+                <div class="g-lienzo"><svg id="gArea" style="height:220px"></svg><div class="g-tip" hidden></div></div>
+                <p class="nota" id="notaInund"></p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. ONI y RONI -->
+    <section class="bloque" id="oni">
+        <div class="eyebrow">El Niño · La Niña</div>
+        <h2>Índices ONI y RONI</h2>
+        <p class="lead"><b>ONI</b>: anomalía de la temperatura del Pacífico tropical (NOAA). Por encima de +0,5 es El Niño (suele traer sequía al
+            Caribe colombiano); por debajo de −0,5, La Niña (lluvias e inundaciones). <b>RONI</b> es la versión relativa, que descuenta el
+            calentamiento de todo el océano tropical.</p>
+        <div class="rejilla dos">
+            <div class="tarjeta">
+                <h3>Mes a mes, 1984 – 2026</h3>
+                <div class="g-ley"><span><i style="background:#2a78d6"></i>ONI</span><span><i style="background:#eb6834"></i>RONI</span></div>
+                <div class="g-lienzo"><svg id="gOniMes" style="height:220px"></svg><div class="g-tip" hidden></div></div>
+            </div>
+            <div class="tarjeta">
+                <h3>Promedio de cada año y su relación con las inundaciones</h3>
+                <div class="g-ley"><span><i style="background:#c4472c"></i>El Niño (≥ 0,5)</span><span><i style="background:#2f6db3"></i>La Niña (≤ −0,5)</span><span><i style="background:#a9adb2"></i>Neutral</span></div>
+                <div class="g-lienzo"><svg id="gOniAnio"></svg><div class="g-tip" hidden></div></div>
+                <div class="mini" id="miniOni"></div>
+                <p class="nota" id="notaOni"></p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 5. Cambio de suelos -->
+    <section class="bloque" id="suelos">
+        <div class="eyebrow">Cobertura del suelo</div>
+        <h2>Cambio de suelos: antes y después</h2>
+        <p class="lead">Modelo propio del proyecto: clasificación Random Forest en Google Earth Engine sobre imágenes Landsat (y radar Sentinel-1),
+            entrenada con puntos de CORINE Land Cover del IDEAM, un mapa por año de <b>1985 a 2025</b> en siete clases.</p>
+        <div class="tarjeta" style="margin-bottom:14px">
+            <h3>Antes y después en mapas</h3>
+            <p class="sub">Arrastra la barra blanca para comparar los dos años. Puedes acercarte y moverte: los dos lados se mueven juntos.</p>
+            <div class="controles">
+                <div class="seg" id="segFuente">
+                    <button type="button" class="activo" data-f="cob">Cobertura · modelo propio · 1985–2025</button>
+                    <button type="button" data-f="s2">Imagen Sentinel-2 · 2018–2024</button>
+                    <button type="button" data-f="wb">Imagen Esri Wayback · 2014–2026</button>
+                    <button type="button" data-f="gls">Imagen Landsat · 1990–2010</button>
+                </div>
+                <label class="sub" style="margin:0">Antes <select id="selAntes"></select></label>
+                <label class="sub" style="margin:0">Después <select id="selDespues"></select></label>
+                <select id="selLugar"></select>
+            </div>
+            <div class="g-ley" id="leyCmp"></div>
+            <div class="comparador" id="comparador">
+                <div class="cmp-mapa" id="mapaAntes"></div>
+                <div class="cmp-mapa" id="mapaDespues"></div>
+                <div class="cmp-barra"><span class="cmp-asa">⇔</span></div>
+                <span class="cmp-et izq" id="etAntes"></span><span class="cmp-et der" id="etDespues"></span>
+            </div>
+            <p class="nota" id="notaCmp"></p>
+        </div>
+        <div class="tarjeta" style="margin-bottom:14px">
+            <h3>Área de cada clase, año a año (km²)</h3>
+            <p class="sub">Cada gráfica tiene su propia escala para que se vea el cambio de las clases pequeñas. La franja gris (2013–2015) no se debe
+                comparar con el resto: ahí cambia el satélite y faltó radar.</p>
+            <div class="multiples" id="multSuelo"></div>
+        </div>
+        <div class="rejilla dos">
+            <div class="tarjeta">
+                <h3>Cuánto cambió cada clase</h3>
+                <div class="controles">
+                    <label class="sub" style="margin:0">Antes <select id="perAntes"></select></label>
+                    <label class="sub" style="margin:0">Después <select id="perDespues"></select></label>
+                </div>
+                <div class="g-lienzo"><svg id="gSuelos"></svg><div class="g-tip" hidden></div></div>
+                <p class="nota">Promedio de cinco años en cada periodo, para que un año raro no domine. Los periodos que tocan 2013–2015 o 2026 no se ofrecen.</p>
+            </div>
+            <div class="tarjeta">
+                <h3>Tabla</h3>
+                <table class="datos" id="tablaSuelos"></table>
+                <p class="nota">Áreas oficiales del modelo, calculadas a 30 m (el CSV del paquete). Los mapas de arriba son de visualización, a unos 340 m
+                    por píxel: lo pequeño o angosto (caseríos, caños, parcelas) se pierde y no sirven para medir. Exactitud frente a CORINE: 80 % (2018)
+                    y 76 % (2007); Urbano y Cultivos salen sobreestimados.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 6. Camellones -->
+    <section class="bloque" id="camellones">
+        <div class="eyebrow">Arqueología del paisaje</div>
+        <h2>Camellones zenúes: los que aprendieron a vivir inundados</h2>
+        <p class="lead">Los camellones son campos elevados y canales que los zenúes construyeron en las llanuras que se inundan: la siembra
+            quedaba en lo alto y el agua corría y se guardaba en los canales. Hoy casi todo lo borró el uso de la tierra; donde se conservan,
+            miden unos pocos decímetros de alto y solo se ven bien con LiDAR.</p>
+        <div class="aviso">
+            <b>Importante:</b> no existe una capa de camellones confirmados dentro de la cuenca del Sinú. Los 1.605 camellones digitalizados
+            están en el bajo <b>San Jorge</b> (San Marcos, Sucre), a unos 44 km al oriente de la cuenca. Del bajo Sinú hay lo que describieron
+            Montejo y Rojas (1992), con ubicación aproximada, y dos franjas candidatas en Isla Pérez que todavía no están confirmadas
+            (podrían ser drenaje natural).
+        </div>
+        <div class="mini" id="miniCam"></div>
+        <div class="rejilla mapa">
+            <div class="tarjeta">
+                <div class="controles">
+                    <div class="seg" id="segCam">
+                        <button type="button" class="activo" data-z="sj">San Marcos · confirmados</button>
+                        <button type="button" data-z="ip">Bajo Sinú · Isla Pérez</button>
+                        <button type="button" data-z="todo">Las dos zonas</button>
+                    </div>
+                </div>
+                <div class="controles capas-cam" id="capasCam">
+                    <label><input type="checkbox" data-c="lidar" checked> Relieve LiDAR</label>
+                    <label><input type="checkbox" data-c="camellon" checked> Camellones</label>
+                    <label><input type="checkbox" data-c="plataforma" checked> Plataformas de vivienda</label>
+                    <label><input type="checkbox" data-c="paleocauce" checked> Cauces antiguos</label>
+                    <label><input type="checkbox" data-c="montejo" checked> Sitios de Montejo y Rojas (1992)</label>
+                    <label><input type="checkbox" data-c="zona" checked> Zonas revisadas (2026)</label>
+                </div>
+                <div class="mapa" id="mapaCam"></div>
+                <div class="g-ley" id="leyCam"></div>
+            </div>
+            <div class="tarjeta">
+                <h3>Altura que todavía conservan (m)</h3>
+                <p class="sub">Diferencia entre lo más alto y lo más bajo de cada camellón en el LiDAR de 1 m. Solo San Jorge.</p>
+                <div class="g-lienzo"><svg id="gCam" style="height:180px"></svg><div class="g-tip" hidden></div></div>
+                <h3 style="margin-top:14px">Lo que se revisó en el bajo Sinú</h3>
+                <table class="datos" id="tablaCam"></table>
+                <p class="nota">Fuentes: Vieri, J., Montejo Gaitán, F., Carrero-Pazos, M. y Martinón-Torres, M. (2026), <i>Collective labour and
+                    sustainability of pre-Hispanic field systems in La Mojana</i>, Communications Sustainability
+                    (<a href="https://doi.org/10.1038/s44458-026-00128-5" target="_blank" rel="noopener">doi</a>; datos CC BY 4.0; LiDAR del Fondo
+                    Adaptación). Montejo, F. y Rojas, S. (1992), Boletín Museo del Oro 34: 166–176. Franjas de Isla Pérez: equipo del StoryMap
+                    Río Sinú, sobre imagen Maxar de 2017 en Google Earth. Las cifras de "150.000 ha en el Sinú" que circulan vienen de la literatura
+                    y no tienen polígono asociado.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 7. Indices espectrales -->
+    <section class="bloque" id="indices">
+        <div class="eyebrow">Índices espectrales · 1985–2026</div>
+        <h2>Vegetación y agua en toda la cuenca: NDVI, NDWI y MNDWI</h2>
+        <p class="lead">Tres índices calculados con Landsat año por año, de 1985 a 2026, en toda la cuenca (14.069 km²). El <b>NDVI</b> mide el vigor
+            de la vegetación; el <b>NDWI</b> y el <b>MNDWI</b> resaltan el agua. Cada año es un compuesto: el índice se calcula en cada imagen sin
+            nubes y se promedia en el año. El mapa va a 250 m por píxel y se puede ver por píxel o como promedio de cada subcuenca.</p>
+        <div class="rejilla mapa">
+            <div class="tarjeta">
+                <div class="controles">
+                    <div class="seg" id="segIdx">
+                        <button type="button" class="activo" data-i="NDVI">NDVI · vegetación</button>
+                        <button type="button" data-i="NDWI">NDWI · agua</button>
+                        <button type="button" data-i="MNDWI">MNDWI · agua</button>
+                    </div>
+                    <div class="seg" id="segIdxVista">
+                        <button type="button" class="activo" data-v="pixel">Píxeles</button>
+                        <button type="button" data-v="sub">Subcuencas</button>
+                    </div>
+                </div>
+                <div class="controles">
+                    <button type="button" class="boton" id="btnPlayIdx">Reproducir</button>
+                    <input type="range" id="rngIdx" min="0" max="41" value="40">
+                    <span class="anio" id="txtIdx">—</span>
+                </div>
+                <div class="mapa" id="mapaIdx" style="height:520px"></div>
+                <div class="rampa" id="rampaIdx"></div>
+            </div>
+            <div class="tarjeta">
+                <h3 id="tituloIdx">NDVI promedio por año</h3>
+                <p class="sub" id="subIdx"></p>
+                <div class="mini" id="miniIdx"></div>
+                <div class="g-ley" id="leyIdx"></div>
+                <div class="g-lienzo"><svg id="gIdx" style="height:220px"></svg><div class="g-tip" hidden></div></div>
+                <p class="sub" style="margin-top:6px">Haz clic en la gráfica para ver ese año en el mapa, y en una subcuenca del mapa para sumar su línea.</p>
+                <h3 style="margin-top:14px" id="tituloCambio">Cambio del NDVI de 2013 a 2025, por subcuenca</h3>
+                <p class="sub">Con el mismo satélite (Landsat 8/9) en los dos años. Las 8 que más subieron y las 8 que más bajaron.</p>
+                <div class="g-lienzo"><svg id="gCambioIdx"></svg><div class="g-tip" hidden></div></div>
+            </div>
+        </div>
+        <div class="rejilla dos" style="margin-top:14px">
+            <div class="tarjeta">
+                <h3>Otros índices de la cuenca</h3>
+                <p class="sub">Promedio de toda la cuenca por año (solo hay tabla, no mapa).</p>
+                <div class="controles"><select id="selOtroIdx"></select></div>
+                <p class="sub" id="txtOtroIdx"></p>
+                <div class="g-lienzo"><svg id="gOtroIdx" style="height:180px"></svg><div class="g-tip" hidden></div></div>
+            </div>
+            <div class="tarjeta">
+                <h3>Cómo leer estos índices</h3>
+                <p class="nota" style="margin-top:6px"><b>NDVI</b> = (NIR − Rojo) / (NIR + Rojo). Bosque denso cerca de 0,8–0,9; pastos y cultivos
+                    0,4–0,7; suelo desnudo y zonas urbanas 0,1–0,3; agua por debajo de 0.<br>
+                    <b>NDWI</b> = (Verde − NIR) / (Verde + NIR) (McFeeters, 1996) y <b>MNDWI</b> = (Verde − SWIR1) / (Verde + SWIR1) (Xu, 2006): por
+                    encima de 0 suele ser agua abierta. El MNDWI separa mejor el agua del suelo y de lo urbano. Como promedio de toda la cuenca salen
+                    negativos todos los años (domina la tierra): sirven para ver la tendencia, no para delimitar el agua.</p>
+                <p class="nota"><b>Cuidado con 2012 → 2013</b> (franja gris en las gráficas): cambia el sensor de Landsat 5/7 a Landsat 8. Aunque se
+                    armonizó, el NDVI sube de 0,67 a 0,73 y ese salto no es real; compara años del mismo lado de la franja. <b>1985</b> tiene pocos
+                    datos y sale atípico, y <b>2026</b> es el año en curso. Los huecos blancos del mapa son zonas sin ninguna imagen sin nubes
+                    ese año; cuando faltaban, el compuesto se amplió a 3, 6 o 12 meses para cubrir al menos el 90 % de la cuenca.</p>
+                <p class="nota">Fuente: Landsat Collection 2 nivel 2 (USGS), procesado en Google Earth Engine por GeoIngenIA, 28 de octubre de 2026
+                    (máscara de nubes QA_PIXEL, píxel de 90 m). Zonas: Alto Sinú – Urrá, Medio Sinú y Bajo Sinú de la zonificación IDEAM 2025.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 7b. Turbidez en la desembocadura -->
+    <section class="bloque" id="turbidez">
+        <div class="eyebrow">Índices espectrales · 1985–2026</div>
+        <h2>Turbidez del agua en la desembocadura (NDTI)</h2>
+        <p class="lead">El <b>NDTI</b> compara el rojo con el verde del agua: <b>(Rojo − Verde) / (Rojo + Verde)</b>. Un valor más alto quiere decir
+            agua más turbia, con más sedimento en suspensión. Va de −1 a 1 y solo se calcula sobre el agua. Un compuesto por año (la mediana del
+            año) en el delta del Sinú, la bahía de Cispatá y la boca de Tinajones, unos 490 km².</p>
+        <div class="rejilla mapa">
+            <div class="tarjeta">
+                <div class="controles">
+                    <button type="button" class="boton" id="btnPlayNdti">Reproducir</button>
+                    <input type="range" id="rngNdti" min="0" max="41" value="41">
+                    <span class="anio" id="txtNdti">—</span>
+                    <div class="seg" id="segNdti">
+                        <button type="button" class="activo" data-m="ndti">Turbidez (NDTI)</button>
+                        <button type="button" data-m="rgb">Color real</button>
+                    </div>
+                </div>
+                <div class="mapa" id="mapaNdti"></div>
+                <div class="rampa" id="rampaNdti"></div>
+            </div>
+            <div class="tarjeta">
+                <h3>NDTI mediano del agua, por año</h3>
+                <p class="sub">Haz clic en la gráfica para ver ese año en el mapa.</p>
+                <div class="mini" id="miniNdti"></div>
+                <div class="g-ley" id="leyNdti"></div>
+                <div class="g-lienzo"><svg id="gNdti" style="height:200px"></svg><div class="g-tip" hidden></div></div>
+                <p class="nota">Desde 2015 las imágenes son de Sentinel-2 (10 m) y antes de Landsat (30 m). El nivel del NDTI cambia con el sensor
+                    (la mediana del agua baja de ≈ −0,12 a ≈ −0,26): por eso van como dos líneas y <b>no se compara un año de antes de 2015 con uno de
+                    después</b>, solo la forma de la pluma. Con Landsat, las nubes dejan sin dato buena parte del mar (13–30 % de la zona con dato,
+                    contra 50 % con Sentinel-2). 1992 casi no tiene dato; entre 2003 y 2012 pueden verse franjas diagonales (falla de Landsat 7);
+                    2026 es el año en curso. No hay capa de sedimentos en mg/L: la fórmula del notebook daba valores negativos y no está calibrada
+                    con muestras de campo.</p>
+            </div>
+        </div>
+        <div class="tarjeta" style="margin-top:14px">
+            <h3>La costa y el delta: antes y después en color real</h3>
+            <p class="sub">Arrastra la barra blanca para comparar los dos años.</p>
+            <div class="controles">
+                <label class="sub" style="margin:0">Antes <select id="selDesA"></select></label>
+                <label class="sub" style="margin:0">Después <select id="selDesD"></select></label>
+            </div>
+            <div class="comparador" id="cmpDes">
+                <div class="cmp-mapa" id="mapaDesA"></div>
+                <div class="cmp-mapa" id="mapaDesD"></div>
+                <div class="cmp-barra"><span class="cmp-asa">⇔</span></div>
+                <span class="cmp-et izq" id="etDesA"></span><span class="cmp-et der" id="etDesD"></span>
+            </div>
+            <p class="nota">Compuestos anuales de Landsat (1985–2014) y Sentinel-2 (2015–2026) exportados de Google Earth Engine por GeoIngenIA,
+                estirados para que se vea el agua. Fuera del recuadro se ve la imagen satelital de Esri.</p>
+        </div>
+    </section>
+
+    <!-- 8. Mapas historicos -->
+    <section class="bloque" id="historicos">
+        <div class="eyebrow">El agua como archivo · 1864 y 1963</div>
+        <h2>Mapas históricos: el bajo Sinú antes y hoy</h2>
+        <p class="lead">Dos mapas viejos puestos en su sitio (georreferenciados por el proyecto) para compararlos con la imagen de hoy: la
+            <b>Carta corográfica del Estado de Bolívar</b> de 1864 y las planchas del <b>INCORA</b> hechas con fotos aéreas de 1963, donde
+            todavía se ven ciénagas que hoy son potreros.</p>
+        <div class="mini" id="miniHis"></div>
+        <div class="tarjeta">
+            <div class="controles">
+                <div class="seg" id="segHis">
+                    <button type="button" class="activo" data-m="bolivar_1864">1864 · bajo Sinú</button>
+                    <button type="button" data-m="incora_61-IB-4d">1963 · plancha 61-IB-4d</button>
+                    <button type="button" data-m="incora_61-IB-2b">1963 · plancha 61-IB-2b</button>
+                </div>
+                <label class="sub" style="margin:0"><input type="checkbox" id="chkCienHis" checked> Ciénagas de 1963 (cian)</label>
+            </div>
+            <p class="sub">Arrastra la barra blanca: a la izquierda el mapa viejo, a la derecha la imagen satelital de hoy. Los dos lados se mueven juntos.</p>
+            <div class="comparador" id="cmpHis">
+                <div class="cmp-mapa" id="mapaHisA"></div>
+                <div class="cmp-mapa" id="mapaHisD"></div>
+                <div class="cmp-barra"><span class="cmp-asa">⇔</span></div>
+                <span class="cmp-et izq" id="etHisA"></span><span class="cmp-et der" id="etHisD">Hoy · Esri World Imagery</span>
+            </div>
+            <p class="nota" id="notaHis"></p>
+        </div>
+        <p class="nota">Fuentes: Ponce de León, M. y Paz, M. M. (1864), <i>Carta corográfica del Estado de Bolívar</i>, Comisión Corográfica,
+            ejemplar del Leibniz-Institut für Länderkunde vía Wikimedia Commons (dominio público). IGAC – INCORA (1966), <i>Proyecto Córdoba
+            No. 2</i>, planchas 61-IB-4d y 61-IB-2b, 1:5.000, fotos aéreas de junio y julio de 1963 (Colombia en Mapas). Georreferenciación y
+            ciénagas de 1963: equipo del proyecto. Imagen de hoy: Esri, Maxar, Earthstar Geographics.</p>
+    </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+<script src="js/graficas.js?v=4"></script>
+<script src="js/dashboard.js?v=11"></script>
+<script src="../../marca/pie.js?v=3" defer></script>
+</body>
+</html>

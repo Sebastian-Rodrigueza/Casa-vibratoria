@@ -41,4 +41,7 @@ capas_pesadas/
 # El visor usa las versiones livianas de Cuencas/Cundinamarca/datos/
 # (las genera Cuencas/Cundinamarca/herramientas/preparar_datos.py).
 Cuencas/Cundinamarca/info/
-Cuencas/Rio Sinu/Sinu_capas_base/
+Cuencas/Rio Sinu/Capas_Rio_Sinu_GeoIngenIA/
+Cuencas/Rio Sinu/Camellones_Zenu_Geovisor/
+Cuencas/Rio Sinu/Mapas_Historicos_Agua_como_archivo/
+Cuencas/Rio Sinu/Indices_Espectrales_Geovisor/
