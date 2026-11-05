@@ -1237,6 +1237,239 @@ def transmilenio_gtfs_red():
                                "paradas": paradas, "rutas": salida}), 24 * 3600)
 
 
+# ---------------------------------------------------------------------------
+# TRANSMILENIO EN VIVO: GTFS-Realtime oficial (gtfs.transmilenio.gov.co, cada ~21 s)
+# ---------------------------------------------------------------------------
+GTFS_RT = "https://gtfs.transmilenio.gov.co"
+
+
+def _gtfs_rt(nombre, intentos=3):
+    """Descarga y decodifica un feed GTFS-Realtime (positions, tripupdates o alerts).
+    A veces el archivo llega cortado (TransMilenio lo reescribe cada ~21 s y se descarga justo en ese
+    momento): sale "Wire format was corrupt". Se reintenta un par de veces con una pausa corta."""
+    from google.protobuf.message import DecodeError
+    from google.transit import gtfs_realtime_pb2
+    ultimo_error = None
+    for k in range(intentos):
+        try:
+            r = req_lib.get(f"{GTFS_RT}/{nombre}.pb", headers=TM_CABECERAS, timeout=20)
+            if r.status_code in (401, 403):
+                raise _SinAcceso()
+            r.raise_for_status()
+            largo = r.headers.get("Content-Length")
+            if largo and largo.isdigit() and int(largo) != len(r.content):
+                raise DecodeError(f"llegaron {len(r.content)} de {largo} bytes")
+            m = gtfs_realtime_pb2.FeedMessage()
+            m.ParseFromString(r.content)
+            if not m.entity:
+                raise DecodeError("el archivo llego vacio")
+            return m
+        except _SinAcceso:
+            raise
+        except (DecodeError, req_lib.RequestException) as e:
+            ultimo_error = e
+            time.sleep(1.2 * (k + 1))
+    raise ultimo_error
+
+
+def _cache_vivo(respuesta, segundos):
+    # la cache de Vercel guarda la respuesta unos segundos: TransMilenio se consulta una sola vez
+    # por intervalo aunque haya muchas personas mirando, y nada si nadie mira
+    respuesta.headers["Cache-Control"] = f"public, max-age=0, s-maxage={segundos}, stale-while-revalidate={segundos}"
+    return respuesta
+
+
+# Ultimas lecturas guardadas en memoria (unos 2 minutos): al abrir la pagina los buses arrancan
+# moviendose y con su estela, en vez de esperar la lectura siguiente. En local dura mientras flask
+# este prendido; en Vercel, mientras la funcion siga caliente (si no, la pagina arranca sin historia).
+_HIST_VIVO = []
+HIST_VIVO_N = 6
+_VIVO_BUENA = {}   # ultima respuesta que salio bien, por si la siguiente falla
+
+
+def _guardar_hist_vivo(hora, buses):
+    if not hora or (_HIST_VIVO and _HIST_VIVO[-1][0] >= hora):
+        return
+    _HIST_VIVO.append((hora, {b[0]: (b[1], b[2]) for b in buses}))
+    del _HIST_VIVO[:-HIST_VIVO_N]
+
+
+def _hist_vivo(actual):
+    """Por bus, sus posiciones anteriores que cambian: {vehiculo: [[lon, lat, hora], ...]} (de la mas vieja a la mas nueva)."""
+    salida = {}
+    for hora, pos in _HIST_VIVO:
+        if hora >= actual:
+            continue
+        for vid, (lo, la) in pos.items():
+            h = salida.setdefault(vid, [])
+            if not h or h[-1][0] != lo or h[-1][1] != la:
+                h.append([lo, la, hora])
+    return salida
+
+
+@app.route("/api/transmilenio/vivo")
+def transmilenio_vivo():
+    """Posicion de cada bus en via (positions.pb) con el retraso de su viaje (tripupdates.pb).
+    Respuesta compacta: b = [[vehiculo, lon, lat, route_id, placa, numero, parada, hora_reporte, retraso_s], ...]
+    Con ?historia=1 agrega h: las posiciones de las ultimas lecturas guardadas (para arrancar con movimiento)."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    try:
+        with ThreadPoolExecutor(2) as ex:
+            f_pos, f_tu = ex.submit(_gtfs_rt, "positions"), ex.submit(_gtfs_rt, "tripupdates")
+            pos = f_pos.result()
+            try:
+                tu = f_tu.result()
+            except Exception:
+                tu = None   # sin retrasos, pero las posiciones siguen sirviendo
+    except _SinAcceso:
+        return _cache_vivo(jsonify({"ok": False, "sin_acceso": True,
+                                    "error": "TransMilenio no esta dejando consultar su GTFS en tiempo real"}), 60), 503
+    except Exception as e:
+        if _VIVO_BUENA:
+            salida = dict(_VIVO_BUENA, viejo=True, error=f"TransMilenio no respondio bien ({e}); se muestra la ultima lectura")
+            if request.args.get("historia"):
+                salida["h"] = _hist_vivo(salida["hora"])
+            return _cache_vivo(jsonify(salida), 5)
+        return jsonify({"ok": False, "error": f"No se pudo leer el GTFS en tiempo real: {e}"}), 502
+
+    retraso = {}
+    if tu is not None:
+        for e in tu.entity:
+            u = e.trip_update
+            if u.HasField("delay"):
+                retraso[u.vehicle.id or u.trip.trip_id] = u.delay
+    buses, ultimo = [], 0
+    for e in pos.entity:
+        if not e.HasField("vehicle"):
+            continue
+        v = e.vehicle
+        if not v.HasField("position") or not v.position.latitude:
+            continue
+        ultimo = max(ultimo, v.timestamp)
+        buses.append([v.vehicle.id or e.id, round(v.position.longitude, 5), round(v.position.latitude, 5), v.trip.route_id,
+                      v.vehicle.license_plate, v.vehicle.label, v.stop_id, v.timestamp,
+                      retraso.get(v.vehicle.id, retraso.get(v.trip.trip_id))])
+    _guardar_hist_vivo(ultimo, buses)
+    salida = {"ok": True, "hora": ultimo, "n": len(buses), "b": buses,
+              "fuente": "TransMilenio S.A. - GTFS Realtime (gtfs.transmilenio.gov.co)"}
+    _VIVO_BUENA.clear()
+    _VIVO_BUENA.update(salida)
+    if request.args.get("historia"):
+        salida["h"] = _hist_vivo(ultimo)
+    return _cache_vivo(jsonify(salida), 15)
+
+
+@app.route("/api/transmilenio/vivo/red")
+def transmilenio_vivo_red():
+    """Lo que no cambia en el dia para el visor en vivo (del GTFS programado): nombre, tipo y color
+    de cada ruta y el nombre de cada parada. r = {route_id: [codigo, nombre, agencia, color]}, p = {stop_id: nombre}"""
+    import csv
+    import io
+
+    try:
+        archivo = _gtfs_mas_reciente()
+        z = _ZipRemoto(f"{GTFS_ALMACEN}/{archivo}")
+        tabla = lambda n: csv.DictReader(io.StringIO(z.leer(n)))
+        agencias = {a["agency_id"]: a["agency_name"].split("-", 1)[-1] for a in tabla("agency.txt")}
+        rutas = {r["route_id"]: [r.get("route_short_name", ""), r.get("route_long_name", ""), r.get("agency_id", ""),
+                                 r.get("route_color", "")] for r in tabla("routes.txt")}
+        paradas = {p["stop_id"]: (p.get("stop_name") or "").strip() for p in tabla("stops.txt")}
+    except _SinAcceso:
+        return _sin_acceso()
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"No se pudo leer el GTFS de TransMilenio: {e}"}), 502
+    return _con_cache(jsonify({"ok": True, "gtfs": archivo, "agencias": agencias, "r": rutas, "p": paradas}), 6 * 3600)
+
+
+@app.route("/api/transmilenio/vivo/trazado")
+def transmilenio_vivo_trazado():
+    """Trazado por las calles de una ruta del GTFS por su route_id (?rid=10073): los trazados
+    de sus viajes (uno o dos por sentido y sus variantes, hasta 6), como [[lon, lat], ...]."""
+    from collections import Counter
+
+    rid = request.args.get("rid", "").strip()
+    if not re.fullmatch(r"[\w\-\.]+", rid):
+        return jsonify({"ok": False, "error": "Falta ?rid=10073"}), 400
+    try:
+        archivo = _gtfs_mas_reciente()
+        z = _ZipRemoto(f"{GTFS_ALMACEN}/{archivo}")
+        lineas = z.lineas("trips.txt")
+        enc = next(lineas).decode("utf-8-sig").strip().split(",")
+        i_r, i_s = enc.index("route_id"), enc.index("shape_id")
+        usos = Counter()
+        for l in lineas:
+            c = l.rstrip(b"\r").decode("utf-8", "replace").split(",")
+            if len(c) > max(i_r, i_s) and c[i_r] == rid and c[i_s]:
+                usos[c[i_s]] += 1
+        if not usos:
+            return _con_cache(jsonify({"ok": False, "error": f"La ruta {rid} no tiene trazado en el GTFS"}), 86400), 404
+        elegidos = [s for s, _ in usos.most_common(6)]
+        puntos = {s: [] for s in elegidos}
+        claves = {s.encode() + b"," for s in elegidos}
+        lineas = z.lineas("shapes.txt")
+        enc = next(lineas).decode("utf-8-sig").strip().split(",")
+        i_s, i_la, i_lo, i_q = (enc.index("shape_id"), enc.index("shape_pt_lat"),
+                                enc.index("shape_pt_lon"), enc.index("shape_pt_sequence"))
+        for l in lineas:
+            if not any(l.startswith(k) for k in claves):
+                continue
+            c = l.rstrip(b"\r").decode().split(",")
+            puntos[c[i_s]].append((int(c[i_q]), round(float(c[i_lo]), 5), round(float(c[i_la]), 5)))
+    except _SinAcceso:
+        return _sin_acceso()
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"No se pudo leer el GTFS: {e}"}), 502
+    trazados = [[[lo, la] for _, lo, la in sorted(puntos[s])] for s in elegidos if len(puntos[s]) > 1]
+    return _con_cache(jsonify({"ok": True, "rid": rid, "trazados": trazados}), 7 * 24 * 3600)
+
+
+_PARADAS_GTFS = {"t": 0, "p": {}}
+
+
+def _paradas_gtfs():
+    """Paradas del GTFS programado {stop_id: (lon, lat, nombre)}, guardadas 6 horas en memoria."""
+    import csv
+    import io
+    if time.time() - _PARADAS_GTFS["t"] > 6 * 3600 or not _PARADAS_GTFS["p"]:
+        z = _ZipRemoto(f"{GTFS_ALMACEN}/{_gtfs_mas_reciente()}")
+        _PARADAS_GTFS["p"] = {p["stop_id"]: (round(float(p["stop_lon"]), 5), round(float(p["stop_lat"]), 5), (p.get("stop_name") or "").strip())
+                              for p in csv.DictReader(io.StringIO(z.leer("stops.txt"))) if p.get("stop_lat")}
+        _PARADAS_GTFS["t"] = time.time()
+    return _PARADAS_GTFS["p"]
+
+
+@app.route("/api/transmilenio/vivo/alertas")
+def transmilenio_vivo_alertas():
+    """Novedades activas de la operacion (alerts.pb): desvios, cierres y cambios de parada."""
+    from google.transit import gtfs_realtime_pb2 as rt
+    try:
+        m = _gtfs_rt("alerts")
+    except _SinAcceso:
+        return _cache_vivo(jsonify({"ok": False, "sin_acceso": True}), 60), 503
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"No se pudo leer las alertas: {e}"}), 502
+    texto = lambda tr: (tr.translation[0].text if tr.translation else "").replace("\\", " · ").strip()
+    try:
+        paradas = _paradas_gtfs()
+    except Exception:
+        paradas = {}   # sin coordenadas: las novedades salen igual, pero no en el mapa
+    ahora = time.time()
+    alertas = []
+    for e in m.entity:
+        a = e.alert
+        if a.active_period and not any((p.start or 0) <= ahora <= (p.end or 1e12) for p in a.active_period):
+            continue
+        alertas.append({"t": texto(a.header_text), "d": texto(a.description_text),
+                        "efecto": rt.Alert.Effect.Name(a.effect),
+                        "rutas": sorted({i.route_id for i in a.informed_entity if i.route_id}),
+                        # paradas afectadas con sus coordenadas: [lon, lat, nombre] (hasta 40 por novedad)
+                        "paradas": [list(paradas[s]) for s in dict.fromkeys(i.stop_id for i in a.informed_entity if i.stop_id)
+                                    if s in paradas][:40],
+                        "desde": min((p.start for p in a.active_period if p.start), default=None)})
+    return _cache_vivo(jsonify({"ok": True, "n": len(alertas), "alertas": alertas}), 60)
+
+
 @app.route("/api/status")
 def status():
     return jsonify({"ok": True, "mensaje": "API GeoDB Andes activa (Vercel + Supabase)"})

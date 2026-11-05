@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buses en vivo | Universidad de los Andes</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Sans+3:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css" rel="stylesheet">
+
+<style>
+    :root {
+        --tinta: #1f2226; --tinta-2: #52514e; --tenue: #898781;
+        --amarillo: #f5c400; --amarillo-osc: #d7aa00; --vivo: #22c55e;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; font-family: "Inter", system-ui, sans-serif; color: var(--tinta); overflow: hidden; background: #111; }
+    button, input, select { font: inherit; }
+    [hidden] { display: none !important; }
+
+    header {
+        height: 72px; display: flex; align-items: center; gap: 18px; padding: 0 24px;
+        background: rgba(255,255,255,.97); border-bottom: 1px solid #e5e5de; box-shadow: 0 3px 15px rgba(34,36,39,.06);
+        position: relative; z-index: 10;
+    }
+    header .logo-box { height: 42px; display: flex; align-items: center; padding-right: 18px; border-right: 1px solid #e5e5de; }
+    header .logo-box img { max-height: 38px; }
+    header small { display: block; color: #898d91; font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+    header strong { display: block; font: 700 21px/1.1 "Source Sans 3", sans-serif; }
+    header nav { margin-left: auto; display: flex; gap: 8px; }
+    header nav a { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 8px;
+        color: var(--tinta); font-size: 13px; font-weight: 700; text-decoration: none; border: 1px solid #e5e5de; background: #fff; }
+    header nav a.primario { background: var(--amarillo); border-color: var(--amarillo-osc); }
+    header nav a svg { width: 16px; height: 16px; }
+
+    #mapa { position: absolute; top: 72px; left: 360px; right: 0; bottom: 0; }
+
+    /* ---------- Panel ---------- */
+    .panel {
+        position: absolute; top: 72px; left: 0; bottom: 0; width: 360px; overflow-y: auto;
+        background: #fbfbf8; border-right: 1px solid #e5e5de; padding: 16px; font-size: 13px;
+    }
+    .panel h2 { margin: 0 0 2px; font: 700 20px/1.15 "Source Sans 3", sans-serif; }
+    .panel .sub { margin: 0 0 12px; color: var(--tinta-2); font-size: 12.5px; line-height: 1.5; }
+    .panel h3 { margin: 18px 0 6px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--tenue); }
+    .total { display: flex; align-items: baseline; gap: 10px; padding: 14px 14px 12px; border-radius: 12px; background: #16181b; color: #fff; }
+    .total b { font: 700 40px/1 "Source Sans 3", sans-serif; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+    .total span { font-size: 12px; color: #c9cbcf; line-height: 1.35; }
+    .pulso { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--vivo); margin-right: 6px; vertical-align: 1px;
+        box-shadow: 0 0 0 0 rgba(34,197,94,.6); animation: pulso 2s infinite; }
+    .pulso.viejo { background: #f59e0b; animation: none; }
+    @keyframes pulso { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.6); } 70% { box-shadow: 0 0 0 8px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }
+    .tipos { display: flex; flex-direction: column; gap: 4px; }
+    .tipos label { display: grid; grid-template-columns: 16px 12px 1fr auto; align-items: center; gap: 8px; padding: 7px 10px;
+        border: 1px solid #e5e5de; border-radius: 9px; background: #fff; cursor: pointer; }
+    .tipos label i { width: 12px; height: 12px; border-radius: 50%; }
+    .tipos label b { font-variant-numeric: tabular-nums; }
+    .campo { display: block; margin-bottom: 8px; }
+    .campo input { width: 100%; padding: 8px 10px; border: 1px solid #d9d9d2; border-radius: 9px; background: #fff; }
+    .lista { display: flex; flex-direction: column; gap: 4px; max-height: 300px; overflow-y: auto; }
+    .lista button {
+        display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; width: 100%; text-align: left;
+        padding: 7px 10px; border: 1px solid #e5e5de; border-radius: 9px; background: #fff; cursor: pointer; font-size: 12.5px; color: var(--tinta);
+    }
+    .lista button:hover { border-color: #c8c8bf; }
+    .lista button small { color: var(--tenue); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cod { display: inline-block; min-width: 44px; padding: 2px 7px; border-radius: 6px; font-weight: 800; font-size: 12px; text-align: center; color: #fff; }
+    .filtro { display: flex; align-items: center; gap: 8px; padding: 8px 10px; margin-bottom: 8px; border-radius: 9px; background: #fff7d1; border: 1px solid #f1d27a; font-size: 12.5px; }
+    .filtro button { margin-left: auto; border: 1px solid #d7aa00; background: #fff; border-radius: 7px; padding: 4px 9px; cursor: pointer; font-size: 12px; font-weight: 600; }
+    .aviso { padding: 10px 12px; background: #eef5fd; border: 1px solid #c9ddf5; border-radius: 10px; font-size: 12px; line-height: 1.55; color: #24364d; margin-top: 14px; }
+    .aviso summary { cursor: pointer; font-weight: 700; }
+    .aviso p { margin: 6px 0 0; }
+    .error { padding: 10px 12px; background: #fff8e1; border: 1px solid #f1d27a; border-radius: 10px; font-size: 12.5px; line-height: 1.5; margin: 10px 0; }
+    .alertas { max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+    .alertas div { padding: 7px 9px; background: #fff; border: 1px solid #e5e5de; border-radius: 8px; font-size: 11.5px; line-height: 1.4; }
+    .alertas div b { display: block; font-size: 12px; }
+    .alertas div small { color: var(--tenue); }
+
+    /* ---------- Ficha del bus ---------- */
+    .ficha { position: absolute; top: 88px; right: 16px; width: 310px; z-index: 5; padding: 14px 16px; border-radius: 14px;
+        background: rgba(22,24,27,.94); color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,.35); font-size: 12.5px; }
+    .ficha .cerrar { position: absolute; top: 8px; right: 8px; border: 0; background: none; color: #c9cbcf; cursor: pointer; padding: 4px; }
+    .ficha h4 { margin: 8px 0 2px; font: 700 18px/1.2 "Source Sans 3", sans-serif; }
+    .ficha .tipo { color: #c9cbcf; font-size: 12px; }
+    .ficha h5 { margin: 12px 0 4px; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: #f5c400; }
+    .ficha dl { display: grid; grid-template-columns: auto 1fr; gap: 5px 12px; margin: 6px 0 4px; }
+    .ficha dt { color: #9aa0a6; }
+    .ficha dd { margin: 0; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+    .ficha .nota { color: #9aa0a6; font-size: 11.5px; line-height: 1.45; margin: 6px 0 10px; }
+    .ficha .botones { display: flex; gap: 6px; }
+    .ficha .botones button { flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 6px; border-radius: 8px;
+        border: 1px solid #3a3d42; background: #23262a; color: #fff; cursor: pointer; font-size: 12px; font-weight: 600; }
+    .ficha .botones button.activo { background: var(--amarillo); border-color: var(--amarillo-osc); color: #1f2226; }
+    .ficha svg { width: 15px; height: 15px; }
+    .maplibregl-ctrl-attrib { font-size: 10px; }
+    .maplibregl-popup.tip .maplibregl-popup-content { background: rgba(22,24,27,.95); color: #fff; padding: 6px 9px; font-size: 12px; border-radius: 8px; }
+    .maplibregl-popup.tip .maplibregl-popup-tip { display: none; }
+    /* campana de novedades sobre el mapa */
+    .campana { position: absolute; z-index: 6; top: 84px; left: 412px; width: 40px; height: 40px; border-radius: 10px; border: 0; cursor: pointer;
+        background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.3); display: inline-flex; align-items: center; justify-content: center; color: var(--tinta); }
+    .campana svg { width: 20px; height: 20px; }
+    .campana.activo { background: var(--amarillo); }
+    .campana .globo { position: absolute; top: -6px; right: -8px; min-width: 22px; height: 20px; padding: 0 5px; border-radius: 10px;
+        background: #ef4444; color: #fff; font-size: 11px; font-weight: 800; line-height: 20px; text-align: center; box-shadow: 0 0 0 2px #fff; }
+    .novedades { position: absolute; z-index: 6; top: 132px; left: 412px; width: 340px; max-height: calc(100% - 160px); display: flex; flex-direction: column;
+        background: #fff; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.35); overflow: hidden; font-size: 12.5px; }
+    .novedades .cab { padding: 10px 12px; border-bottom: 1px solid #e5e5de; }
+    .novedades .cab b { font: 700 16px/1.2 "Source Sans 3", sans-serif; }
+    .novedades .cab label { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; color: var(--tinta-2); cursor: pointer; }
+    .novedades .cab input[type=search] { width: 100%; margin-top: 8px; padding: 6px 9px; border: 1px solid #d9d9d2; border-radius: 8px; }
+    .novedades .items { overflow-y: auto; padding: 6px; display: flex; flex-direction: column; gap: 4px; }
+    .novedades .item { text-align: left; padding: 8px 10px; border: 1px solid #e5e5de; border-radius: 9px; background: #fff; cursor: pointer; line-height: 1.4; }
+    .novedades .item:hover, .novedades .item.activo { border-color: #f59e0b; background: #fffbeb; }
+    .novedades .item b { display: block; font-size: 12.5px; }
+    .novedades .item small { color: var(--tenue); }
+    .novedades .efecto { display: inline-block; padding: 1px 6px; border-radius: 5px; background: #fde68a; color: #78350f; font-size: 10.5px; font-weight: 700; margin-right: 4px; }
+    .estado-vivo { margin: 8px 0 0; font-size: 12px; color: #92400e; }
+    @media (max-width: 860px) { .campana { left: 56px; top: calc(72px + 42% + 10px); } .novedades { left: 10px; right: 10px; width: auto; top: calc(72px + 42% + 58px); } }
+
+    @media (max-width: 860px) {
+        .panel { width: 100%; bottom: auto; height: 42%; border-right: 0; border-bottom: 1px solid #e5e5de; }
+        #mapa { left: 0; top: calc(72px + 42%); }
+        .ficha { top: auto; bottom: 12px; right: 10px; left: 10px; width: auto; }
+        header nav a span { display: none; }
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <span class="logo-box"><img src="../../marca/uniandes-logo-cabecera.svg?v=2" alt="Universidad de los Andes">
+<img class="logo-sinergia" src="../../marca/sinergia-logo-negro.png?v=2" alt="Lab SinergIA" style="height:24px;width:auto;max-width:none;max-height:none;flex:none;margin-left:12px;display:block"></span>
+    <span><small>Geodata de Bogotá · Movilidad</small><strong>Buses en vivo</strong></span>
+    <nav>
+        <a href="Buses.html"><i data-lucide="route"></i> <span>Rutas y horarios</span></a>
+        <a href="Movilidad.html"><i data-lucide="arrow-left"></i> <span>Volver al visor</span></a>
+        <a class="primario" href="../../Index.html"><i data-lucide="house"></i> <span>Inicio</span></a>
+    </nav>
+</header>
+
+<aside class="panel">
+    <h2>TransMilenio y SITP en vivo</h2>
+    <p class="sub">La posición de cada bus en vía, tal como la publica TransMilenio cada unos 20 segundos. <b>Toca un bus</b>
+        para seguirlo: desde ese momento se va marcando por dónde va, y su ficha muestra la velocidad y el retraso.</p>
+
+    <div class="total"><b id="txtTotal">—</b><span><span class="pulso" id="pulso"></span><span id="txtHora">Conectando…</span></span></div>
+    <div class="error" id="error" hidden></div>
+    <p class="estado-vivo" id="estadoVivo" hidden></p>
+
+    <h3>Por tipo de servicio</h3>
+    <div class="tipos" id="tipos"></div>
+    <div class="tipos" style="margin-top:4px">
+        <label><input type="checkbox" id="chkTroncales" checked><i style="background:#ef3b2c;border-radius:2px;height:4px"></i><span>Red troncal de TransMilenio</span><b></b></label>
+    </div>
+
+    <h3>Rutas en vía</h3>
+    <div class="filtro" id="filtro" hidden><span id="txtFiltro"></span><button type="button" id="btnQuitarFiltro">Ver todas</button></div>
+    <label class="campo"><input type="search" id="buscar" placeholder="Busca una ruta: B10, C25, H907, Usme…" autocomplete="off"></label>
+    <div class="lista" id="listaRutas"></div>
+
+
+    <details class="aviso">
+        <summary>¿De dónde salen estos datos?</summary>
+        <p>Del <b>GTFS Realtime oficial de TransMilenio</b> (<code>gtfs.transmilenio.gov.co</code>): <code>positions.pb</code> trae dónde está
+           cada bus, <code>tripupdates.pb</code> el retraso de su viaje y <code>alerts.pb</code> las novedades (desvíos, cierres). Se
+           actualizan cada unos 21 segundos.</p>
+        <p>Los nombres y colores de las rutas, los nombres de las paradas y el trazado de cada ruta salen del GTFS programado del día.</p>
+        <p>Entre un reporte y el siguiente cada bus sigue avanzando con la dirección y la velocidad que traía, y se corrige
+           suave cuando llega el reporte nuevo. Al abrir la página los buses arrancan con las lecturas que la API ya tenía
+           guardadas, o con las que guardó tu navegador si la recargas.</p>
+        <p>El recorrido del bus que sigues se dibuja <b>sobre el trazado de su ruta</b> entre un reporte y el siguiente, porque
+           TransMilenio solo da un punto cada 20 s. Si el bus se sale del trazado (desvío), se dibuja el punto tal cual llegó.</p>
+        <p>TransMilenio advierte que estos datos están en proceso de mejora continua.</p>
+    </details>
+</aside>
+
+<div id="mapa"></div>
+<button type="button" class="campana" id="btnCampana" title="Novedades de la operación (desvíos, cierres)"><i data-lucide="bell"></i><span class="globo" id="globo" hidden></span></button>
+<section class="novedades" id="novedades" hidden>
+    <div class="cab">
+        <b id="txtNovedades">Novedades de la operación</b>
+        <label><input type="checkbox" id="chkNovMapa" checked> Ver las paradas afectadas en el mapa</label>
+        <input type="search" id="buscarNov" placeholder="Filtra por ruta, barrio o palabra…" autocomplete="off">
+    </div>
+    <div class="items" id="listaNov"></div>
+</section>
+
+<article class="ficha" id="ficha" hidden>
+    <button type="button" class="cerrar" id="cerrarFicha" aria-label="Cerrar" title="Cerrar"><i data-lucide="x"></i></button>
+    <div id="fichaCuerpo"></div>
+    <div class="botones">
+        <button type="button" id="btnSeguir" class="activo"><i data-lucide="locate-fixed"></i> Seguir</button>
+        <button type="button" id="btnSoloRuta"><i data-lucide="filter"></i> Solo su ruta</button>
+        <button type="button" id="btnTrazado" title="Recorrido que la ruta tiene programado (GTFS)"><i data-lucide="route"></i> Programado</button>
+    </div>
+</article>
+
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@1.52.0/dist/umd/lucide.min.js"></script>
+<script>
+(() => {
+    "use strict";
+
+    // ---------- Configuracion ----------
+    const esLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+    const API = esLocal ? "http://localhost:5000/api/transmilenio" : "/api/transmilenio";
+    const CADA_MS = 21000;        // TransMilenio publica cada ~21 s
+    const CUADRO_LEJOS = 90;      // ms entre cuadros con toda la ciudad a la vista (miles de buses)
+    const CUADRO_CERCA = 33;      // ms entre cuadros de cerca (pocos buses en pantalla): ~30 por segundo
+    const PEGAR_M = 90;           // un reporte a menos de 90 m del trazado se pega al trazado
+    const HUECO_M = 150;          // dos reportes sueltos (fuera del trazado) mas lejos que esto no se unen con una recta
+    const ESPERA_ERROR_MS = 5000; // si una lectura falla, se reintenta pronto
+    const TIEMPO_MAX_MS = 15000;  // una lectura que tarda mas que esto se corta y se reintenta
+    const ESTELA_S = 130;         // segundos de reportes que se guardan de cada bus
+    const PREDICE_M = 1000;       // lo maximo que se simula que avanza un bus mientras llega su proximo reporte
+    const PREDICE_S = 180;        // y por cuanto tiempo como maximo (cubre las pausas largas del feed)
+    const CORRIGE_S = 2.5;        // segundos que tarda en corregirse suave cuando llega el reporte real
+    const VEL_MIN = 0.4;          // m/s: por debajo se considera quieto (no se simula avance)
+    const GUARDADO = "envivo-historia-v1";   // ultimas lecturas guardadas en el navegador (para recargar sin perderlas)
+    const RETROCESO_M = 25;       // si el GPS "retrocede" menos que esto, es ruido: el bus no vuelve atras
+    const TRONCALES = "https://gis.transmilenio.gov.co/arcgis/rest/services/Troncal/consulta_rutas_troncales/MapServer/0/query" +
+        "?where=1%3D1&outFields=*&returnGeometry=true&outSR=4326&geometryPrecision=5&maxAllowableOffset=0.00003&f=geojson";
+    // tipo de servicio por agencia del GTFS: 1 troncal, 2 alimentador, 3-5 zonal, 6 dual, 7 cable
+    const TIPOS = [
+        { id: "troncal", nombre: "Troncal TransMilenio", color: "#ef3b2c", agencias: ["1"] },
+        { id: "dual", nombre: "Dual", color: "#ff9f1c", agencias: ["6"] },
+        { id: "alimentador", nombre: "Alimentador", color: "#3ecf6a", agencias: ["2"] },
+        { id: "zonal", nombre: "Zonal SITP", color: "#4ea1ff", agencias: ["3", "4", "5"] },
+        { id: "cable", nombre: "TransMiCable", color: "#c084fc", agencias: ["7"] }
+    ];
+    const TIPO_AGENCIA = {};
+    TIPOS.forEach((t) => t.agencias.forEach((a) => { TIPO_AGENCIA[a] = t; }));
+    const SIN_TIPO = { id: "otro", nombre: "Sin ruta en el GTFS", color: "#9aa0a6" };
+
+    const $ = (id) => document.getElementById(id);
+    const fmt = (v) => Number(v).toLocaleString("es-CO");
+    const escapar = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const iconos = () => { if (window.lucide) lucide.createIcons(); };
+    const vacio = () => ({ type: "FeatureCollection", features: [] });
+
+    let RED = { r: {}, p: {} };      // rutas y paradas del GTFS programado
+    const buses = new Map();         // id -> { de, a, t0, dur, datos }
+    const visibles = new Set(TIPOS.map((t) => t.id).concat("otro"));
+    let filtroRuta = null, ultimaHora = 0, temporizador = 0, moviendo = false, punteroAbajo = false;
+    const abajoPuntero = () => punteroAbajo;
+    window.addEventListener("pointerdown", (e) => { if (e.target.closest && e.target.closest("#mapa")) punteroAbajo = true; });
+    window.addEventListener("pointerup", () => { punteroAbajo = false; });
+    // el bus que se sigue: su recorrido desde que se eligio, pegado al trazado de su ruta
+    let SEL = null;                  // { id, rid, formas, forma, pts: [{ p, ts, s }], vS, tmax, lag, c, t0, sAct, seguir }
+
+    const rutaDe = (rid) => RED.r[rid] || null;
+    const tipoDe = (rid) => { const r = rutaDe(rid); return r ? (TIPO_AGENCIA[r[2]] || SIN_TIPO) : SIN_TIPO; };
+    const colorTipo = (rid) => tipoDe(rid).color;
+    const colorRuta = (rid) => { const r = rutaDe(rid); return r && /^[0-9a-f]{6}$/i.test(r[3]) ? "#" + r[3] : tipoDe(rid).color; };
+
+    // ---------- Mapa ----------
+    const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/";
+    const mapa = new maplibregl.Map({
+        container: "mapa", center: [-74.1, 4.65], zoom: 11, maxZoom: 18, antialias: false, attributionControl: { compact: true },
+        style: { version: 8, glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
+            sources: {
+                base: { type: "raster", tileSize: 256, maxzoom: 16, tiles: [ESRI + "World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"],
+                    attribution: "Mapa: Esri, HERE, Garmin, © OpenStreetMap · Buses: TransMilenio S.A. (GTFS Realtime)" },
+                nombres: { type: "raster", tileSize: 256, maxzoom: 16, tiles: [ESRI + "World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}"] }
+            },
+            layers: [{ id: "base", type: "raster", source: "base" }, { id: "nombres", type: "raster", source: "nombres", paint: { "raster-opacity": 0.8 } }] }
+    });
+    mapa.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left");
+
+    mapa.on("load", () => {
+        ["buses", "recorrido", "trazado", "sel"].forEach((s) => mapa.addSource(s, { type: "geojson", data: vacio(), maxzoom: 14, buffer: 64 }));
+        mapa.addSource("novedades", { type: "geojson", data: vacio() });
+        mapa.addSource("troncales", { type: "geojson", data: TRONCALES });
+        mapa.addLayer({ id: "troncales", type: "line", source: "troncales", paint: { "line-color": "#ef3b2c", "line-opacity": 0.3,
+            "line-width": ["interpolate", ["linear"], ["zoom"], 10, 1.2, 15, 4] } });
+        // trazado programado (solo si se pide), punteado para no confundirlo con lo real
+        mapa.addLayer({ id: "trazado", type: "line", source: "trazado", layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": ["get", "color"], "line-opacity": 0.75, "line-dasharray": [2, 1.5], "line-width": ["interpolate", ["linear"], ["zoom"], 10, 2.5, 15, 5] } });
+        // paradas afectadas por novedades (desvios, cierres): rombos naranja; la elegida, mas grande
+        mapa.addLayer({ id: "novedades", type: "circle", source: "novedades", layout: { visibility: "none" }, paint: {
+            "circle-radius": ["case", ["get", "sel"], ["interpolate", ["linear"], ["zoom"], 10, 6, 16, 11], ["interpolate", ["linear"], ["zoom"], 10, 3, 16, 7]],
+            "circle-color": ["case", ["get", "sel"], "#f59e0b", "#fbbf24"], "circle-opacity": ["case", ["get", "sel"], 1, 0.75],
+            "circle-stroke-color": "#78350f", "circle-stroke-width": ["case", ["get", "sel"], 2, 1] } });
+        mapa.on("click", "novedades", (e) => {
+            const f = e.features[0].properties, a = NOV.lista[f.i];
+            if (!a) return;
+            new maplibregl.Popup({ maxWidth: "300px" }).setLngLat(e.lngLat).setHTML(textoNovedad(a, f.parada)).addTo(mapa);
+        });
+        mapa.on("mouseenter", "novedades", () => { mapa.getCanvas().style.cursor = "pointer"; });
+        mapa.on("mouseleave", "novedades", () => { mapa.getCanvas().style.cursor = ""; });
+        mapa.addLayer({ id: "buses-halo", type: "circle", source: "buses", paint: {
+            "circle-color": ["get", "color"], "circle-opacity": 0.16, "circle-blur": 0.8,
+            "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 4, 13, 9, 16, 16] } });
+        mapa.addLayer({ id: "buses", type: "circle", source: "buses", paint: {
+            "circle-color": ["get", "color"],
+            "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 2.2, 13, 4, 16, 7.5],
+            "circle-stroke-color": "#0b0c0e", "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 12, 0, 15, 1.2] } });
+        mapa.addLayer({ id: "etiquetas", type: "symbol", source: "buses", minzoom: 14.5, layout: {
+            "text-field": ["get", "cod"], "text-size": 11, "text-offset": [0, 1.2], "text-anchor": "top", "text-font": ["Noto Sans Bold"] },
+            paint: { "text-color": "#fff", "text-halo-color": "#000", "text-halo-width": 1.2 } });
+        // recorrido en vivo del bus elegido y el bus mismo, resaltado
+        mapa.addLayer({ id: "recorrido-halo", type: "line", source: "recorrido", layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#f5c400", "line-opacity": 0.3, "line-width": ["interpolate", ["linear"], ["zoom"], 10, 8, 16, 16] } });
+        mapa.addLayer({ id: "recorrido", type: "line", source: "recorrido", layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#f5c400", "line-width": ["interpolate", ["linear"], ["zoom"], 10, 3.5, 16, 6.5] } });
+        mapa.addLayer({ id: "sel-halo", type: "circle", source: "sel", paint: {
+            "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 12, 16, 22], "circle-color": "#f5c400", "circle-opacity": 0.22, "circle-blur": 0.4 } });
+        mapa.addLayer({ id: "sel", type: "circle", source: "sel", paint: {
+            "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 6, 16, 10], "circle-color": ["get", "color"],
+            "circle-stroke-color": "#f5c400", "circle-stroke-width": 3.5 } });
+
+        mapa.on("click", "buses", (e) => elegir(e.features[0].properties.id));
+        const tip = new maplibregl.Popup({ closeButton: false, closeOnClick: false, className: "tip", offset: 12 });
+        mapa.on("mousemove", "buses", (e) => {
+            mapa.getCanvas().style.cursor = "pointer";
+            const b = buses.get(e.features[0].properties.id);
+            if (!b) return;
+            const r = rutaDe(b.datos.rid);
+            tip.setLngLat(e.lngLat).setHTML(`<b>${escapar(r ? r[0] : b.datos.rid)}</b> ${escapar(r ? r[1] : "")}` +
+                (b.datos.placa ? `<br>${escapar(b.datos.placa)}` : "")).addTo(mapa);
+        });
+        mapa.on("mouseleave", "buses", () => { mapa.getCanvas().style.cursor = ""; tip.remove(); });
+        // al mover el mapa aparecen otros buses: se vuelve a dibujar
+        mapa.on("movestart", (e) => { if (e.originalEvent) moviendo = true; });
+        mapa.on("moveend", () => { moviendo = false; redibujar(); });
+        // si se arrastra el mapa con la mano, deja de seguir al bus (el zoom no: se hace sobre el bus).
+        // Se mira el puntero directamente: si se espera al "dragstart" del mapa, la camara que sigue al bus
+        // le gana al arrastre y el mapa se siente pegado.
+        const lienzo = mapa.getCanvasContainer();
+        let abajo = null;
+        lienzo.addEventListener("pointerdown", (e) => { abajo = [e.clientX, e.clientY]; });
+        lienzo.addEventListener("pointermove", (e) => {
+            if (abajo && e.buttons && Math.hypot(e.clientX - abajo[0], e.clientY - abajo[1]) > 3 && SEL && SEL.seguir) seguir(false);
+        });
+        window.addEventListener("pointerup", () => { abajo = null; });
+        mapa.on("dragstart", () => { if (SEL && SEL.seguir) seguir(false); });
+        dibujar();
+    });
+
+    // ---------- Datos ----------
+    let pidiendoRed = null;
+    function cargarRed() {
+        // si la pagina abrio antes que la API, se vuelve a intentar en cada lectura hasta que llegue
+        if (RED.ok || pidiendoRed) return pidiendoRed || Promise.resolve();
+        pidiendoRed = fetch(`${API}/vivo/red`).then((r) => r.json()).then((j) => {
+            if (j.ok) { RED = j; resumen(); redibujar(); alertas(); }
+        }).catch((e) => console.warn("Sin nombres de rutas", e)).finally(() => { pidiendoRed = null; });
+        return pidiendoRed;
+    }
+    let primera = true;
+    async function leer() {
+        clearTimeout(temporizador);
+        try {
+            const corte = new AbortController(), reloj = setTimeout(() => corte.abort(), TIEMPO_MAX_MS);
+            const r = await fetch(`${API}/vivo${primera ? "?historia=1" : ""}`, { cache: "no-store", signal: corte.signal }).finally(() => clearTimeout(reloj));
+            const j = await r.json();
+            if (!j.ok) throw new Error(j.sin_acceso ? "TransMilenio no está dejando consultar su GTFS en tiempo real." : j.error);
+            $("error").hidden = true;
+            // la API respondio con su ultima lectura buena porque TransMilenio fallo: los buses siguen simulando
+            $("estadoVivo").hidden = !j.viejo;
+            $("estadoVivo").textContent = j.viejo ? "TransMilenio no respondió bien esta vez; se reintenta en unos segundos." : "";
+            if (primera) { primera = false; arrancar(j); } else actualizar(j);
+            guardarLocal();
+            cargarRed();
+            if (!document.hidden) temporizador = setTimeout(leer, j.viejo ? ESPERA_ERROR_MS : CADA_MS);
+            return;
+        } catch (e) {
+            $("error").hidden = false;
+            $("error").innerHTML = `<b>No llegaron datos nuevos.</b> ${escapar(e.name === "AbortError" ? "La API tardó demasiado." : e.message)}
+                Se vuelve a intentar en 5 segundos; mientras tanto los buses siguen avanzando a su velocidad.`;
+        }
+        if (!document.hidden) temporizador = setTimeout(leer, ESPERA_ERROR_MS);
+    }
+    document.addEventListener("visibilitychange", () => {
+        // con la pestana oculta no se pide nada; al volver se lee de una vez
+        if (document.hidden) clearTimeout(temporizador); else leer();
+    });
+
+    function actualizar(j) {
+        const ahora = performance.now(), vistos = new Set();
+        j.b.forEach(([id, lon, lat, rid, placa, num, parada, ts, retraso]) => {
+            vistos.add(id);
+            const datos = { id, rid, placa, num, parada, ts, retraso };
+            const b = buses.get(id);
+            if (!b) { const n = { datos, rastro: [[lon, lat, ts]] }; mover(n, ahora, null); buses.set(id, n); return; }
+            // la misma foto otra vez (se pidio antes de que TransMilenio publicara la siguiente): no se toca,
+            // para no frenar el bus en seco
+            if (ts === b.datos.ts) return;
+            const pos = posicion(b, ahora);
+            // de un viaje a otro el bus puede "saltar" lejos: ahi no se anima
+            const salto = distM(pos, [lon, lat]) > 3000;
+            b.datos = datos;
+            agregarRastro(b, [lon, lat, ts], salto);
+            mover(b, ahora, salto ? null : pos);
+            if (SEL && SEL.id === id) nuevoPunto(b, ahora, salto);
+        });
+        for (const id of buses.keys()) if (!vistos.has(id)) buses.delete(id);
+        ultimaHora = j.hora;
+        redibujar();
+        resumen();
+        if (SEL) ficha();
+    }
+
+    // ultimos reportes de cada bus (~2 minutos): para arrancar moviendose y adelantar su posicion
+    function agregarRastro(b, q, salto) {
+        if (salto) { b.rastro = [q]; return; }
+        const u = b.rastro[b.rastro.length - 1];
+        if (u && u[2] >= q[2]) return;
+        b.rastro.push(q);
+        while (b.rastro.length > 2 && q[2] - b.rastro[0][2] > ESTELA_S) b.rastro.shift();
+    }
+    // primera lectura: con las lecturas anteriores (de la API o del navegador) cada bus arranca ya moviendose
+    // desde donde estaba en la lectura anterior
+    function arrancar(j) {
+        const previas = j.h || {};
+        let local = {};
+        try {
+            const g = JSON.parse(localStorage.getItem(GUARDADO) || "null");
+            if (g && j.hora - g.hora < 300) local = g.b || {};
+        } catch (e) { /* sin almacenamiento: se arranca solo con lo de la API */ }
+        const ahora = performance.now();
+        j.b.forEach(([id, lon, lat, rid, placa, num, parada, ts, retraso]) => {
+            const datos = { id, rid, placa, num, parada, ts, retraso };
+            const hist = [...(previas[id] || []), ...(local[id] || [])].filter((q) => q[2] < ts).sort((a, b) => a[2] - b[2]);
+            const rastro = [];
+            hist.concat([[lon, lat, ts]]).forEach((q) => {
+                const u = rastro[rastro.length - 1];
+                if (u && u[2] === q[2]) return;
+                if (u && distM(u, q) > 3000) rastro.length = 0;   // otro viaje: se empieza de nuevo
+                rastro.push(q);
+            });
+            while (rastro.length > 2 && ts - rastro[0][2] > ESTELA_S) rastro.shift();
+            const b = { datos, rastro };
+            mover(b, ahora, null);
+            buses.set(id, b);
+        });
+        ultimaHora = j.hora;
+        redibujar();
+        resumen();
+    }
+    // Simulacion entre reportes: el bus sigue avanzando con la velocidad media de sus ultimos ~2 minutos
+    // (desde su ultimo reporte real, contando lo que ya paso desde que se tomo). Cuando llega el reporte
+    // siguiente se corrige suave desde donde se esta viendo, sin saltos.
+    const atraso = (ts) => Math.max(0, Math.min(25, Date.now() / 1000 - ts));
+    function velocidadMedia(r) {
+        const q = r[r.length - 1];
+        let k = 0;
+        while (k < r.length - 2 && q[2] - r[k + 1][2] >= 30) k++;   // el reporte mas viejo que deje al menos 30 s
+        const p = r[k], dt = q[2] - p[2];
+        if (dt < 15) return [0, 0];
+        const d = distM(p, q), v = d / dt;
+        if (v < VEL_MIN || v > 22) return [0, 0];                     // quieto, o un salto del GPS (mas de 80 km/h)
+        return [(q[0] - p[0]) / dt, (q[1] - p[1]) / dt];
+    }
+    function mover(b, ahora, vista) {
+        const q = b.rastro[b.rastro.length - 1];
+        b.real = [q[0], q[1]];
+        b.v = velocidadMedia(b.rastro);
+        const vm = distM([0, q[1]], [b.v[0], q[1] + b.v[1]]);
+        b.tmax = vm > 0 ? Math.min(PREDICE_S, PREDICE_M / vm) : 0;
+        b.lag = atraso(q[2]);
+        b.t0 = ahora;
+        // correccion: diferencia entre lo que se esta viendo y donde deberia ir; se desvanece en ~2 s
+        const ad = Math.min(b.lag, b.tmax), base = [b.real[0] + b.v[0] * ad, b.real[1] + b.v[1] * ad];
+        b.c = vista ? [vista[0] - base[0], vista[1] - base[1]] : [0, 0];
+    }
+    function seMueve(b, ahora) {
+        const dt = (ahora - b.t0) / 1000;
+        return (b.tmax > 0 && dt + b.lag < b.tmax) || ((b.c[0] || b.c[1]) && dt < 4 * CORRIGE_S);
+    }
+    function guardarLocal() {
+        try {
+            const b = {};
+            buses.forEach((x) => { if (x.rastro.length) b[x.datos.id] = x.rastro.slice(-5); });
+            localStorage.setItem(GUARDADO, JSON.stringify({ hora: ultimaHora, b }));
+        } catch (e) { /* lleno o bloqueado: no pasa nada, solo no se guarda */ }
+    }
+
+    // ---------- Geometria ----------
+    function distM(p, q) {
+        const k = Math.PI / 180, x = (q[0] - p[0]) * k * Math.cos((p[1] + q[1]) / 2 * k), y = (q[1] - p[1]) * k;
+        return Math.hypot(x, y) * 6371000;
+    }
+    // un trazado preparado para medir sobre el: puntos en metros y distancia acumulada
+    function prepararForma(coords) {
+        const lat0 = coords[0][1] * Math.PI / 180, kx = 111320 * Math.cos(lat0), ky = 110574;
+        const xy = coords.map(([lo, la]) => [lo * kx, la * ky]), s = [0];
+        for (let i = 1; i < xy.length; i++) s.push(s[i - 1] + Math.hypot(xy[i][0] - xy[i - 1][0], xy[i][1] - xy[i - 1][1]));
+        return { coords, xy, s, kx, ky, largo: s[s.length - 1] };
+    }
+    // el punto del trazado mas cercano a p: { s (metros desde el inicio), d (metros al trazado) }
+    function proyectar(F, p) {
+        const x = p[0] * F.kx, y = p[1] * F.ky;
+        let mejor = { s: 0, d: Infinity };
+        for (let i = 1; i < F.xy.length; i++) {
+            const [ax, ay] = F.xy[i - 1], [bx, by] = F.xy[i], dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+            const u = l2 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)) : 0;
+            const d = Math.hypot(x - (ax + u * dx), y - (ay + u * dy));
+            if (d < mejor.d) mejor = { s: F.s[i - 1] + u * (F.s[i] - F.s[i - 1]), d };
+        }
+        return mejor;
+    }
+    function indiceEn(F, s) {
+        let lo = 0, hi = F.s.length - 1;
+        while (hi - lo > 1) { const m = (lo + hi) >> 1; if (F.s[m] <= s) lo = m; else hi = m; }
+        return lo;
+    }
+    function puntoEn(F, s) {
+        s = Math.max(0, Math.min(F.largo, s));
+        const i = indiceEn(F, s), j = Math.min(i + 1, F.coords.length - 1), l = F.s[j] - F.s[i] || 1, u = (s - F.s[i]) / l;
+        return [F.coords[i][0] + (F.coords[j][0] - F.coords[i][0]) * u, F.coords[i][1] + (F.coords[j][1] - F.coords[i][1]) * u];
+    }
+    // el pedazo del trazado entre s0 y s1 (sigue las calles, no corta por las manzanas)
+    function tramo(F, s0, s1) {
+        const c = [puntoEn(F, s0)];
+        for (let i = indiceEn(F, s0) + 1; i < F.coords.length && F.s[i] < s1; i++) c.push(F.coords[i]);
+        c.push(puntoEn(F, s1));
+        return c;
+    }
+
+    // ---------- Bus elegido: recorrido en vivo pegado al trazado ----------
+    async function elegir(id) {
+        if (!id) {
+            if (SEL && SEL.seguir) zoomAlCentro(false);
+            SEL = null;
+            $("ficha").hidden = true;
+            verTrazado(false);
+            ["recorrido", "sel"].forEach((s) => mapa.getSource(s).setData(vacio()));
+            return;
+        }
+        const b = buses.get(id);
+        if (!b) return;
+        // el recorrido empieza con los reportes de los ultimos ~2 minutos que ya se tienen de este bus
+        SEL = { id, rid: b.datos.rid, formas: null, forma: null, pts: b.rastro.map((q) => ({ p: [q[0], q[1]], ts: q[2], s: null })),
+            vS: 0, tmax: 0, lag: 0, c: 0, t0: performance.now(), sAct: null, seguir: true };
+        $("ficha").hidden = false;
+        verTrazado(false);
+        seguir(true);
+        ficha();
+        // el trazado de su ruta, para pegarle el recorrido
+        try {
+            const j = await pedirTrazado(b.datos.rid);
+            if (!SEL || SEL.id !== id) return;
+            SEL.formas = (j.trazados || []).filter((c) => c.length > 1).map(prepararForma);
+            elegirForma();
+        } catch (e) { console.warn("Sin trazado para pegar el recorrido", e); }
+    }
+    // de los trazados de la ruta (uno por sentido), el que mejor explica los puntos: cerca y avanzando
+    function elegirForma() {
+        if (!SEL || !SEL.formas || !SEL.formas.length) return;
+        let mejor = null, puntaje = Infinity;
+        SEL.formas.forEach((F) => {
+            const pr = SEL.pts.map((q) => proyectar(F, q.p));
+            let pen = pr.reduce((a, q) => a + Math.min(q.d, 300), 0) / pr.length;
+            for (let i = 1; i < pr.length; i++) if (pr[i].s < pr[i - 1].s - RETROCESO_M) pen += 80;   // va en contra del trazado
+            if (pen < puntaje) { puntaje = pen; mejor = F; }
+        });
+        SEL.forma = mejor;
+        // se vuelven a pegar todos los puntos al trazado elegido
+        let sAnt = null;
+        SEL.pts.forEach((q) => {
+            const pr = proyectar(mejor, q.p);
+            q.s = pr.d <= PEGAR_M ? (sAnt != null && pr.s < sAnt && sAnt - pr.s < RETROCESO_M * 4 ? sAnt : pr.s) : null;
+            if (q.s != null) sAnt = q.s;
+        });
+        simularSel(true);
+        redibujar();
+    }
+    // velocidad media del bus elegido sobre su trazado en los ultimos ~2 minutos (m/s)
+    function velocidadSel() {
+        const pts = SEL.pts.filter((q) => q.s != null), q = pts[pts.length - 1];
+        if (!q) return 0;
+        let k = 0;
+        while (k < pts.length - 2 && q.ts - pts[k + 1].ts >= 30) k++;
+        const p = pts[k], dt = q.ts - p.ts;
+        if (dt < 15) return 0;
+        const v = (q.s - p.s) / dt;
+        return v < VEL_MIN || v > 22 ? 0 : v;
+    }
+    // arranca la simulacion desde el ultimo reporte; "vista" = seguir desde donde se ve ahora (corrige suave)
+    function simularSel(desdeCero) {
+        const q = SEL.pts[SEL.pts.length - 1];
+        SEL.vS = velocidadSel();
+        SEL.tmax = SEL.vS > 0 ? Math.min(PREDICE_S, PREDICE_M / SEL.vS) : 0;
+        SEL.lag = atraso(q.ts);
+        SEL.t0 = performance.now();
+        const base = q.s == null ? null : q.s + SEL.vS * Math.min(SEL.lag, SEL.tmax);
+        SEL.c = !desdeCero && base != null && SEL.sAct != null && Math.abs(SEL.sAct - base) < 400 ? SEL.sAct - base : 0;
+        if (desdeCero) SEL.sAct = null;
+    }
+    function nuevoPunto(b, ahora, salto) {
+        const ult = SEL.pts[SEL.pts.length - 1];
+        if (b.datos.ts === ult.ts) return;
+        if (b.datos.rid !== SEL.rid || salto) {   // empezo otro viaje: el recorrido vuelve a empezar
+            SEL.rid = b.datos.rid; SEL.pts = [{ p: [b.rastro[b.rastro.length - 1][0], b.rastro[b.rastro.length - 1][1]], ts: b.datos.ts, s: null }]; SEL.formas = null; SEL.forma = null; SEL.sAct = null;
+            pedirTrazado(b.datos.rid).then((j) => { if (SEL && SEL.id === b.datos.id) { SEL.formas = (j.trazados || []).filter((c) => c.length > 1).map(prepararForma); elegirForma(); } });
+            return;
+        }
+        const q = { p: [b.rastro[b.rastro.length - 1][0], b.rastro[b.rastro.length - 1][1]], ts: b.datos.ts, s: null };
+        SEL.pts.push(q);
+        if (SEL.pts.length <= 4 && SEL.formas) { elegirForma(); simularSel(false); return; }   // con pocos puntos todavia se corrige el sentido
+        if (!SEL.forma) return;
+        const pr = proyectar(SEL.forma, q.p);
+        if (pr.d <= PEGAR_M) {
+            const sAnt = ult.s;
+            // un pequeno "retroceso" del GPS no mueve el bus hacia atras
+            q.s = sAnt != null && pr.s < sAnt && sAnt - pr.s < RETROCESO_M * 4 ? sAnt : pr.s;
+        }
+        // sigue desde donde se esta viendo ahora, con la velocidad nueva
+        simularSel(false);
+    }
+    // posicion del bus elegido: sobre el trazado si sus dos ultimos puntos estan pegados
+    function posicionSel(b, ahora) {
+        const q = SEL.pts[SEL.pts.length - 1];
+        if (SEL.forma && q.s != null) {
+            const dt = (ahora - SEL.t0) / 1000, ad = Math.min(dt + SEL.lag, SEL.tmax);
+            let s = q.s + SEL.vS * ad + SEL.c * Math.exp(-dt / CORRIGE_S);
+            // nunca hacia atras: si la simulacion se adelanto un poco, el bus espera a que el real lo alcance
+            if (SEL.sAct != null && s < SEL.sAct && SEL.sAct - s < 150) s = SEL.sAct;
+            s = Math.min(s, SEL.forma.largo);
+            SEL.sAct = s;
+            return { pos: puntoEn(SEL.forma, s), s };
+        }
+        SEL.sAct = null;
+        return { pos: posicion(b, ahora), s: null };
+    }
+    // el recorrido como uno o varios tramos: sobre el trazado cuando se puede; si el bus anduvo fuera del
+    // trazado y entre dos reportes hay mucho espacio, se corta en vez de unirlos con una recta por las manzanas
+    function tramosRecorrido(actual) {
+        const tramos = [[]], F = SEL.forma, pts = SEL.pts;
+        const ult = () => tramos[tramos.length - 1];
+        const agregar = (lista) => lista.forEach((p) => { const c = ult(); if (!c.length || p[0] !== c[c.length - 1][0] || p[1] !== c[c.length - 1][1]) c.push(p); });
+        const cortar = () => { if (ult().length) tramos.push([]); };
+        agregar([pts[0].s != null && F ? puntoEn(F, pts[0].s) : pts[0].p]);
+        for (let i = 1; i < pts.length; i++) {
+            const a = pts[i - 1], b = pts[i];
+            // el ultimo tramo llega hasta donde va el bus ahora (incluida la parte simulada)
+            const fin = i === pts.length - 1 ? actual : null;
+            if (F && a.s != null && b.s != null && b.s >= a.s && b.s - a.s < 3000) agregar(tramo(F, a.s, fin && fin.s != null ? Math.max(b.s, fin.s) : b.s));
+            else {
+                const destino = fin ? fin.pos : b.p, desde = ult()[ult().length - 1];
+                if (desde && distM(desde, destino) > HUECO_M) cortar();
+                agregar([destino]);
+            }
+        }
+        if (pts.length === 1) agregar([actual.pos]);
+        return tramos.filter((c) => c.length > 1);
+    }
+    const lineaRecorrido = (actual) => tramosRecorrido(actual).flat();
+
+    // ---------- Animacion ----------
+    function posicion(b, ahora) {
+        const dt = (ahora - b.t0) / 1000, ad = Math.min(dt + b.lag, b.tmax), k = Math.exp(-dt / CORRIGE_S);
+        return [b.real[0] + b.v[0] * ad + b.c[0] * k, b.real[1] + b.v[1] * ad + b.c[1] * k];
+    }
+    function pasaFiltro(d) {
+        if (filtroRuta) return d.rid === filtroRuta;
+        return visibles.has(tipoDe(d.rid).id);
+    }
+    let ultimoCuadro = 0;
+    const redibujar = () => { dibujar.sucio = true; };
+    function dibujar(t = 0) {
+        requestAnimationFrame(dibujar);
+        if (!mapa.getSource("buses") || moviendo) return;
+        const cerca = mapa.getZoom() >= 13;
+        if (t - ultimoCuadro < (cerca ? CUADRO_CERCA : CUADRO_LEJOS)) return;
+        ultimoCuadro = t;
+        const ahora = performance.now(), feats = [];
+        // de cerca solo se mandan al mapa los buses en pantalla (con margen): asi alcanza para 20 cuadros por segundo
+        const c = mapa.getBounds(), mx = (c.getEast() - c.getWest()) * 0.25, my = (c.getNorth() - c.getSouth()) * 0.25;
+        const O = c.getWest() - mx, E = c.getEast() + mx, S = c.getSouth() - my, N = c.getNorth() + my;
+        let movimiento = false;
+        buses.forEach((b) => {
+            if (!pasaFiltro(b.datos) && !(SEL && SEL.id === b.datos.id)) return;
+            if (seMueve(b, ahora)) movimiento = true;
+            if (SEL && SEL.id === b.datos.id) return;   // el elegido se dibuja aparte, resaltado
+            const pos = posicion(b, ahora);
+            if (pos[0] < O || pos[0] > E || pos[1] < S || pos[1] > N) return;
+            const r = rutaDe(b.datos.rid);
+            feats.push({ type: "Feature", geometry: { type: "Point", coordinates: pos },
+                properties: { id: b.datos.id, color: colorTipo(b.datos.rid), cod: r ? r[0] : "" } });
+        });
+        // sin buses moviendose no hace falta volver a mandar los datos al mapa
+        if (!movimiento && !dibujar.sucio) return;
+        dibujar.sucio = false;
+        mapa.getSource("buses").setData({ type: "FeatureCollection", features: feats });
+        const b = SEL && buses.get(SEL.id);
+        if (!b) return;
+        const act = posicionSel(b, ahora), tramos = tramosRecorrido(act);
+        mapa.getSource("sel").setData({ type: "Feature", geometry: { type: "Point", coordinates: act.pos }, properties: { color: colorTipo(b.datos.rid) } });
+        mapa.getSource("recorrido").setData(tramos.length ? { type: "Feature", properties: {}, geometry: { type: "MultiLineString", coordinates: tramos } } : vacio());
+        if (SEL.seguir && !abajoPuntero() && !mapa.isMoving()) mapa.jumpTo({ center: act.pos });
+    }
+
+    // ---------- Panel ----------
+    function resumen() {
+        const porTipo = {}, porRuta = {};
+        buses.forEach((b) => {
+            const t = tipoDe(b.datos.rid).id;
+            porTipo[t] = (porTipo[t] || 0) + 1;
+            porRuta[b.datos.rid] = (porRuta[b.datos.rid] || 0) + 1;
+        });
+        $("txtTotal").textContent = fmt(buses.size);
+        reloj();
+        $("tipos").innerHTML = TIPOS.concat(porTipo.otro ? [SIN_TIPO] : []).map((t) => `<label>
+            <input type="checkbox" data-tipo="${t.id}" ${visibles.has(t.id) ? "checked" : ""}>
+            <i style="background:${t.color}"></i><span>${t.nombre}</span><b>${fmt(porTipo[t.id] || 0)}</b></label>`).join("");
+        $("tipos").querySelectorAll("input").forEach((c) => c.onchange = () => {
+            if (c.checked) visibles.add(c.dataset.tipo); else visibles.delete(c.dataset.tipo);
+            redibujar();
+        });
+        resumen.porRuta = porRuta;
+        listaRutas();
+    }
+    function reloj() {
+        if (!ultimaHora) return;
+        const s = Math.max(0, Math.round(Date.now() / 1000 - ultimaHora));
+        const h = new Date(ultimaHora * 1000).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        $("txtHora").textContent = `buses en vía · último reporte ${h} (hace ${s < 60 ? s + " s" : Math.round(s / 60) + " min"})`;
+        $("pulso").classList.toggle("viejo", s > 90);
+    }
+    setInterval(reloj, 1000);
+
+    function listaRutas() {
+        const q = $("buscar").value.trim().toLowerCase();
+        const por = resumen.porRuta || {};
+        const filas = Object.entries(por).map(([rid, n]) => ({ rid, n, r: rutaDe(rid) || [rid, "", "", ""] }))
+            .filter((f) => !q || f.r[0].toLowerCase().includes(q) || f.r[1].toLowerCase().includes(q))
+            .sort((a, b) => b.n - a.n).slice(0, 60);
+        const lista = $("listaRutas"), arriba = lista.scrollTop, panel = document.querySelector(".panel"), arribaPanel = panel.scrollTop;
+        lista.innerHTML = filas.length ? filas.map((f) => `<button type="button" data-rid="${escapar(f.rid)}">
+            <span class="cod" style="background:${colorRuta(f.rid)}">${escapar(f.r[0])}</span>
+            <small>${escapar(f.r[1])}</small><b>${f.n}</b></button>`).join("")
+            : `<div class="sub">Ninguna ruta en vía con ese nombre.</div>`;
+        lista.querySelectorAll("button").forEach((b) => b.onclick = () => soloRuta(b.dataset.rid));
+        lista.scrollTop = arriba; panel.scrollTop = arribaPanel;
+    }
+    $("buscar").oninput = listaRutas;
+
+    function soloRuta(rid) {
+        filtroRuta = rid;
+        const r = rutaDe(rid) || [rid, ""];
+        $("filtro").hidden = !rid;
+        if (rid) {
+            $("txtFiltro").innerHTML = `Solo la ruta <b>${escapar(r[0])}</b> ${escapar(r[1])}`;
+            const caja = new maplibregl.LngLatBounds();
+            buses.forEach((b) => { if (b.datos.rid === rid) caja.extend(b.real); });
+            if (!caja.isEmpty() && !(SEL && SEL.seguir)) mapa.fitBounds(caja, { padding: 80, maxZoom: 14, duration: 1000 });
+        }
+        redibujar();
+    }
+    $("btnQuitarFiltro").onclick = () => soloRuta(null);
+
+    // trazado de una ruta (GTFS), guardado para no pedirlo dos veces
+    const trazados = {};
+    function pedirTrazado(rid) {
+        if (!trazados[rid]) trazados[rid] = fetch(`${API}/vivo/trazado?rid=${encodeURIComponent(rid)}`).then((r) => r.json())
+            .catch((e) => { delete trazados[rid]; throw e; });
+        return trazados[rid];
+    }
+    async function verTrazado(si) {
+        $("btnTrazado").classList.toggle("activo", si);
+        if (!si || !SEL) { mapa.getSource("trazado") && mapa.getSource("trazado").setData(vacio()); return; }
+        const rid = SEL.rid, j = await pedirTrazado(rid), color = colorRuta(rid);
+        if (!SEL || SEL.rid !== rid || !$("btnTrazado").classList.contains("activo")) return;
+        mapa.getSource("trazado").setData({ type: "FeatureCollection", features: (j.trazados || []).map((c) =>
+            ({ type: "Feature", geometry: { type: "LineString", coordinates: c }, properties: { color } })) });
+    }
+
+    // ---------- Ficha del bus ----------
+    function largoRecorrido() {
+        let m = 0;
+        tramosRecorrido(posicionSel(buses.get(SEL.id), performance.now())).forEach((l) => {
+            for (let i = 1; i < l.length; i++) m += distM(l[i - 1], l[i]);
+        });
+        return m;
+    }
+    // velocidad del ultimo minuto, medida sobre el recorrido (por las calles)
+    function velocidadReciente() {
+        const pts = SEL.pts, q = pts[pts.length - 1];
+        let k = pts.length - 1;
+        while (k > 0 && q.ts - pts[k - 1].ts <= 65) k--;
+        const dt = q.ts - pts[k].ts;
+        if (dt < 15) return null;
+        let m = 0;
+        for (let i = k + 1; i < pts.length; i++) {
+            const a = pts[i - 1], b = pts[i];
+            m += SEL.forma && a.s != null && b.s != null && b.s >= a.s ? b.s - a.s : distM(a.p, b.p);
+        }
+        return m / dt * 3.6;
+    }
+    const km = (m) => m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1).replace(".", ",")} km`;
+    function ficha() {
+        const b = SEL && buses.get(SEL.id);
+        if (!b) {
+            $("fichaCuerpo").innerHTML = `<h4>Este bus ya no está en vía</h4><p class="tipo">Terminó su viaje o dejó de reportar.</p>`;
+            return;
+        }
+        const d = b.datos, r = rutaDe(d.rid), t = tipoDe(d.rid);
+        const ret = d.retraso == null ? "—" : Math.abs(d.retraso) < 60 ? "a tiempo"
+            : `${Math.round(Math.abs(d.retraso) / 60)} min ${d.retraso > 0 ? "tarde" : "adelantado"}`;
+        const v = velocidadReciente(), m = largoRecorrido();
+        const min = (SEL.pts[SEL.pts.length - 1].ts - SEL.pts[0].ts) / 60;
+        const media = min >= 1 ? m / (min * 60) * 3.6 : null;
+        $("fichaCuerpo").innerHTML = `
+            <span class="cod" style="background:${colorRuta(d.rid)}">${escapar(r ? r[0] : d.rid)}</span>
+            <h4>${escapar(r ? r[1] : "Ruta sin nombre en el GTFS")}</h4>
+            <div class="tipo">${t.nombre}</div>
+            <dl>
+                <dt>Placa</dt><dd>${escapar(d.placa || "—")}</dd>
+                <dt>Número del bus</dt><dd>${escapar(d.num || "—")}</dd>
+                <dt>Próxima parada</dt><dd>${escapar(RED.p[d.parada] || d.parada || "—")}</dd>
+                <dt>Frente al horario</dt><dd>${ret}</dd>
+            </dl>
+            <h5>Sus últimos minutos</h5>
+            <dl>
+                <dt>Recorrido</dt><dd>${SEL.pts.length < 2 ? "esperando el próximo reporte…" : `${km(m)} en ${Math.round(min)} min`}</dd>
+                <dt>Velocidad ahora</dt><dd>${v == null ? "midiendo…" : Math.round(v) + " km/h"}</dd>
+                <dt>Velocidad promedio</dt><dd>${media == null ? "—" : Math.round(media) + " km/h"}</dd>
+                <dt>Reportes en la línea</dt><dd>${SEL.pts.length}</dd>
+            </dl>
+            <p class="nota">La línea amarilla es por donde ha ido este bus (desde unos 2 minutos antes de tocarlo), sobre las calles de su ruta.
+                Entre reportes se simula que sigue a su velocidad media y se corrige con cada reporte real (cada unos 20 s).</p>`;
+        iconos();
+    }
+    function zoomAlCentro(si) {
+        mapa.scrollZoom.disable(); mapa.touchZoomRotate.disable();
+        mapa.scrollZoom.enable(si ? { around: "center" } : undefined);
+        mapa.touchZoomRotate.enable(si ? { around: "center" } : undefined);
+    }
+    function seguir(si) {
+        if (!SEL) return;
+        SEL.seguir = si;
+        zoomAlCentro(si);
+        $("btnSeguir").classList.toggle("activo", si);
+        const b = buses.get(SEL.id);
+        if (si && b) mapa.easeTo({ center: posicion(b, performance.now()), zoom: Math.max(mapa.getZoom(), 15.5), duration: 900 });
+    }
+    $("btnSeguir").onclick = () => seguir(!(SEL && SEL.seguir));
+    $("btnSoloRuta").onclick = () => { if (SEL) soloRuta(filtroRuta === SEL.rid ? null : SEL.rid); };
+    $("btnTrazado").onclick = () => verTrazado(!$("btnTrazado").classList.contains("activo"));
+    $("chkTroncales").onchange = () => mapa.setLayoutProperty("troncales", "visibility", $("chkTroncales").checked ? "visible" : "none");
+    $("cerrarFicha").onclick = () => elegir(null);
+
+    // ---------- Novedades (campana) ----------
+    const EFECTO = { DETOUR: "Desvío", NO_SERVICE: "Sin servicio", REDUCED_SERVICE: "Servicio reducido", STOP_MOVED: "Parada movida",
+        MODIFIED_SERVICE: "Servicio modificado", ADDITIONAL_SERVICE: "Servicio adicional", SIGNIFICANT_DELAYS: "Demoras",
+        OTHER_EFFECT: "Novedad", UNKNOWN_EFFECT: "Novedad" };
+    const NOV = { lista: [], sel: null, vistas: new Set() };
+    const codigosNov = (a) => a.rutas.map((rid) => (rutaDe(rid) || [rid])[0]);
+    function textoNovedad(a, parada) {
+        const rutas = codigosNov(a);
+        return `<b>${escapar(a.t || EFECTO[a.efecto] || "Novedad")}</b><br>${escapar(a.d)}<br>
+            <small><span class="efecto">${EFECTO[a.efecto] || "Novedad"}</span>${rutas.length ? "rutas " + escapar(rutas.slice(0, 8).join(", ")) : ""}
+            ${parada ? "<br>Parada: " + escapar(parada) : ""}${a.desde ? "<br>Desde " + new Date(a.desde * 1000).toLocaleString("es-CO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}</small>`;
+    }
+    async function alertas() {
+        try {
+            const j = await (await fetch(`${API}/vivo/alertas`)).json();
+            if (!j.ok) return;
+            // las mas recientes primero
+            NOV.lista = j.alertas.sort((a, b) => (b.desde || 0) - (a.desde || 0));
+            $("txtNovedades").textContent = `${fmt(j.n)} novedades activas en la operación`;
+            // el globo cuenta las que llegaron desde la ultima vez que se abrio la campana
+            const nuevas = NOV.lista.filter((a) => !NOV.vistas.has(a.t + a.d)).length;
+            $("globo").hidden = !nuevas;
+            $("globo").textContent = nuevas > 99 ? "99+" : nuevas;
+            listaNovedades();
+            pintarNovedades();
+        } catch (e) { console.warn("Sin novedades", e); }
+    }
+    function listaNovedades() {
+        const q = $("buscarNov").value.trim().toLowerCase();
+        const filas = NOV.lista.map((a, i) => ({ a, i })).filter(({ a }) => !q ||
+            (a.t + " " + a.d + " " + codigosNov(a).join(" ")).toLowerCase().includes(q)).slice(0, 200);
+        $("listaNov").innerHTML = filas.length ? filas.map(({ a, i }) => `<button type="button" class="item${NOV.sel === i ? " activo" : ""}" data-i="${i}">
+            <b>${escapar(a.t || EFECTO[a.efecto] || "Novedad")}</b>${escapar(a.d)}
+            <br><small><span class="efecto">${EFECTO[a.efecto] || "Novedad"}</span>${codigosNov(a).length ? "rutas " + escapar(codigosNov(a).slice(0, 6).join(", ")) : ""}
+            · ${a.paradas.length} parada${a.paradas.length === 1 ? "" : "s"}</small></button>`).join("")
+            : `<div class="sub" style="padding:8px">Ninguna novedad con ese filtro.</div>`;
+        $("listaNov").querySelectorAll(".item").forEach((b) => b.onclick = () => elegirNovedad(+b.dataset.i));
+    }
+    function pintarNovedades() {
+        if (!mapa.getSource("novedades")) return;
+        const feats = [];
+        NOV.lista.forEach((a, i) => {
+            if (NOV.sel != null && NOV.sel !== i && !$("chkNovMapa").checked) return;
+            a.paradas.forEach(([lo, la, nombre]) => feats.push({ type: "Feature", geometry: { type: "Point", coordinates: [lo, la] },
+                properties: { i, parada: nombre, sel: NOV.sel === i } }));
+        });
+        // la elegida encima de las demas
+        feats.sort((x, y) => x.properties.sel - y.properties.sel);
+        mapa.getSource("novedades").setData({ type: "FeatureCollection", features: feats });
+        const ver = !$("novedades").hidden && ($("chkNovMapa").checked || NOV.sel != null);
+        mapa.setLayoutProperty("novedades", "visibility", ver ? "visible" : "none");
+    }
+    function elegirNovedad(i) {
+        NOV.sel = NOV.sel === i ? null : i;
+        listaNovedades();
+        pintarNovedades();
+        const a = NOV.lista[i];
+        if (NOV.sel == null || !a.paradas.length) return;
+        if (SEL && SEL.seguir) seguir(false);
+        const caja = new maplibregl.LngLatBounds();
+        a.paradas.forEach(([lo, la]) => caja.extend([lo, la]));
+        mapa.fitBounds(caja, { padding: { top: 80, bottom: 80, left: 420, right: 80 }, maxZoom: 16, duration: 900 });
+    }
+    $("btnCampana").onclick = () => {
+        const abrir = $("novedades").hidden;
+        $("novedades").hidden = !abrir;
+        $("btnCampana").classList.toggle("activo", abrir);
+        if (abrir) { NOV.lista.forEach((a) => NOV.vistas.add(a.t + a.d)); $("globo").hidden = true; }
+        pintarNovedades();
+    };
+    $("chkNovMapa").onchange = pintarNovedades;
+    $("buscarNov").oninput = listaNovedades;
+
+    iconos();
+    cargarRed().then(() => { leer(); setInterval(() => { if (!document.hidden && RED.ok) alertas(); }, 5 * 60 * 1000); });
+})();
+</script>
+<script src="../../marca/pie.js?v=3" defer></script>
+</body>
+</html>
