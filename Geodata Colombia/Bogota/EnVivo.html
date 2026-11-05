@@ -213,11 +213,12 @@
     const HUECO_M = 150;          // dos reportes sueltos (fuera del trazado) mas lejos que esto no se unen con una recta
     const ESPERA_ERROR_MS = 5000; // si una lectura falla, se reintenta pronto
     const TIEMPO_MAX_MS = 15000;  // una lectura que tarda mas que esto se corta y se reintenta
-    const ESTELA_S = 130;         // segundos de reportes que se guardan de cada bus
+    const ESTELA_S = 190;         // segundos de reportes que se guardan de cada bus (~3 minutos)
     const PREDICE_M = 1000;       // lo maximo que se simula que avanza un bus mientras llega su proximo reporte
     const PREDICE_S = 180;        // y por cuanto tiempo como maximo (cubre las pausas largas del feed)
     const CORRIGE_S = 2.5;        // segundos que tarda en corregirse suave cuando llega el reporte real
     const VEL_MIN = 0.4;          // m/s: por debajo se considera quieto (no se simula avance)
+    const VEL_ARRANQUE = 4;       // m/s (~15 km/h): bus sin historia, mientras llega su segundo reporte va hacia su proxima parada
     const GUARDADO = "envivo-historia-v1";   // ultimas lecturas guardadas en el navegador (para recargar sin perderlas)
     const RETROCESO_M = 25;       // si el GPS "retrocede" menos que esto, es ruido: el bus no vuelve atras
     const TRONCALES = "https://gis.transmilenio.gov.co/arcgis/rest/services/Troncal/consulta_rutas_troncales/MapServer/0/query" +
@@ -345,7 +346,12 @@
         // si la pagina abrio antes que la API, se vuelve a intentar en cada lectura hasta que llegue
         if (RED.ok || pidiendoRed) return pidiendoRed || Promise.resolve();
         pidiendoRed = fetch(`${API}/vivo/red`).then((r) => r.json()).then((j) => {
-            if (j.ok) { RED = j; resumen(); redibujar(); alertas(); }
+            if (j.ok) {
+                RED = j;
+                const ahora = performance.now();
+                buses.forEach((b) => { if (b.rastro.length === 1 && !(b.v[0] || b.v[1])) mover(b, ahora, posicion(b, ahora)); });
+                resumen(); redibujar(); alertas();
+            }
         }).catch((e) => console.warn("Sin nombres de rutas", e)).finally(() => { pidiendoRed = null; });
         return pidiendoRed;
     }
@@ -458,8 +464,14 @@
         const q = b.rastro[b.rastro.length - 1];
         b.real = [q[0], q[1]];
         b.v = velocidadMedia(b.rastro);
+        let tope = PREDICE_S;
+        const parada = b.rastro.length === 1 && RED.c ? RED.c[b.datos.parada] : null;
+        if (parada) {
+            const d = distM(q, parada);
+            if (d > 40 && d < 3000) { tope = d / VEL_ARRANQUE; b.v = [(parada[0] - q[0]) / tope, (parada[1] - q[1]) / tope]; }
+        }
         const vm = distM([0, q[1]], [b.v[0], q[1] + b.v[1]]);
-        b.tmax = vm > 0 ? Math.min(PREDICE_S, PREDICE_M / vm) : 0;
+        b.tmax = vm > 0 ? Math.min(tope, PREDICE_M / vm) : 0;
         b.lag = atraso(q[2]);
         b.t0 = ahora;
         // correccion: diferencia entre lo que se esta viendo y donde deberia ir; se desvanece en ~2 s
@@ -581,13 +593,16 @@
     }
     // arranca la simulacion desde el ultimo reporte; "vista" = seguir desde donde se ve ahora (corrige suave)
     function simularSel(desdeCero) {
-        const q = SEL.pts[SEL.pts.length - 1];
-        SEL.vS = velocidadSel();
+        const q = SEL.pts[SEL.pts.length - 1], b = buses.get(SEL.id);
+        const vb = b && b.v ? distM([0, 0], [b.v[0], b.v[1]]) : 0;
+        SEL.vS = Math.max(velocidadSel(), vb);
         SEL.tmax = SEL.vS > 0 ? Math.min(PREDICE_S, PREDICE_M / SEL.vS) : 0;
         SEL.lag = atraso(q.ts);
         SEL.t0 = performance.now();
         const base = q.s == null ? null : q.s + SEL.vS * Math.min(SEL.lag, SEL.tmax);
         SEL.c = !desdeCero && base != null && SEL.sAct != null && Math.abs(SEL.sAct - base) < 400 ? SEL.sAct - base : 0;
+        // la correccion se reparte en el tiempo para que el bus siga avanzando al menos al 30 % de su velocidad
+        SEL.T = SEL.c > 0 && SEL.vS > 0 ? Math.max(CORRIGE_S, SEL.c / (0.7 * SEL.vS)) : CORRIGE_S;
         if (desdeCero) SEL.sAct = null;
     }
     function nuevoPunto(b, ahora, salto) {
@@ -616,7 +631,7 @@
         const q = SEL.pts[SEL.pts.length - 1];
         if (SEL.forma && q.s != null) {
             const dt = (ahora - SEL.t0) / 1000, ad = Math.min(dt + SEL.lag, SEL.tmax);
-            let s = q.s + SEL.vS * ad + SEL.c * Math.exp(-dt / CORRIGE_S);
+            let s = q.s + SEL.vS * ad + SEL.c * Math.exp(-dt / (SEL.T || CORRIGE_S));
             // nunca hacia atras: si la simulacion se adelanto un poco, el bus espera a que el real lo alcance
             if (SEL.sAct != null && s < SEL.sAct && SEL.sAct - s < 150) s = SEL.sAct;
             s = Math.min(s, SEL.forma.largo);

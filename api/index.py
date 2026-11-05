@@ -1279,26 +1279,80 @@ def _cache_vivo(respuesta, segundos):
     return respuesta
 
 
-# Ultimas lecturas guardadas en memoria (unos 2 minutos): al abrir la pagina los buses arrancan
-# moviendose y con su estela, en vez de esperar la lectura siguiente. En local dura mientras flask
-# este prendido; en Vercel, mientras la funcion siga caliente (si no, la pagina arranca sin historia).
+# Ultimas lecturas (unos 3 minutos): al abrir la pagina los buses arrancan moviendose y con su estela,
+# en vez de esperar la lectura siguiente. Se guardan en memoria y tambien en Supabase (tabla tm_vivo_hist),
+# porque en Vercel la memoria se pierde cada vez que la funcion arranca de nuevo.
 _HIST_VIVO = []
-HIST_VIVO_N = 6
+HIST_VIVO_N = 10
+HIST_VIVO_S = 200   # segundos de historia que se entregan con ?historia=1
 _VIVO_BUENA = {}   # ultima respuesta que salio bien, por si la siguiente falla
+_TABLA_HIST = {"lista": False}
+
+
+def _db_hist():
+    """Conexion corta a Supabase para la historia en vivo (None si no hay base configurada)."""
+    if not DATABASE_URL:
+        return None
+    c = psycopg2.connect(DATABASE_URL, connect_timeout=4)
+    if not _TABLA_HIST["lista"]:
+        with c, c.cursor() as cur:
+            cur.execute("CREATE TABLE IF NOT EXISTS tm_vivo_hist (hora BIGINT PRIMARY KEY, pos BYTEA NOT NULL)")
+        _TABLA_HIST["lista"] = True
+    return c
 
 
 def _guardar_hist_vivo(hora, buses):
     if not hora or (_HIST_VIVO and _HIST_VIVO[-1][0] >= hora):
         return
-    _HIST_VIVO.append((hora, {b[0]: (b[1], b[2]) for b in buses}))
+    pos = {b[0]: (b[1], b[2]) for b in buses}
+    _HIST_VIVO.append((hora, pos))
     del _HIST_VIVO[:-HIST_VIVO_N]
+    try:
+        import json
+        import zlib
+        c = _db_hist()
+        if c is None:
+            return
+        with c, c.cursor() as cur:
+            cur.execute("INSERT INTO tm_vivo_hist (hora, pos) VALUES (%s, %s) ON CONFLICT (hora) DO NOTHING",
+                        (hora, psycopg2.Binary(zlib.compress(json.dumps(pos, separators=(",", ":")).encode(), 6))))
+            cur.execute("DELETE FROM tm_vivo_hist WHERE hora < %s", (hora - 600,))
+        c.close()
+    except Exception as e:
+        print("historia en vivo: no se pudo guardar en la base:", e)
+
+
+def _completar_hist_vivo(actual):
+    """Trae de Supabase las lecturas de los ultimos minutos que esta funcion no tiene en memoria."""
+    tengo = {h for h, _ in _HIST_VIVO}
+    if sum(1 for h in tengo if actual - HIST_VIVO_S <= h < actual) >= 7:
+        return
+    try:
+        import json
+        import zlib
+        c = _db_hist()
+        if c is None:
+            return
+        with c, c.cursor() as cur:
+            cur.execute("SELECT hora, pos FROM tm_vivo_hist WHERE hora >= %s AND hora < %s ORDER BY hora",
+                        (actual - HIST_VIVO_S, actual))
+            filas = cur.fetchall()
+        c.close()
+        for hora, pos in filas:
+            if hora not in tengo:
+                _HIST_VIVO.append((hora, {k: tuple(v) for k, v in json.loads(zlib.decompress(bytes(pos))).items()}))
+        _HIST_VIVO.sort(key=lambda x: x[0])
+        del _HIST_VIVO[:-HIST_VIVO_N]
+    except Exception as e:
+        print("historia en vivo: no se pudo leer de la base:", e)
 
 
 def _hist_vivo(actual):
     """Por bus, sus posiciones anteriores que cambian: {vehiculo: [[lon, lat, hora], ...]} (de la mas vieja a la mas nueva)."""
     salida = {}
+    _completar_hist_vivo(actual)
     for hora, pos in _HIST_VIVO:
-        if hora >= actual:
+        if hora >= actual or hora < actual - HIST_VIVO_S:
             continue
         for vid, (lo, la) in pos.items():
             h = salida.setdefault(vid, [])
@@ -1363,7 +1417,8 @@ def transmilenio_vivo():
 @app.route("/api/transmilenio/vivo/red")
 def transmilenio_vivo_red():
     """Lo que no cambia en el dia para el visor en vivo (del GTFS programado): nombre, tipo y color
-    de cada ruta y el nombre de cada parada. r = {route_id: [codigo, nombre, agencia, color]}, p = {stop_id: nombre}"""
+    de cada ruta y el nombre de cada parada. r = {route_id: [codigo, nombre, agencia, color]}, p = {stop_id: nombre},
+    c = {stop_id: [lon, lat]} (para que un bus sin historia arranque hacia su proxima parada)"""
     import csv
     import io
 
@@ -1374,12 +1429,16 @@ def transmilenio_vivo_red():
         agencias = {a["agency_id"]: a["agency_name"].split("-", 1)[-1] for a in tabla("agency.txt")}
         rutas = {r["route_id"]: [r.get("route_short_name", ""), r.get("route_long_name", ""), r.get("agency_id", ""),
                                  r.get("route_color", "")] for r in tabla("routes.txt")}
-        paradas = {p["stop_id"]: (p.get("stop_name") or "").strip() for p in tabla("stops.txt")}
+        paradas, lugar = {}, {}
+        for p in tabla("stops.txt"):
+            paradas[p["stop_id"]] = (p.get("stop_name") or "").strip()
+            if p.get("stop_lat"):
+                lugar[p["stop_id"]] = [round(float(p["stop_lon"]), 5), round(float(p["stop_lat"]), 5)]
     except _SinAcceso:
         return _sin_acceso()
     except Exception as e:
         return jsonify({"ok": False, "error": f"No se pudo leer el GTFS de TransMilenio: {e}"}), 502
-    return _con_cache(jsonify({"ok": True, "gtfs": archivo, "agencias": agencias, "r": rutas, "p": paradas}), 6 * 3600)
+    return _con_cache(jsonify({"ok": True, "gtfs": archivo, "agencias": agencias, "r": rutas, "p": paradas, "c": lugar}), 6 * 3600)
 
 
 @app.route("/api/transmilenio/vivo/trazado")
