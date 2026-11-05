@@ -52,6 +52,15 @@
         box-shadow: 0 0 0 0 rgba(34,197,94,.6); animation: pulso 2s infinite; }
     .pulso.viejo { background: #f59e0b; animation: none; }
     @keyframes pulso { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.6); } 70% { box-shadow: 0 0 0 8px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }
+    .modos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .modos button { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 9px 10px; text-align: left;
+        border: 1px solid #e5e5de; border-radius: 10px; background: #fff; cursor: pointer; font: inherit; color: inherit; }
+    .modos button svg { width: 16px; height: 16px; }
+    .modos button b { font-size: 12.5px; }
+    .modos button small { font-size: 11px; line-height: 1.3; color: #6b6b66; }
+    .modos button.activo { border-color: var(--amarillo-osc); background: #fff7d1; box-shadow: inset 0 0 0 1px var(--amarillo-osc); }
+    .modos button:disabled { cursor: not-allowed; opacity: .55; }
+    .modos .pronto { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px; background: #e5e5de; color: #4a4a45; }
     .tipos { display: flex; flex-direction: column; gap: 4px; }
     .tipos label { display: grid; grid-template-columns: 16px 12px 1fr auto; align-items: center; gap: 8px; padding: 7px 10px;
         border: 1px solid #e5e5de; border-radius: 9px; background: #fff; cursor: pointer; }
@@ -149,6 +158,16 @@
     <div class="error" id="error" hidden></div>
     <p class="estado-vivo" id="estadoVivo" hidden></p>
 
+    <h3>Modo</h3>
+    <div class="modos" id="modos">
+        <button type="button" data-modo="linea" title="Cada bus se ve en la posición que reportó TransMilenio; se actualiza cada unos 20 segundos">
+            <i data-lucide="radio"></i><b>En línea</b><small>Posición real, cada ~20 s</small></button>
+        <button type="button" data-modo="proyectado" class="activo" title="Entre reportes, cada bus sigue avanzando a su velocidad de los últimos minutos y se corrige al llegar el reporte real">
+            <i data-lucide="activity"></i><b>Proyectado</b><small>Avanza entre reportes</small></button>
+        <button type="button" disabled title="Ver cómo fue el flujo en una ventana de los últimos 15 minutos. Necesita guardar las lecturas en una base de datos">
+            <i data-lucide="history"></i><b>Histórico</b><small>Últimos 15 min</small><span class="pronto">Pronto</span></button>
+    </div>
+
     <h3>Por tipo de servicio</h3>
     <div class="tipos" id="tipos"></div>
     <div class="tipos" style="margin-top:4px">
@@ -218,6 +237,9 @@
     const PREDICE_S = 180;        // y por cuanto tiempo como maximo (cubre las pausas largas del feed)
     const CORRIGE_S = 2.5;        // segundos que tarda en corregirse suave cuando llega el reporte real
     const VEL_MIN = 0.4;          // m/s: por debajo se considera quieto (no se simula avance)
+    const DESLIZA_S = 0.6;        // modo en linea: el bus pasa a su posicion nueva en menos de 2 s, sin proyectar
+    const GUARDADO_MODO = "envivo-modo";
+    let MODO = "proyectado";      // "linea": solo posiciones reales; "proyectado": avanza entre reportes
     const VEL_ARRANQUE = 4;       // m/s (~15 km/h): bus sin historia, mientras llega su segundo reporte va hacia su proxima parada
     const GUARDADO = "envivo-historia-v1";   // ultimas lecturas guardadas en el navegador (para recargar sin perderlas)
     const RETROCESO_M = 25;       // si el GPS "retrocede" menos que esto, es ruido: el bus no vuelve atras
@@ -470,6 +492,7 @@
             const d = distM(q, parada);
             if (d > 40 && d < 3000) { tope = d / VEL_ARRANQUE; b.v = [(parada[0] - q[0]) / tope, (parada[1] - q[1]) / tope]; }
         }
+        if (MODO === "linea") b.v = [0, 0];   // en linea no se proyecta: el bus se queda en su ultimo reporte
         const vm = distM([0, q[1]], [b.v[0], q[1] + b.v[1]]);
         b.tmax = vm > 0 ? Math.min(tope, PREDICE_M / vm) : 0;
         b.lag = atraso(q[2]);
@@ -478,6 +501,18 @@
         const ad = Math.min(b.lag, b.tmax), base = [b.real[0] + b.v[0] * ad, b.real[1] + b.v[1] * ad];
         b.c = vista ? [vista[0] - base[0], vista[1] - base[1]] : [0, 0];
     }
+    function ponerModo(m, alAbrir) {
+        MODO = m;
+        document.querySelectorAll("#modos button[data-modo]").forEach((x) => x.classList.toggle("activo", x.dataset.modo === m));
+        if (alAbrir) return;   // al abrir la pagina todavia no hay buses
+        try { localStorage.setItem(GUARDADO_MODO, m); } catch (e) { /* sin almacenamiento: no se recuerda */ }
+        const ahora = performance.now();
+        buses.forEach((b) => mover(b, ahora, posicion(b, ahora)));
+        if (SEL) simularSel(false);
+        redibujar();
+    }
+    document.querySelectorAll("#modos button[data-modo]").forEach((x) => x.addEventListener("click", () => ponerModo(x.dataset.modo)));
+    try { const m = localStorage.getItem(GUARDADO_MODO); if (m === "linea" || m === "proyectado") ponerModo(m, true); } catch (e) { /* modo por defecto */ }
     function seMueve(b, ahora) {
         const dt = (ahora - b.t0) / 1000;
         return (b.tmax > 0 && dt + b.lag < b.tmax) || ((b.c[0] || b.c[1]) && dt < 4 * CORRIGE_S);
@@ -595,14 +630,14 @@
     function simularSel(desdeCero) {
         const q = SEL.pts[SEL.pts.length - 1], b = buses.get(SEL.id);
         const vb = b && b.v ? distM([0, 0], [b.v[0], b.v[1]]) : 0;
-        SEL.vS = Math.max(velocidadSel(), vb);
+        SEL.vS = MODO === "linea" ? 0 : Math.max(velocidadSel(), vb);
         SEL.tmax = SEL.vS > 0 ? Math.min(PREDICE_S, PREDICE_M / SEL.vS) : 0;
         SEL.lag = atraso(q.ts);
         SEL.t0 = performance.now();
         const base = q.s == null ? null : q.s + SEL.vS * Math.min(SEL.lag, SEL.tmax);
         SEL.c = !desdeCero && base != null && SEL.sAct != null && Math.abs(SEL.sAct - base) < 400 ? SEL.sAct - base : 0;
         // la correccion se reparte en el tiempo para que el bus siga avanzando al menos al 30 % de su velocidad
-        SEL.T = SEL.c > 0 && SEL.vS > 0 ? Math.max(CORRIGE_S, SEL.c / (0.7 * SEL.vS)) : CORRIGE_S;
+        SEL.T = MODO === "linea" ? DESLIZA_S : SEL.c > 0 && SEL.vS > 0 ? Math.max(CORRIGE_S, SEL.c / (0.7 * SEL.vS)) : CORRIGE_S;
         if (desdeCero) SEL.sAct = null;
     }
     function nuevoPunto(b, ahora, salto) {
@@ -633,7 +668,7 @@
             const dt = (ahora - SEL.t0) / 1000, ad = Math.min(dt + SEL.lag, SEL.tmax);
             let s = q.s + SEL.vS * ad + SEL.c * Math.exp(-dt / (SEL.T || CORRIGE_S));
             // nunca hacia atras: si la simulacion se adelanto un poco, el bus espera a que el real lo alcance
-            if (SEL.sAct != null && s < SEL.sAct && SEL.sAct - s < 150) s = SEL.sAct;
+            if (MODO !== "linea" && SEL.sAct != null && s < SEL.sAct && SEL.sAct - s < 150) s = SEL.sAct;
             s = Math.min(s, SEL.forma.largo);
             SEL.sAct = s;
             return { pos: puntoEn(SEL.forma, s), s };
@@ -667,7 +702,7 @@
 
     // ---------- Animacion ----------
     function posicion(b, ahora) {
-        const dt = (ahora - b.t0) / 1000, ad = Math.min(dt + b.lag, b.tmax), k = Math.exp(-dt / CORRIGE_S);
+        const dt = (ahora - b.t0) / 1000, ad = Math.min(dt + b.lag, b.tmax), k = Math.exp(-dt / (MODO === "linea" ? DESLIZA_S : CORRIGE_S));
         return [b.real[0] + b.v[0] * ad + b.c[0] * k, b.real[1] + b.v[1] * ad + b.c[1] * k];
     }
     function pasaFiltro(d) {
