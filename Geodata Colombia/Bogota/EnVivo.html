@@ -151,8 +151,7 @@
 
 <aside class="panel">
     <h2>TransMilenio y SITP en vivo</h2>
-    <p class="sub">La posición de cada bus en vía, tal como la publica TransMilenio cada unos 20 segundos. <b>Toca un bus</b>
-        para seguirlo: desde ese momento se va marcando por dónde va, y su ficha muestra la velocidad y el retraso.</p>
+    <p class="sub" id="txtModo"></p>
 
     <div class="total"><b id="txtTotal">—</b><span><span class="pulso" id="pulso"></span><span id="txtHora">Conectando…</span></span></div>
     <div class="error" id="error" hidden></div>
@@ -501,8 +500,19 @@
         const ad = Math.min(b.lag, b.tmax), base = [b.real[0] + b.v[0] * ad, b.real[1] + b.v[1] * ad];
         b.c = vista ? [vista[0] - base[0], vista[1] - base[1]] : [0, 0];
     }
+    // lo que se explica arriba del panel segun el modo
+    const TEXTO_MODO = {
+        linea: `<b>En línea:</b> se llama así porque cada bus aparece justo donde TransMilenio dice que está, sin inventar nada.
+            TransMilenio publica la posición de cada bus cada unos 20 segundos; entre un reporte y otro el bus se queda quieto
+            y, cuando llega el nuevo, pasa a su posición real. Es lo más fiel al dato, aunque se vea a saltos.`,
+        proyectado: `<b>Proyectado:</b> se llama así porque entre un reporte y otro cada bus se proyecta hacia adelante: sigue avanzando
+            a la velocidad que traía en sus últimos minutos. Cuando llega la posición real de TransMilenio (cada unos 20 segundos),
+            se corrige suave hasta ella. Así el mapa se ve fluido, pero lo que hay entre reportes es una estimación.`
+    };
     function ponerModo(m, alAbrir) {
         MODO = m;
+        document.getElementById("txtModo").innerHTML = TEXTO_MODO[m] +
+            ` <b>Toca un bus</b> para seguirlo: se va marcando por dónde va y su ficha muestra la velocidad y el retraso.`;
         document.querySelectorAll("#modos button[data-modo]").forEach((x) => x.classList.toggle("activo", x.dataset.modo === m));
         if (alAbrir) return;   // al abrir la pagina todavia no hay buses
         try { localStorage.setItem(GUARDADO_MODO, m); } catch (e) { /* sin almacenamiento: no se recuerda */ }
@@ -512,7 +522,7 @@
         redibujar();
     }
     document.querySelectorAll("#modos button[data-modo]").forEach((x) => x.addEventListener("click", () => ponerModo(x.dataset.modo)));
-    try { const m = localStorage.getItem(GUARDADO_MODO); if (m === "linea" || m === "proyectado") ponerModo(m, true); } catch (e) { /* modo por defecto */ }
+    try { const m = localStorage.getItem(GUARDADO_MODO); ponerModo(m === "linea" ? "linea" : "proyectado", true); } catch (e) { ponerModo("proyectado", true); }
     function seMueve(b, ahora) {
         const dt = (ahora - b.t0) / 1000;
         return (b.tmax > 0 && dt + b.lag < b.tmax) || ((b.c[0] || b.c[1]) && dt < 4 * CORRIGE_S);
