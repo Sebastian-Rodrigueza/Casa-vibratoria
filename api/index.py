@@ -12,16 +12,16 @@ Diferencias a proposito respecto a api.py:
   siguen consultando bien con /api/labview/historico y /api/labview/archivos.
 - No hay scheduler en segundo plano (APScheduler): las funciones
   serverless no mantienen procesos corriendo entre peticiones.
-- Gemini se llama con la libreria "requests" normal (el workaround de
-  curl.exe en api.py era por una red especifica de la PC del usuario,
-  no hace falta en el entorno de Vercel).
+- El asistente SinergIA usa Groq.
 
 Variables de entorno que hay que configurar en Vercel (Project Settings
 -> Environment Variables):
   - DATABASE_URL: la cadena de conexion de Supabase (postgresql://...)
-  - GEMINI_API_KEY: la clave de Gemini para el asistente ICDE (opcional,
-    si falta simplemente /api/agente/consultar responde con un error
-    claro en vez de fallar feo)
+  - GROQ_API_KEY: la clave de Groq para el asistente SinergIA (/api/agente/consultar).
+    Si falta, el asistente responde con un error claro.
+
+En local, si existe .env.local en la raiz del repo (no se sube a git), se leen de ahi
+las variables que no esten ya definidas.
 """
 
 import os
@@ -33,6 +33,21 @@ import psycopg2.extras
 import requests as req_lib
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+
+def _cargar_env_local():
+    """Variables de .env.local (solo en local; en Vercel no existe ese archivo)."""
+    ruta = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env.local")
+    if not os.path.exists(ruta):
+        return
+    for linea in open(ruta, encoding="utf-8-sig"):
+        linea = linea.strip()
+        if not linea or linea.startswith("#") or "=" not in linea:
+            continue
+        clave, valor = linea.split("=", 1)
+        os.environ.setdefault(clave.strip(), valor.strip().strip('"').strip("'"))
+
+
+_cargar_env_local()
 
 app = Flask(__name__)
 CORS(app)
@@ -275,170 +290,198 @@ def proxy_geojson():
 
 
 # =====================================================================
-# AGENTE ICDE - ASISTENTE DEL CATALOGO
+# ASISTENTE SINERGIA (Groq): busca en lo que tenemos y recomienda
 # =====================================================================
+# Es un agente: el modelo decide que herramientas usar (buscar en el catalogo ICDE,
+# ver los visores del portal), lee lo que encuentran y recomienda solo de ahi.
+# Groq es gratis con limites por minuto y por dia; la clave va en GROQ_API_KEY.
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-# El modelo "flash" normal solo da 20 solicitudes GRATIS por dia -- se
-# agota facilisimo en una demo. El "flash-lite" tiene un cupo gratis
-# mucho mas alto, y de sobra para este uso (recomendar datasets).
-GEMINI_MODEL = "gemini-flash-lite-latest"
-GEMINI_URL = (
-    f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL = "openai/gpt-oss-120b"   # Llama 3.3 ya no esta en Groq (noviembre de 2026)
+
+# Visores del portal (lo que el catalogo de la base no tiene). ruta: desde la raiz del sitio
+VISORES_PORTAL = [
+    {"id": "mapa", "nombre": "Mapa principal", "ruta": "/Mapa.html",
+     "temas": "visor general de Colombia: capas ArcGIS de entidades (IGAC, IDEAM, DANE, SGC...), OpenStreetMap, archivos GDB y GeoTIFF, imagenes historicas Esri Wayback; sirve para cualquier departamento o municipio, incluido Boyaca"},
+    {"id": "icde", "nombre": "Catalogo ICDE", "ruta": "/Geodata Colombia/General/Index.html",
+     "temas": "catalogo nacional de datos geograficos por categorias (limites, ambiente, catastro, riesgo, agua, transporte...) de entidades colombianas"},
+    {"id": "bogota", "nombre": "Geodata Bogota", "ruta": "/Geodata Colombia/Bogota/Index.html",
+     "temas": "portada de los visores de Bogota"},
+    {"id": "movilidad", "nombre": "Movilidad Bogota 3D", "ruta": "/Geodata Colombia/Bogota/Movilidad.html",
+     "temas": "Bogota: Metro linea 1 y 2, TransMilenio troncales y estaciones, SITP, TransMiCable, en 3D"},
+    {"id": "envivo", "nombre": "Buses en vivo", "ruta": "/Geodata Colombia/Bogota/EnVivo.html",
+     "temas": "Bogota: posicion de los buses de TransMilenio y SITP en tiempo real, novedades de la operacion"},
+    {"id": "buses", "nombre": "Rutas SITP", "ruta": "/Geodata Colombia/Bogota/Buses.html",
+     "temas": "Bogota: rutas y horarios del SITP, como ir de A a B, recorrido de buses por placa"},
+    {"id": "demanda", "nombre": "Demanda TransMilenio", "ruta": "/Geodata Colombia/Bogota/Demanda.html",
+     "temas": "Bogota: entradas y salidas por estacion cada 15 minutos"},
+    {"id": "obras", "nombre": "Obras IDU", "ruta": "/Geodata Colombia/Bogota/Obras.html",
+     "temas": "Bogota: obras del Instituto de Desarrollo Urbano en 3D"},
+    {"id": "redvial", "nombre": "Red vial Bogota", "ruta": "/Geodata Colombia/Bogota/RedVial.html",
+     "temas": "Bogota: malla vial"},
+    {"id": "cuencas", "nombre": "Cuencas", "ruta": "/Cuencas/Index.html",
+     "temas": "cuencas hidrograficas: rio Sinu (Cordoba) y Cundinamarca"},
+    {"id": "sinu", "nombre": "Rio Sinu", "ruta": "/Cuencas/Rio Sinu/Dashboard.html",
+     "temas": "cuenca del rio Sinu (Cordoba): estaciones IDEAM, lluvia, caudal, inundacion, sequia, indices espectrales NDVI, camellones zenues, relieve 3D"},
+    {"id": "cundinamarca", "nombre": "Gemelo digital Cundinamarca", "ruta": "/Cuencas/Cundinamarca/Index.html",
+     "temas": "Cundinamarca: subcuencas en 3D, drenaje, lluvia en vivo, embalses, niveles IDEAM, simulacion de inundacion"},
+    {"id": "lidar", "nombre": "Visor LiDAR", "ruta": "/NubeLidar.html",
+     "temas": "nubes de puntos LiDAR (LAS, LAZ, COPC), comparar antes y despues"},
+    {"id": "casa", "nombre": "Casa vibratoria", "ruta": "/casa.html",
+     "temas": "experimento de laboratorio: sensores LabVIEW y modelo 3D de una casa"},
+]
+
+_SIN_TILDES = str.maketrans("áéíóúüñ", "aeiouun")
+
+
+def _sin_tildes(s):
+    return (s or "").lower().translate(_SIN_TILDES)
+
+
+def _buscar_catalogo_groq(palabras, limite=12):
+    """Datasets del ICDE que tengan alguna de las palabras (sin importar tildes ni mayusculas)."""
+    palabras = [_sin_tildes(p) for p in palabras if len(str(p).strip()) >= 3][:8]
+    if not palabras:
+        return []
+    campo = "translate(lower(coalesce({}, '')), 'áéíóúüñ', 'aeiouun')"
+    texto = " || ' ' || ".join(campo.format(c) for c in ("d.nombre_dataset", "d.descripcion", "d.entidad_responsable", "c.nombre"))
+    # cuantas palabras coinciden: primero los que tienen mas
+    puntaje = " + ".join(f"(CASE WHEN {texto} LIKE %s THEN 1 ELSE 0 END)" for _ in palabras)
+    sql = f"""SELECT d.id, d.nombre_dataset, d.entidad_responsable, d.descripcion, d.formato,
+                     d.url_fuente, d.url_descarga, d.arcgis_id, c.nombre AS categoria, ({puntaje}) AS puntos
+              FROM datasets d JOIN categorias c ON d.categoria_id = c.id
+              WHERE ({puntaje}) > 0 ORDER BY puntos DESC, d.nombre_dataset LIMIT %s"""
+    valores = [f"%{p}%" for p in palabras] * 2 + [limite]
+    conn = conectar()
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(sql, valores)
+        return cur.fetchall()
+    finally:
+        conn.close()
+
+
+def _buscar_visores_groq(palabras):
+    palabras = [_sin_tildes(p) for p in palabras if len(str(p).strip()) >= 3]
+    salida = []
+    for v in VISORES_PORTAL:
+        texto = _sin_tildes(v["nombre"] + " " + v["temas"])
+        n = sum(1 for p in palabras if p in texto)
+        if n:
+            salida.append((n, v))
+    salida.sort(key=lambda x: -x[0])
+    return [v for _, v in salida][:6] or VISORES_PORTAL[:2]
+
+
+HERRAMIENTAS_GROQ = [
+    {"type": "function", "function": {
+        "name": "buscar_catalogo",
+        "description": "Busca datasets geograficos en el catalogo ICDE del portal (entidades colombianas: IGAC, IDEAM, DANE, SGC, etc.). "
+                       "Usa palabras clave cortas: el lugar (ej. boyaca, tunja) y el tema (ej. vias, rios, suelos, limites, riesgo).",
+        "parameters": {"type": "object", "properties": {
+            "palabras": {"type": "array", "items": {"type": "string"}, "description": "de 1 a 6 palabras clave"}},
+            "required": ["palabras"]}}},
+    {"type": "function", "function": {
+        "name": "buscar_visores",
+        "description": "Busca entre los visores y mapas interactivos del portal (Mapa principal, visores de Bogota, cuencas, LiDAR...).",
+        "parameters": {"type": "object", "properties": {
+            "palabras": {"type": "array", "items": {"type": "string"}, "description": "de 1 a 6 palabras clave"}},
+            "required": ["palabras"]}}},
+]
+
+INSTRUCCIONES_GROQ = (
+    "Eres el Asistente SinergIA, del Portal Geodata del Lab SinergIA (Universidad de los Andes). Ayudas a encontrar informacion "
+    "geografica en lo que el portal TIENE. Antes de responder, usa las herramientas: busca en el catalogo y en los visores "
+    "(puedes buscar varias veces con otras palabras, por ejemplo el lugar solo y luego lugar + tema).\n"
+    "Reglas:\n"
+    "- Responde en espanol, claro y corto (maximo 120 palabras), empezando con lo que tenemos y lo que recomiendas.\n"
+    "- Recomienda SOLO datasets y visores que aparezcan en los resultados de las herramientas. Nunca inventes.\n"
+    "- Describe cada visor solo con lo que dicen sus temas; no prometas datos en tiempo real ni funciones que no aparezcan.\n"
+    "- Texto plano: sin markdown, sin asteriscos ni titulos. No escribas los id en el texto, solo en las lineas del final.\n"
+    "- Si no hay nada especifico del lugar, dilo con honestidad y recomienda lo mas cercano (por ejemplo una capa nacional "
+    "que cubra ese lugar, o el Mapa principal).\n"
+    "- Al final agrega una linea por recomendacion, con el id exacto que dieron las herramientas:\n"
+    "DATASET: <id numerico>\n"
+    "VISOR: <id del visor>\n"
 )
 
 
-def buscar_datasets_relacionados(mensaje, limite=40):
-    palabras = [p for p in re.split(r"\W+", mensaje.lower()) if len(p) >= 3]
-
-    conn = conectar()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-    base_query = """
-        SELECT
-            d.id, d.nombre_dataset, d.entidad_responsable, d.descripcion,
-            d.formato, d.url_fuente, d.url_descarga, d.arcgis_id,
-            c.nombre AS categoria
-        FROM datasets d
-        JOIN categorias c ON d.categoria_id = c.id
-    """
-
-    resultados = []
-
-    if palabras:
-        condiciones = []
-        valores = []
-        for palabra in palabras:
-            comodin = f"%{palabra}%"
-            condiciones.append(
-                "(d.nombre_dataset ILIKE %s OR d.descripcion ILIKE %s "
-                "OR d.entidad_responsable ILIKE %s OR c.nombre ILIKE %s)"
-            )
-            valores.extend([comodin, comodin, comodin, comodin])
-
-        query = base_query + " WHERE " + " OR ".join(condiciones) + " LIMIT %s"
-        valores.append(limite)
-        cur.execute(query, tuple(valores))
-        resultados = cur.fetchall()
-
-    if not resultados:
-        cur.execute(base_query + " LIMIT %s", (limite,))
-        resultados = cur.fetchall()
-
-    cur.close()
-    conn.close()
-    return resultados
+def _groq(mensajes, responder=False):
+    """Una llamada a Groq; reintenta una vez si esta ocupado (429/503). responder=True: ya no puede buscar mas."""
+    for intento in range(2):
+        r = req_lib.post(GROQ_URL, headers={"Authorization": f"Bearer {GROQ_API_KEY}"}, timeout=40,
+                         json={"model": GROQ_MODEL, "messages": mensajes, "tools": HERRAMIENTAS_GROQ,
+                               "tool_choice": "none" if responder else "auto", "temperature": 0.2, "max_tokens": 900})
+        if r.status_code in (429, 503) and intento == 0:
+            time.sleep(2)
+            continue
+        if r.status_code >= 400:
+            raise RuntimeError(f"Groq respondio {r.status_code}: {r.text[:200]}")
+        return r.json()["choices"][0]["message"]
 
 
 @app.route("/api/agente/consultar", methods=["POST"])
-def agente_consultar():
-    if not GEMINI_API_KEY:
-        return jsonify({
-            "ok": False,
-            "error": (
-                "El agente no tiene configurada la clave de Gemini en Vercel. "
-                "Agrega la variable de entorno GEMINI_API_KEY en Project Settings."
-            )
-        }), 503
+@app.route("/api/agente/groq", methods=["POST"])
+def agente_groq():
+    """Asistente SinergIA con Groq. Entrada: {"mensaje": "..."}.
+    Salida: {ok, respuesta, recomendados: [datasets], visores: [{id, nombre, ruta, temas}], pasos: [herramientas usadas]}"""
+    import json
 
-    datos_entrada = request.get_json(silent=True) or {}
-    mensaje = str(datos_entrada.get("mensaje", "")).strip()
-
+    if not GROQ_API_KEY:
+        return jsonify({"ok": False, "error": "El asistente no tiene configurada la clave de Groq. Agrega la variable GROQ_API_KEY en Vercel (Project Settings > Environment Variables) o en .env.local."}), 503
+    mensaje = str((request.get_json(silent=True) or {}).get("mensaje", "")).strip()[:500]
     if not mensaje:
         return jsonify({"ok": False, "error": "Falta el mensaje."}), 400
 
+    mensajes = [{"role": "system", "content": INSTRUCCIONES_GROQ}, {"role": "user", "content": mensaje}]
+    vistos_ds, vistos_vis, pasos = {}, {}, []
     try:
-        candidatos = buscar_datasets_relacionados(mensaje)
+        for ronda in range(6):   # hasta 5 rondas de busqueda; en la ultima tiene que responder
+            m = _groq(mensajes, responder=ronda == 5)
+            llamadas = m.get("tool_calls") or []
+            if not llamadas:
+                break
+            mensajes.append({"role": "assistant", "content": m.get("content") or "", "tool_calls": llamadas})
+            for ll in llamadas:
+                nombre = ll["function"]["name"]
+                try:
+                    palabras = json.loads(ll["function"].get("arguments") or "{}").get("palabras") or []
+                except ValueError:
+                    palabras = []
+                pasos.append({"herramienta": nombre, "palabras": palabras})
+                if nombre == "buscar_catalogo":
+                    try:
+                        filas = _buscar_catalogo_groq(palabras)
+                    except Exception as e:
+                        # sin base de datos el agente sigue, solo con los visores
+                        print("agente groq: no se pudo leer el catalogo:", e)
+                        filas = []
+                    for f in filas:
+                        vistos_ds[str(f["id"])] = f
+                    resultado = [{"id": f["id"], "nombre": f["nombre_dataset"], "categoria": f["categoria"],
+                                  "entidad": f["entidad_responsable"], "descripcion": (f["descripcion"] or "")[:110]} for f in filas]
+                else:
+                    resultado = _buscar_visores_groq(palabras)
+                    for v in resultado:
+                        vistos_vis[v["id"]] = v
+                mensajes.append({"role": "tool", "tool_call_id": ll["id"],
+                                 "content": json.dumps(resultado or "sin resultados", ensure_ascii=False, default=str)})
+        else:
+            m = {"content": ""}
     except Exception as e:
-        return jsonify({"ok": False, "error": f"No fue posible consultar el catalogo: {str(e)}"}), 500
+        return jsonify({"ok": False, "error": f"El agente no pudo responder: {e}"}), 502
 
-    catalogo_texto = "\n".join(
-        f"- {c['nombre_dataset']} · {c['categoria']} · "
-        f"{c['entidad_responsable'] or 'Entidad no especificada'} · "
-        f"{(c['descripcion'] or '').strip()[:200]}"
-        for c in candidatos
-    ) or "(el catalogo no tiene datasets registrados todavia)"
-
-    prompt = (
-        "Eres el asistente del portal ICDE (Infraestructura Colombiana de Datos "
-        "Espaciales) del Lab SinergIA, Universidad de los Andes. "
-        "Ayudas a las personas a encontrar los datasets geograficos que necesitan.\n\n"
-        "Instrucciones:\n"
-        "- Responde en espanol, en un maximo de 100 palabras, en tono claro y directo.\n"
-        "- Recomienda SOLO datasets que existan en el catalogo de abajo. No inventes datasets.\n"
-        "- Si nada del catalogo coincide bien con lo que pide la persona, dilo con honestidad "
-        "y sugiere que categoria del portal podria explorar en su lugar.\n"
-        "- Al final de tu respuesta, agrega una linea por cada dataset que recomiendes, con "
-        "el nombre EXACTO tal cual aparece en el catalogo, en el formato:\n"
-        "RECOMENDADO: <nombre exacto del dataset>\n"
-        "Si no recomiendas ninguno, no agregues esas lineas.\n\n"
-        f"Catalogo disponible:\n{catalogo_texto}\n\n"
-        f'Pregunta de la persona: "{mensaje}"'
-    )
-
-    # Gemini a veces responde 503 "high demand" un momento y ya -- 2
-    # reintentos cortos evitan que eso tumbe la demo por algo pasajero.
-    ultimo_error = None
-    cuerpo = None
-    for intento in range(3):
-        try:
-            respuesta = req_lib.post(
-                GEMINI_URL,
-                headers={"Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY},
-                # "flash-lite" no tiene modo de razonamiento (no acepta
-                # thinkingConfig, responde 400 si se lo mandamos), asi
-                # que ni hace falta -- ya responde rapido de por si.
-                json={"contents": [{"parts": [{"text": prompt}]}]},
-                # Con el catalogo completo en el prompt, Gemini a veces
-                # tarda 30-40s en responder -- Vercel permite funciones de
-                # hasta 300s, asi que hay margen de sobra para esperar.
-                timeout=60,
-            )
-            respuesta.raise_for_status()
-            cuerpo = respuesta.json()
-            break
-        except req_lib.exceptions.HTTPError as e:
-            ultimo_error = e
-            if respuesta.status_code != 503 or intento == 2:
-                return jsonify({"ok": False, "error": f"No fue posible conectar con Gemini: {str(e)}"}), 502
-            time.sleep(1.5)
-        except req_lib.exceptions.RequestException as e:
-            return jsonify({"ok": False, "error": f"No fue posible conectar con Gemini: {str(e)}"}), 502
-        except ValueError:
-            return jsonify({"ok": False, "error": "Gemini no devolvio un JSON valido"}), 502
-
-    if cuerpo is None:
-        return jsonify({"ok": False, "error": f"No fue posible conectar con Gemini: {str(ultimo_error)}"}), 502
-
-    try:
-        texto_ia = (
-            cuerpo.get("candidates", [{}])[0]
-            .get("content", {})
-            .get("parts", [{}])[0]
-            .get("text", "")
-        ).strip()
-        if not texto_ia:
-            raise ValueError("Gemini no devolvio texto en la respuesta.")
-    except (ValueError, KeyError, IndexError) as e:
-        return jsonify({"ok": False, "error": f"Gemini devolvio una respuesta inesperada: {str(e)}"}), 502
-
-    nombres_recomendados = re.findall(r"RECOMENDADO:\s*(.+)", texto_ia)
-    texto_para_mostrar = re.sub(r"RECOMENDADO:.*", "", texto_ia).strip()
-
-    recomendados = []
-    for nombre in nombres_recomendados:
-        nombre = nombre.strip()
-        coincidencia = next(
-            (c for c in candidatos if c["nombre_dataset"].strip().lower() == nombre.lower()),
-            None
-        )
-        if coincidencia:
-            recomendados.append(coincidencia)
-
+    texto = (m.get("content") or "").strip()
+    ids_ds = re.findall(r"DATASET:\s*(\d+)", texto)
+    ids_vis = re.findall(r"VISOR:\s*([\w-]+)", texto)
+    texto = re.sub(r"^\s*(DATASET|VISOR):.*$", "", texto, flags=re.M).strip()
     return jsonify({
         "ok": True,
-        "respuesta": texto_para_mostrar or texto_ia,
-        "recomendados": recomendados
+        "respuesta": texto or "No encontré nada que recomendar con esa búsqueda.",
+        "recomendados": [vistos_ds[i] for i in dict.fromkeys(ids_ds) if i in vistos_ds],
+        "visores": [vistos_vis[i] for i in dict.fromkeys(ids_vis) if i in vistos_vis],
+        "pasos": pasos,
     })
 
 

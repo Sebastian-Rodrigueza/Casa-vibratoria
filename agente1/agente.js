@@ -159,7 +159,7 @@ function cambiarConexion(activo) {
 
 
         elConexion.innerHTML =
-            "● GEMINI ONLINE";
+            "● IA EN LÍNEA";
 
 
         elConexion.className =
@@ -587,33 +587,24 @@ if (elSelect) {
 
 
 // ======================================================
-// AGENTE ICDE - ASISTENTE DEL CATÁLOGO (panel flotante
-// del Index.html principal)
+// ASISTENTE SINERGIA (panel flotante de las paginas del sitio)
 // ======================================================
 //
 // Este bloque solo se activa si el HTML donde se carga este
-// archivo tiene el panel de chat del ICDE (Index.html). No
-// interfiere en nada con el holograma NEXA AI de arriba, que
-// sigue funcionando igual en agente1/index.html.
+// archivo tiene el panel de chat. No interfiere con el
+// holograma NEXA AI de arriba (agente1/index.html).
 //
-// El agente le pregunta a un backend propio (api.py) que:
-//   1) busca en la base de datos MySQL los datasets del ICDE
-//      relacionados con lo que la persona escribió, y
-//   2) le pide a Gemini que redacte una recomendación breve
-//      usando SOLO esos datasets (para no inventar resultados).
-//
-// La clave de Gemini nunca viaja hasta aquí: vive únicamente
-// en el servidor (api.py), leída de una variable de entorno.
+// El asistente le pregunta a la API (api/index.py, ruta
+// /api/agente/consultar), que es un agente con Groq: busca en el
+// catalogo ICDE y en los visores del portal y recomienda SOLO lo
+// que encontro. La clave de Groq vive en el servidor, nunca aqui.
 // ======================================================
 
 (() => {
 
-    // En Vercel, /api/* lo atiende api/index.py (mismo dominio, ruta
-    // relativa). En local se sigue usando el api.py viejo en el puerto
-    // 5000 (si lo tienes corriendo), para no romper ese flujo.
-    const API_AGENTE_ICDE = (location.hostname === "localhost" || location.hostname === "127.0.0.1")
-        ? "http://localhost:5000/api/agente/consultar"
-        : "/api/agente/consultar";
+    // En Vercel, /api/* lo atiende api/index.py (mismo dominio); en local, la API en el puerto 5000
+    const API_LOCAL = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+    const API_AGENTE_ICDE = (API_LOCAL ? "http://localhost:5000" : "") + "/api/agente/consultar";
 
     // Ruta absoluta desde la raiz del sitio (con "/" al inicio), para
     // que funcione igual sin importar desde que carpeta se abrio esta
@@ -891,7 +882,7 @@ if (elSelect) {
        ================================================== */
 
     async function consultarAgente(mensaje) {
-        const burbujaCargando = agregarBurbuja("Buscando en el catálogo del ICDE…", "bot loading");
+        const burbujaCargando = agregarBurbuja("Buscando en el catálogo y en los visores…", "bot loading");
 
         try {
             const respuesta = await fetch(API_AGENTE_ICDE, {
@@ -915,20 +906,26 @@ if (elSelect) {
                 burbujaTarjeta.appendChild(crearTarjetaDataset(dataset));
             });
 
+            // agente Groq: visores del portal recomendados, como enlaces directos
+            (datos.visores || []).forEach((visor) => {
+                agregarBurbuja(
+                    `<b>Visor:</b> <a href="${encodeURI(visor.ruta)}">${escaparTexto(visor.nombre)}</a>`, "bot");
+            });
+
         } catch (error) {
             burbujaCargando.remove();
-            console.error("Error consultando al agente ICDE:", error);
+            console.error("Error consultando al asistente SinergIA:", error);
 
             // Si el servidor respondio pero con un error puntual (ej. falta
-            // la clave de Gemini), ese mensaje ya es claro y viene en
+            // la clave de Groq), ese mensaje ya es claro y viene en
             // error.message -- mostrarlo tal cual en vez de un aviso
             // generico que asuma que siempre es un servidor local caido.
             const esErrorDeRed = error instanceof TypeError;
             const mensaje = !esErrorDeRed && error.message
                 ? escaparTexto(error.message)
-                : "No pude conectarme con el agente. Verifica que el servidor esté activo " +
-                  "(<code>python api.py</code>) en <code>http://localhost:5000</code>, o que " +
-                  "la API este desplegada correctamente en Vercel.";
+                : "No pude conectarme con el asistente. Verifica que la API esté activa " +
+                  "(<code>py -m flask --app api/index.py run --port 5000</code>) o que " +
+                  "esté desplegada correctamente en Vercel.";
 
             agregarBurbuja(mensaje, "bot");
         }

@@ -126,6 +126,10 @@
     .novedades .item small { color: var(--tenue); }
     .novedades .efecto { display: inline-block; padding: 1px 6px; border-radius: 5px; background: #fde68a; color: #78350f; font-size: 10.5px; font-weight: 700; margin-right: 4px; }
     .estado-vivo { margin: 8px 0 0; font-size: 12px; color: #92400e; }
+    .sin-senal { display: grid; grid-template-columns: 20px 1fr; gap: 8px; margin: 10px 0 0; padding: 11px 12px; border-radius: 10px;
+        background: #fff1e6; border: 1px solid #f5b37a; color: #7a2e0b; font-size: 12.5px; line-height: 1.5; }
+    .sin-senal svg { width: 18px; height: 18px; margin-top: 1px; }
+    .sin-senal b { display: block; font-size: 13px; }
     @media (max-width: 860px) { .campana { left: 56px; top: calc(72px + 42% + 10px); } .novedades { left: 10px; right: 10px; width: auto; top: calc(72px + 42% + 58px); } }
 
     @media (max-width: 860px) {
@@ -156,6 +160,7 @@
     <div class="total"><b id="txtTotal">—</b><span><span class="pulso" id="pulso"></span><span id="txtHora">Conectando…</span></span></div>
     <div class="error" id="error" hidden></div>
     <p class="estado-vivo" id="estadoVivo" hidden></p>
+    <div class="sin-senal" id="sinSenal" hidden><i data-lucide="wifi-off"></i><div><b>Sin datos en vivo</b><span id="txtSinSenal"></span></div></div>
 
     <h3>Modo</h3>
     <div class="modos" id="modos">
@@ -239,6 +244,7 @@
     const DESLIZA_S = 0.6;        // modo en linea: el bus pasa a su posicion nueva en menos de 2 s, sin proyectar
     const GUARDADO_MODO = "envivo-modo";
     let MODO = "proyectado";      // "linea": solo posiciones reales; "proyectado": avanza entre reportes
+    const SIN_SENAL_S = 300;      // si el ultimo reporte tiene mas de 5 minutos, TransMilenio dejo de publicar
     const VEL_ARRANQUE = 4;       // m/s (~15 km/h): bus sin historia, mientras llega su segundo reporte va hacia su proxima parada
     const GUARDADO = "envivo-historia-v1";   // ultimas lecturas guardadas en el navegador (para recargar sin perderlas)
     const RETROCESO_M = 25;       // si el GPS "retrocede" menos que esto, es ruido: el bus no vuelve atras
@@ -491,7 +497,8 @@
             const d = distM(q, parada);
             if (d > 40 && d < 3000) { tope = d / VEL_ARRANQUE; b.v = [(parada[0] - q[0]) / tope, (parada[1] - q[1]) / tope]; }
         }
-        if (MODO === "linea") b.v = [0, 0];   // en linea no se proyecta: el bus se queda en su ultimo reporte
+        // en linea no se proyecta, ni tampoco si TransMilenio dejo de publicar: el bus se queda en su ultimo reporte
+        if (MODO === "linea" || Date.now() / 1000 - q[2] > SIN_SENAL_S) b.v = [0, 0];
         const vm = distM([0, q[1]], [b.v[0], q[1] + b.v[1]]);
         b.tmax = vm > 0 ? Math.min(tope, PREDICE_M / vm) : 0;
         b.lag = atraso(q[2]);
@@ -640,7 +647,7 @@
     function simularSel(desdeCero) {
         const q = SEL.pts[SEL.pts.length - 1], b = buses.get(SEL.id);
         const vb = b && b.v ? distM([0, 0], [b.v[0], b.v[1]]) : 0;
-        SEL.vS = MODO === "linea" ? 0 : Math.max(velocidadSel(), vb);
+        SEL.vS = MODO === "linea" || Date.now() / 1000 - q.ts > SIN_SENAL_S ? 0 : Math.max(velocidadSel(), vb);
         SEL.tmax = SEL.vS > 0 ? Math.min(PREDICE_S, PREDICE_M / SEL.vS) : 0;
         SEL.lag = atraso(q.ts);
         SEL.t0 = performance.now();
@@ -774,12 +781,24 @@
         resumen.porRuta = porRuta;
         listaRutas();
     }
+    // "las 19:11 del 5 de noviembre"
+    function fechaHora(ts) {
+        const d = new Date(ts * 1000);
+        return `las ${d.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", hour12: false })} del ` +
+            d.toLocaleDateString("es-CO", { day: "numeric", month: "long" });
+    }
     function reloj() {
         if (!ultimaHora) return;
         const s = Math.max(0, Math.round(Date.now() / 1000 - ultimaHora));
         const h = new Date(ultimaHora * 1000).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-        $("txtHora").textContent = `buses en vía · último reporte ${h} (hace ${s < 60 ? s + " s" : Math.round(s / 60) + " min"})`;
+        const hace = s < 60 ? s + " s" : s < 3600 ? Math.round(s / 60) + " min" : s < 172800 ? Math.round(s / 3600) + " h" : Math.round(s / 86400) + " días";
+        $("txtHora").textContent = `buses en vía · último reporte ${s < 43200 ? h : fechaHora(ultimaHora)} (hace ${hace})`;
         $("pulso").classList.toggle("viejo", s > 90);
+        // TransMilenio dejo de publicar: se avisa claro para que no parezca que el visor esta danado
+        const sin = s > SIN_SENAL_S;
+        $("sinSenal").hidden = !sin;
+        if (sin) $("txtSinSenal").textContent = `TransMilenio no está publicando la ubicación de los buses desde ${fechaHora(ultimaHora)}.
+            El mapa muestra la última posición publicada de cada bus; cuando vuelva la señal, se actualiza solo.`;
     }
     setInterval(reloj, 1000);
 
