@@ -180,19 +180,29 @@ def labview_archivos():
 # CATALOGO ICDE (datasets / categorias)
 # =====================================================================
 
+def _columnas_mapa(cur):
+    """Si ya se corrio "DB Geo andes/verificar_capas_mapa.py", cada dataset trae servicio_mapa
+    (el servicio ArcGIS que se ve en el mapa) y mapa_ok (true/false; null = sin revisar)."""
+    cur.execute("SELECT to_regclass('public.capas_mapa') IS NOT NULL AS hay")
+    if cur.fetchone()["hay"]:
+        return ", m.servicio AS servicio_mapa, m.ok AS mapa_ok", " LEFT JOIN capas_mapa m ON m.dataset_id = d.id"
+    return ", NULL AS servicio_mapa, NULL::boolean AS mapa_ok", ""
+
+
 @app.route("/api/datasets")
 def obtener_datasets():
     categoria_nombre = request.args.get("categoria", "").strip()
 
     conn = conectar()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    campos, union = _columnas_mapa(cur)
     cur.execute(
-        """
+        f"""
         SELECT
             d.id, d.nombre_dataset, d.entidad_responsable, d.descripcion,
-            d.formato, d.url_fuente, d.url_descarga, d.arcgis_id
+            d.formato, d.url_fuente, d.url_descarga, d.arcgis_id{campos}
         FROM datasets d
-        JOIN categorias c ON d.categoria_id = c.id
+        JOIN categorias c ON d.categoria_id = c.id{union}
         WHERE c.nombre ILIKE %s
         """,
         (f"%{categoria_nombre}%",)
@@ -207,14 +217,15 @@ def obtener_datasets():
 def obtener_dataset(dataset_id):
     conn = conectar()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    campos, union = _columnas_mapa(cur)
     cur.execute(
-        """
+        f"""
         SELECT
             d.id, d.nombre_dataset, d.entidad_responsable, d.descripcion,
             d.formato, d.url_fuente, d.url_descarga, d.arcgis_id,
-            c.id AS categoria_id, c.nombre AS categoria
+            c.id AS categoria_id, c.nombre AS categoria{campos}
         FROM datasets d
-        JOIN categorias c ON d.categoria_id = c.id
+        JOIN categorias c ON d.categoria_id = c.id{union}
         WHERE d.id = %s
         LIMIT 1
         """,

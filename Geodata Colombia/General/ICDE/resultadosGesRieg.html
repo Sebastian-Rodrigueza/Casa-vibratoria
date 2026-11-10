@@ -992,6 +992,11 @@
             function abrirEnMapa(dataset, servicio, arcgisItem) {
                 const nombre = textoSeguro(dataset.nombre_dataset, "Capa ICDE");
 
+                // "Agregar a mi mapa": se junta con otras capas en vez de abrir el mapa (seleccion-capas.js)
+                if (window.SeleccionCapas && SeleccionCapas.interceptar(dataset, limpiarUrlArcGIS(servicio), nombre)) {
+                    return;
+                }
+
                 const parametros = new URLSearchParams();
                 parametros.set("servicio", limpiarUrlArcGIS(servicio));
                 parametros.set("nombre", nombre);
@@ -1023,6 +1028,11 @@
                     return null;
                 }
 
+                // revisada con "DB Geo andes/verificar_capas_mapa.py" y no se puede ver: sin boton de mapa
+                if (dataset.mapa_ok === false) {
+                    return null;
+                }
+
                 const boton = document.createElement("button");
                 boton.type = "button";
                 boton.className = "action-link tertiary";
@@ -1044,6 +1054,7 @@
                             extraerArcgisItemId(dataset.url_descarga);
 
                         const candidatosDirectos = [
+                            dataset.servicio_mapa,
                             dataset.url_servicio,
                             dataset.arcgis_url,
                             dataset.url_descarga,
@@ -1191,10 +1202,12 @@
                 const fuente = crearEnlace("Ver fuente", dataset.url_fuente, "");
                 const descarga = crearEnlace("Descargar", dataset.url_descarga, "secondary");
                 const enMapa = crearBotonMapa(dataset);
+                const agregarMapa = window.SeleccionCapas ? SeleccionCapas.botonAgregar(dataset, enMapa) : null;
 
                 if (fuente) acciones.appendChild(fuente);
                 if (descarga) acciones.appendChild(descarga);
                 if (enMapa) acciones.appendChild(enMapa);
+                if (agregarMapa) acciones.appendChild(agregarMapa);
 
                 if (!fuente && !descarga && !enMapa) {
                     const texto = document.createElement("span");
@@ -1348,6 +1361,7 @@
         </form>
     </section>
 
+    <script src="../../../seleccion-capas.js"></script>
     <script src="../../../agente1/agente.js"></script>
 
 <script src="../../../marca/pie.js?v=3" data-pie="en-footer" defer></script>

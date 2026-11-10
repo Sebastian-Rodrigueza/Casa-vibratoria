@@ -1263,6 +1263,27 @@
 
              /* ---------- Imagenes historicas (Esri Wayback) ---------- */
              .wayback-card { max-height: min(600px, calc(100vh - var(--topbar-h) - 60px)); }
+             /* Catalogo ICDE dentro del mapa */
+             .catalogo-card { top: calc(var(--topbar-h) + 18px); bottom: auto; width: min(380px, calc(100vw - 40px)); max-height: min(640px, calc(100vh - var(--topbar-h) - 60px)); }
+             .cat-body { display: flex; flex-direction: column; gap: 9px; font-size: 13px; min-height: 0; }
+             .cat-body select, .cat-body input[type=search] {
+                 padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+                 font: 500 13px var(--font-body); background: #fff; color: var(--text);
+             }
+             .cat-estado { margin: 0; font-size: 12px; color: var(--muted); }
+             .cat-estado:empty { display: none; }
+             .cat-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+             .cat-lista li { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 9px 10px;
+                 border: 1px solid var(--line); border-radius: var(--radius-sm); background: #fff; }
+             .cat-lista li b { display: block; font-size: 12.5px; line-height: 1.35; color: var(--text); }
+             .cat-lista li small { display: block; margin-top: 2px; font-size: 11.5px; color: var(--muted); }
+             .cat-lista li .cat-color { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: 0; }
+             .cat-add { padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--yellow-dark); background: var(--yellow-soft);
+                 font: 700 12px var(--font-body); color: var(--charcoal); cursor: pointer; white-space: nowrap; }
+             .cat-add:hover { background: var(--yellow); }
+             .cat-add:disabled { cursor: default; opacity: .65; }
+             .cat-add.listo { background: #e8f6ec; border-color: #7cc79a; color: #1d6b3a; opacity: 1; }
+             .cat-add.fallo { background: #fff4e5; border-color: #f5c37a; color: #7a3e00; opacity: 1; }
              .wayback-body { display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
              .wb-fila { display: flex; gap: 8px; }
              .wb-btn {
@@ -1961,7 +1982,21 @@
                  .uploaded-feature-tooltip::before {
                      border-top-color: rgba(37, 40, 44, .94) !important;
                  }
-    </style>
+            /* Leyenda de "Mi seleccion de capas" */
+        .leyenda-seleccion { width: 290px; max-height: 46vh; overflow-y: auto; padding: 10px 12px; border-radius: 12px; background: #fff;
+            border: 1px solid #e5e4dc; box-shadow: 0 10px 26px rgba(38,40,43,.16); font: 12.5px/1.4 "Inter", "Segoe UI", sans-serif; color: #282b2f; }
+        .leyenda-seleccion .ls-cabeza { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 13.5px; }
+        .leyenda-seleccion .ls-cabeza button { border: 0; background: none; font-size: 18px; line-height: 1; cursor: pointer; color: #6f7479; }
+        .leyenda-seleccion .ls-fila { display: grid; grid-template-columns: 14px 1fr; gap: 8px; align-items: start; padding: 3px 0; }
+        .leyenda-seleccion .ls-ir { cursor: pointer; margin: 0 -6px; padding: 4px 6px; border-radius: 7px; }
+        .leyenda-seleccion .ls-ir:hover { background: #fff3b0; }
+        .leyenda-seleccion .ls-color { width: 14px; height: 14px; border-radius: 4px; margin-top: 2px; }
+        .leyenda-seleccion .ls-imagen { background: repeating-linear-gradient(45deg, #ccc 0 3px, #fff 3px 6px); border: 1px solid #bbb; }
+        .leyenda-seleccion .ls-aviso { margin-top: 8px; padding: 9px 10px; border-radius: 10px; background: #fff4e5; border: 1px solid #f5c37a; color: #7a3e00; }
+        .leyenda-seleccion .ls-x { background: #f59e0b; color: #fff; font-weight: 800; font-size: 11px; display: grid; place-items: center; }
+        .leyenda-seleccion .ls-mala small { display: block; color: #8a5a1f; }
+        .leyenda-seleccion .ls-aviso > small { display: block; margin-top: 6px; color: #8a5a1f; }
+</style>
 
     <link rel="stylesheet" href="agente1/agente-panel.css">
 </head>
@@ -2033,6 +2068,15 @@
                         <path d="M3 12h2" />
                     </svg>
                     <span class="tip">Imágenes históricas</span>
+                </button>
+
+                <button class="nav-btn" id="sideCatalogo" type="button" aria-label="Agregar capas del catálogo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path d="m12 2 9 5-9 5-9-5 9-5Z" />
+                        <path d="m3 12 9 5 9-5" />
+                        <path d="M19 15v6M16 18h6" />
+                    </svg>
+                    <span class="tip">Agregar capas</span>
                 </button>
             </nav>
 
@@ -2267,6 +2311,33 @@
                         la temática y el rango de fechas.
                     </p>
                 </div>
+            </div>
+        </section>
+
+        <section class="upload-card catalogo-card" id="catalogoCard" hidden>
+            <div class="zone-chat-head">
+                <div class="zone-chat-title">
+                    <span class="zone-chat-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path d="m12 2 9 5-9 5-9-5 9-5Z" />
+                            <path d="m3 12 9 5 9-5" />
+                            <path d="m3 17 9 5 9-5" />
+                        </svg>
+                    </span>
+                    <div>
+                        <small>Catálogo ICDE · ArcGIS</small>
+                        <h2>Agregar capas al mapa</h2>
+                    </div>
+                </div>
+                <button class="zone-chat-close" id="catalogoClose" type="button" aria-label="Cerrar catálogo">×</button>
+            </div>
+
+            <div class="upload-body cat-body">
+                <select id="catCategoria" aria-label="Categoría"><option value="">Cargando categorías…</option></select>
+                <input type="search" id="catBuscar" placeholder="Buscar capa, entidad o lugar…" autocomplete="off">
+                <label class="wb-check"><input type="checkbox" id="catSoloMapa" checked> Solo capas que se pueden ver en el mapa</label>
+                <p class="cat-estado" id="catEstado"></p>
+                <ul class="cat-lista" id="catLista"></ul>
             </div>
         </section>
 
@@ -2731,31 +2802,41 @@
                             `;
             }
 
-            function addArcgisGeoJsonToMap(geojson, layerName) {
+            // Cada servicio que se carga toma un color distinto (para distinguir capas juntas)
+            const COLORES_CAPAS = ["#e6194b", "#3cb44b", "#4363d8", "#f58231", "#911eb4", "#00a6a6", "#f032e6",
+                "#9a6324", "#808000", "#000075", "#ff6b00", "#2f8f5b", "#b8860b", "#5b5bd6", "#c2185b"];
+            let siguienteColorCapa = 0;
+            const colorNuevoCapa = () => COLORES_CAPAS[siguienteColorCapa++ % COLORES_CAPAS.length];
+            const nombreConColor = (nombre, color) =>
+                `<span style="display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px;background:${color}"></span>${escapeHtmlArcGIS(nombre)}`;
+
+            function addArcgisGeoJsonToMap(geojson, layerName, opciones = {}) {
                 if (!geojson || !Array.isArray(geojson.features)) {
                     throw new Error("ArcGIS no devolvió un GeoJSON válido.");
                 }
 
                 if (!geojson.features.length) {
                     console.warn(`La capa ${layerName} no contiene entidades visibles.`);
+                    if (opciones.vacias) opciones.vacias.push(layerName);
                     return null;
                 }
 
+                const color = opciones.color || colorNuevoCapa();
                 const layer = L.geoJSON(geojson, {
                     pane: "uploadedDataPane",
                     style: () => ({
-                        color: "#ff6b00",       // borde naranja
+                        color,
                         weight: 2.5,
                         opacity: 1,
-                        fillColor: "#ff9d4d",   // relleno naranja claro
-                        fillOpacity: 0.35
+                        fillColor: color,
+                        fillOpacity: 0.3
                     }),
                     pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
                         pane: "uploadedDataPane",
                         radius: 7,
                         color: "#ffffff",
                         weight: 2,
-                        fillColor: "#ff6b00",
+                        fillColor: color,
                         fillOpacity: 0.9
                     }),
                     onEachFeature: (feature, leafletLayer) => {
@@ -2764,14 +2845,15 @@
                 });
 
                 layer.addTo(map);
-                layersControl.addOverlay(layer, layerName);
+                layersControl.addOverlay(layer, nombreConColor(layerName, color));
                 remoteArcgisLayers.push(layer);
                 remoteArcgisLoaded = true;
+                if (opciones.capas) opciones.capas.push(layer);
 
                 return layer;
             }
 
-            async function queryArcgisLayerAll(layerUrl, layerName) {
+            async function queryArcgisLayerAll(layerUrl, layerName, opciones = {}) {
                 const cleanUrl = String(layerUrl || "").replace(/\/+$/, "");
                 const metadata = await fetchArcgisJson(`${cleanUrl}?f=json`);
 
@@ -2834,15 +2916,15 @@
                     features: allFeatures
                 };
 
-                return addArcgisGeoJsonToMap(geojson, layerName);
+                return addArcgisGeoJsonToMap(geojson, layerName, opciones);
             }
 
-            async function loadArcgisFeatureServer(serviceUrl, serviceName) {
+            async function loadArcgisFeatureServer(serviceUrl, serviceName, opciones = {}) {
                 const cleanUrl = String(serviceUrl || "").replace(/\/+$/, "");
 
                 if (/FeatureServer\/\d+$/i.test(cleanUrl)) {
                     const meta = await fetchArcgisJson(`${cleanUrl}?f=json`);
-                    return queryArcgisLayerAll(cleanUrl, meta.name || serviceName);
+                    return queryArcgisLayerAll(cleanUrl, meta.name || serviceName, opciones);
                 }
 
                 const serviceMeta = await fetchArcgisJson(`${cleanUrl}?f=json`);
@@ -2854,16 +2936,16 @@
 
                 for (const layerInfo of layers) {
                     const layerUrl = `${cleanUrl}/${layerInfo.id}`;
-                    await queryArcgisLayerAll(layerUrl, layerInfo.name || serviceName);
+                    await queryArcgisLayerAll(layerUrl, layerInfo.name || serviceName, opciones);
                 }
             }
 
-            async function loadArcgisMapServer(serviceUrl, serviceName) {
+            async function loadArcgisMapServer(serviceUrl, serviceName, opciones = {}) {
                 const cleanUrl = String(serviceUrl || "").replace(/\/+$/, "");
 
                 if (/MapServer\/\d+$/i.test(cleanUrl)) {
                     const meta = await fetchArcgisJson(`${cleanUrl}?f=json`);
-                    return queryArcgisLayerAll(cleanUrl, meta.name || serviceName);
+                    return queryArcgisLayerAll(cleanUrl, meta.name || serviceName, opciones);
                 }
 
                 const serviceMeta = await fetchArcgisJson(`${cleanUrl}?f=json`);
@@ -2878,7 +2960,8 @@
                         try {
                             const layer = await queryArcgisLayerAll(
                                 layerUrl,
-                                layerInfo.name || serviceName
+                                layerInfo.name || serviceName,
+                                opciones
                             );
 
                             if (layer) loadedAny = true;
@@ -2900,13 +2983,15 @@
                     layersControl.addOverlay(tiled, serviceName);
                     remoteArcgisLayers.push(tiled);
                     remoteArcgisLoaded = true;
+                    // es una imagen del servicio: se ve con sus propios colores
+                    if (opciones.capas) { opciones.capas.push(tiled); opciones.imagen = true; }
                     return;
                 }
 
                 throw new Error("El MapServer no expone capas consultables ni mosaicos compatibles.");
             }
 
-            async function loadArcgisService(serviceUrl, serviceName) {
+            async function loadArcgisService(serviceUrl, serviceName, opciones = {}) {
                 const cleanUrl = String(serviceUrl || "").trim().replace(/\/+$/, "");
 
                 if (!/^https?:\/\//i.test(cleanUrl)) {
@@ -2914,12 +2999,12 @@
                 }
 
                 if (/FeatureServer(?:\/\d+)?$/i.test(cleanUrl)) {
-                    await loadArcgisFeatureServer(cleanUrl, serviceName);
+                    await loadArcgisFeatureServer(cleanUrl, serviceName, opciones);
                     return;
                 }
 
                 if (/MapServer(?:\/\d+)?$/i.test(cleanUrl)) {
-                    await loadArcgisMapServer(cleanUrl, serviceName);
+                    await loadArcgisMapServer(cleanUrl, serviceName, opciones);
                     return;
                 }
 
@@ -2949,7 +3034,259 @@
                 }
             }
 
+            // "Mi seleccion de capas" (seleccion-capas.js): Mapa.html?seleccion=1 carga todas juntas
+            async function cargarSeleccionCapas() {
+                let capas = [];
+                try {
+                    capas = JSON.parse(localStorage.getItem("sinergia-capas") || "[]");
+                } catch (e) {
+                    capas = [];
+                }
+                capas = (Array.isArray(capas) ? capas : []).filter((c) => c && c.servicio);
+                if (!capas.length) {
+                    showToast("Tu selección de capas está vacía.");
+                    return;
+                }
+                showToast(`Cargando ${capas.length} ${capas.length === 1 ? "capa" : "capas"} de tu selección…`, 4000);
+                const seguimiento = capas.map(() => ({ color: colorNuevoCapa(), capas: [], vacias: [] }));
+                const resultados = await Promise.allSettled(capas.map((c, i) => loadArcgisService(c.servicio, c.nombre || "Capa ArcGIS", seguimiento[i])));
+                // por capa: se ve, o por que no
+                const estado = capas.map((c, i) => {
+                    const s = seguimiento[i], r = resultados[i];
+                    if (r.status === "rejected") {
+                        console.error("No cargo", c.nombre, r.reason);
+                        return { ...c, color: s.color, ok: false, motivo: (r.reason && r.reason.message) || "el servicio no respondió" };
+                    }
+                    if (!s.capas.length) return { ...c, color: s.color, ok: false, motivo: "el servicio respondió, pero no tiene elementos para dibujar" };
+                    return { ...c, color: s.color, ok: true, imagen: s.imagen, capas: s.capas };
+                });
+                fitRemoteArcgisLayers();
+                leyendaSeleccion(estado);
+                const malas = estado.filter((e) => !e.ok).length;
+                showToast(malas
+                    ? `Se ven ${estado.length - malas} de ${estado.length} capas. Mira el aviso para ver cuáles no se pudieron mostrar.`
+                    : `Se cargaron las ${estado.length} capas de tu selección.`, 4500);
+            }
+
+            // Leyenda de las capas agregadas (seleccion o catalogo): color de cada una y aviso de las que no se ven
+            let controlLeyenda = null;
+            const estadoLeyenda = [];
+            function irACapa(e) {
+                if (!e || !e.capas) return;
+                const limites = L.latLngBounds([]);
+                e.capas.forEach((c) => {
+                    if (typeof c.getBounds === "function") {
+                        const b = c.getBounds();
+                        if (b && b.isValid()) limites.extend(b);
+                    }
+                });
+                if (limites.isValid()) {
+                    map.flyToBounds(limites, { padding: [40, 40], maxZoom: 15, duration: 1.2 });
+                    // la capa parpadea un momento para que se note cual es
+                    e.capas.forEach((c) => {
+                        if (typeof c.setStyle !== "function") return;
+                        c.setStyle({ weight: 5, fillOpacity: .55 });
+                        setTimeout(() => (typeof c.resetStyle === "function" ? c.resetStyle() : c.setStyle({ weight: 2.5 })), 1800);
+                    });
+                } else {
+                    showToast(`"${e.nombre}" es una imagen del servicio: no tiene un área definida para ir a ella.`, 3500);
+                }
+            }
+            function leyendaSeleccion(estado) {
+                estado.forEach((e) => {
+                    const i = estadoLeyenda.findIndex((x) => x.servicio === e.servicio);
+                    if (i >= 0) estadoLeyenda[i] = e; else estadoLeyenda.push(e);
+                });
+                if (!controlLeyenda) {
+                    controlLeyenda = L.control({ position: "bottomleft" });
+                    controlLeyenda.onAdd = () => {
+                        const div = L.DomUtil.create("div", "leyenda-seleccion");
+                        L.DomEvent.disableClickPropagation(div);
+                        L.DomEvent.disableScrollPropagation(div);
+                        div.addEventListener("click", (ev) => {
+                            const fila = ev.target.closest(".ls-ir");
+                            if (fila) { irACapa(estadoLeyenda[Number(fila.dataset.i)]); return; }
+                            if (!ev.target.closest(".ls-cerrar")) return;
+                            map.removeControl(controlLeyenda);
+                            controlLeyenda = null;
+                            estadoLeyenda.length = 0;
+                        });
+                        return div;
+                    };
+                    controlLeyenda.addTo(map);
+                }
+                const buenas = estadoLeyenda.filter((e) => e.ok), malas = estadoLeyenda.filter((e) => !e.ok);
+                controlLeyenda.getContainer().innerHTML = `
+                    <div class="ls-cabeza"><b>Capas en el mapa</b><button type="button" class="ls-cerrar" aria-label="Cerrar" title="Cerrar">×</button></div>
+                    ${buenas.map((e) => `<div class="ls-fila ls-ir" data-i="${estadoLeyenda.indexOf(e)}" title="Ir a esta capa en el mapa">${e.imagen
+                        ? '<span class="ls-color ls-imagen" title="Imagen del servicio, con sus propios colores"></span>'
+                        : `<span class="ls-color" style="background:${e.color}"></span>`}<span>${escapeHtmlArcGIS(e.nombre)}</span></div>`).join("")}
+                    ${malas.length ? `<div class="ls-aviso"><b>${malas.length === 1 ? "Esta capa no se puede ver" : "Estas " + malas.length + " capas no se pueden ver"} en el mapa:</b>
+                        ${malas.map((e) => `<div class="ls-fila ls-mala"><span class="ls-color ls-x">!</span><span>${escapeHtmlArcGIS(e.nombre)}<small>${escapeHtmlArcGIS(e.motivo)}</small></span></div>`).join("")}
+                        <small>Puede que la entidad haya apagado o movido el servicio. Puedes quitarla de tu selección.</small></div>` : ""}`;
+            }
+
+            // ---------- Catalogo ICDE dentro del mapa: elegir una capa y verla aqui mismo ----------
+            (() => {
+                const API_CATALOGO = esLocal ? "http://localhost:5000/api" : "/api";
+                const card = document.getElementById("catalogoCard");
+                const selCategoria = document.getElementById("catCategoria");
+                const inpBuscar = document.getElementById("catBuscar");
+                const chkSoloMapa = document.getElementById("catSoloMapa");
+                const lista = document.getElementById("catLista");
+                const estadoTxt = document.getElementById("catEstado");
+                let datasets = [];
+                const cargadas = {};   // id del dataset -> { ok, color, motivo }
+
+                const REGEX_SERVICIO = /https?:\/\/[^\s"'<>]+\/(?:FeatureServer|MapServer)(?:\/\d+)?/i;
+                function buscarServicio(valor) {
+                    if (!valor) return "";
+                    if (typeof valor === "string") {
+                        const m = valor.match(REGEX_SERVICIO);
+                        return m ? m[0].split("?")[0].replace(/\/+$/, "") : "";
+                    }
+                    for (const v of Array.isArray(valor) ? valor : Object.values(valor)) {
+                        const s = buscarServicio(v);
+                        if (s) return s;
+                    }
+                    return "";
+                }
+                function idItem(valor) {
+                    const m = String(valor || "").match(/[a-f0-9]{32}/i);
+                    return m ? m[0] : "";
+                }
+                // mapa_ok viene de "DB Geo andes/verificar_capas_mapa.py": false = se reviso y no se puede ver
+                const sePuedeVer = (d) => d.mapa_ok !== false &&
+                    Boolean(d.servicio_mapa || d.arcgis_id || buscarServicio(d.url_descarga) || buscarServicio(d.url_fuente));
+
+                // el servicio ArcGIS de un dataset: directo en sus enlaces o en los datos de su item de ArcGIS Online
+                async function servicioDeDataset(d) {
+                    if (d.servicio_mapa) return d.servicio_mapa;   // ya revisado: no hay que buscarlo
+                    const directo = buscarServicio(d.url_descarga) || buscarServicio(d.url_fuente) || buscarServicio(d.arcgis_id);
+                    if (directo) return directo;
+                    const item = idItem(d.arcgis_id) || idItem(d.url_fuente) || idItem(d.url_descarga);
+                    if (!item) throw new Error("no tiene un servicio de ArcGIS para el mapa");
+                    const base = "https://www.arcgis.com/sharing/rest/content/items/" + encodeURIComponent(item);
+                    const info = await fetch(base + "?f=json").then((r) => r.json());
+                    if (info.error) throw new Error(info.error.message || "ArcGIS no dejó consultar el ítem");
+                    const s = buscarServicio(info.url);
+                    if (s) return s;
+                    const datos = await fetch(base + "/data?f=json").then((r) => r.ok ? r.text() : "").then((txt) => {
+                        try { return JSON.parse(txt); } catch (e) { return null; }
+                    }).catch(() => null);
+                    const s2 = buscarServicio(datos);
+                    if (s2) return s2;
+                    throw new Error("el ítem de ArcGIS no tiene un servicio público");
+                }
+
+                // se recuerda en "Mi seleccion de capas" (el mismo de las paginas de resultados)
+                function guardarEnSeleccion(capa) {
+                    try {
+                        const sel = JSON.parse(localStorage.getItem("sinergia-capas") || "[]").filter((c) => String(c.dataset) !== String(capa.dataset));
+                        sel.push(capa);
+                        localStorage.setItem("sinergia-capas", JSON.stringify(sel.slice(-25)));
+                    } catch (e) { /* sin almacenamiento */ }
+                }
+
+                async function agregar(d, boton) {
+                    const nombre = d.nombre_dataset || "Capa ICDE";
+                    boton.disabled = true;
+                    boton.textContent = "Cargando…";
+                    const seguimiento = { color: colorNuevoCapa(), capas: [], vacias: [] };
+                    let estado;
+                    try {
+                        const servicio = await servicioDeDataset(d);
+                        await loadArcgisService(servicio, nombre, seguimiento);
+                        estado = seguimiento.capas.length
+                            ? { servicio, nombre, color: seguimiento.color, ok: true, imagen: seguimiento.imagen, capas: seguimiento.capas }
+                            : { servicio, nombre, color: seguimiento.color, ok: false, motivo: "el servicio respondió, pero no tiene elementos para dibujar" };
+                        if (estado.ok) {
+                            guardarEnSeleccion({ servicio, nombre, dataset: String(d.id || "") });
+                            const capasBounds = L.featureGroup(seguimiento.capas.filter((c) => typeof c.getBounds === "function"));
+                            const b = capasBounds.getLayers().length ? capasBounds.getBounds() : null;
+                            if (b && b.isValid()) map.fitBounds(b, { padding: [35, 35], maxZoom: 14 });
+                        }
+                    } catch (error) {
+                        console.error("No cargo", nombre, error);
+                        estado = { servicio: "dataset-" + d.id, nombre, color: seguimiento.color, ok: false, motivo: error.message || "el servicio no respondió" };
+                    }
+                    cargadas[d.id] = estado;
+                    leyendaSeleccion([estado]);
+                    showToast(estado.ok ? `"${nombre}" quedó en el mapa.` : `"${nombre}" no se puede ver en el mapa: ${estado.motivo}.`, 4000);
+                    pintar();
+                }
+
+                function pintar() {
+                    const q = inpBuscar.value.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    const filas = datasets.filter((d) => (!chkSoloMapa.checked || sePuedeVer(d)) &&
+                        (!q || `${d.nombre_dataset} ${d.entidad_responsable} ${d.descripcion}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(q)));
+                    estadoTxt.textContent = datasets.length ? `${filas.length} de ${datasets.length} capas` : estadoTxt.textContent;
+                    lista.innerHTML = filas.slice(0, 150).map((d) => {
+                        const c = cargadas[d.id];
+                        const etiqueta = !sePuedeVer(d) ? "Sin mapa" : !c ? "Agregar" : c.ok ? "En el mapa ✓" : "No se ve";
+                        const clase = c ? (c.ok ? "listo" : "fallo") : "";
+                        return `<li><div><b>${c && c.ok ? `<span class="cat-color" style="background:${c.color}"></span>` : ""}${escapeHtmlArcGIS(d.nombre_dataset)}</b>
+                            <small>${escapeHtmlArcGIS(d.entidad_responsable || "Entidad no especificada")}</small></div>
+                            <button type="button" class="cat-add ${clase}" data-id="${d.id}" ${!sePuedeVer(d) || c ? "disabled" : ""}
+                                title="${c && !c.ok ? escapeHtmlArcGIS(c.motivo) : ""}">${etiqueta}</button></li>`;
+                    }).join("") || `<li><small>No hay capas con ese filtro.</small></li>`;
+                }
+                lista.addEventListener("click", (ev) => {
+                    const b = ev.target.closest(".cat-add");
+                    const d = b && datasets.find((x) => String(x.id) === b.dataset.id);
+                    if (d && !b.disabled) agregar(d, b);
+                });
+
+                async function cargarCategoria() {
+                    const cat = selCategoria.value;
+                    if (!cat) return;
+                    estadoTxt.textContent = "Cargando capas…";
+                    lista.innerHTML = "";
+                    try {
+                        const r = await fetch(`${API_CATALOGO}/datasets?categoria=${encodeURIComponent(cat)}`);
+                        if (!r.ok) throw new Error("HTTP " + r.status);
+                        datasets = await r.json();
+                        pintar();
+                    } catch (e) {
+                        datasets = [];
+                        estadoTxt.textContent = "No se pudo leer el catálogo. Revisa que la API esté activa.";
+                    }
+                }
+                async function cargarCategorias() {
+                    try {
+                        const r = await fetch(`${API_CATALOGO}/categorias`);
+                        if (!r.ok) throw new Error("HTTP " + r.status);
+                        const cats = await r.json();
+                        selCategoria.innerHTML = cats.map((c) => `<option value="${escapeHtmlArcGIS(c.nombre)}">${escapeHtmlArcGIS(c.nombre)}</option>`).join("");
+                        cargarCategoria();
+                    } catch (e) {
+                        selCategoria.innerHTML = `<option value="">Sin conexión con el catálogo</option>`;
+                        estadoTxt.textContent = "No se pudo leer el catálogo. Revisa que la API esté activa.";
+                    }
+                }
+
+                function abrir() {
+                    card.hidden = false;
+                    document.getElementById("uploadCard").hidden = true;
+                    const wb = document.getElementById("waybackCard");
+                    if (wb && !wb.hidden) document.getElementById("waybackClose").click();
+                    if (!selCategoria.options.length || !selCategoria.value) cargarCategorias();
+                }
+                const cerrar = () => { card.hidden = true; };
+                document.getElementById("sideCatalogo").addEventListener("click", () => card.hidden ? abrir() : cerrar());
+                document.getElementById("catalogoClose").addEventListener("click", cerrar);
+                document.getElementById("sideUpload").addEventListener("click", cerrar);
+                document.getElementById("sideWayback").addEventListener("click", cerrar);
+                selCategoria.addEventListener("change", cargarCategoria);
+                inpBuscar.addEventListener("input", pintar);
+                chkSoloMapa.addEventListener("change", pintar);
+            })();
+
             async function loadArcgisFromQueryString() {
+                if (arcgisUrlParams.get("seleccion")) {
+                    await cargarSeleccionCapas();
+                    return;
+                }
                 if (!arcgisServicioInicial) {
                     return;
                 }
@@ -5929,6 +6266,7 @@
                         if (
                             index === delays.length - 1 &&
                             !arcgisServicioInicial &&
+                            !arcgisUrlParams.get("seleccion") &&
                             !remoteArcgisLoaded
                         ) {
                             map.fitBounds(southAmericaBounds, {
